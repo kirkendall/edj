@@ -88,8 +88,10 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 	if (!table || (!jx_is_table(table) && table->type != JX_OBJECT))
 		return jx_array();
 
+#if 0
 	/* This won't work for deferred arrays */
 	jx_undefer(table);
+#endif
 
 	/* We want to treat the nest list as linked list of JX_STRINGs.
 	 * Probably it comes to us as a JX_ARRAY though; skip to the start
@@ -111,14 +113,21 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 	/* Start with an empty response array */
 	result = jx_array();
 
-	/* For each element of the table... */
+	/* For each row of the table... */
 	for (table = jx_first(table); table; table = jx_next(table)) {
 		/* Fetch the unrolled nested variable */
-		value = jx_by_expr(table, nestlist->text, NULL); /* undeferred */
+		value = jx_by_expr(table, nestlist->text, NULL);/* undeferred */
+
+		/* Recursively unroll the nested value.  Since the name of
+		 * this member was passed as part of nestlist, we expect it
+		 * to be a table but if it isn't then jx_unroll() will return
+		 * an empty array.  Either way, it's an array.
+		 */
 		nested = jx_unroll(value, nestlist->next);
 
 		/* If nested is empty, either skip it or stuff an empty object
-		 * into it.
+		 * into it.  The empty object will allow the remainder of the
+		 * loop to add a row containing the current object.
 		 */
 		if (!nested->first) {
 			if (skipempty) {
@@ -144,7 +153,11 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 
 					/* If this is the last row, we can
 					 * recycle the members, but for other
-					 * rows we need to make copies.
+					 * rows we need to make copies.  This
+					 * works because nested was returned by
+					 * jx_unroll() which always returns a
+					 * copy of the data, never the original
+					 * data.
 					 */
 					if (!jx_is_last(nrow) || jx_is_deferred_element(nrow)) {
 						/* Append copies of the nested members */

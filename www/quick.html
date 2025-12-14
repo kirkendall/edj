@@ -169,7 +169,8 @@
     or CSV or even a series of shell script records.
 
     <div class="example">
-      <kbd>jx -s sh -c test.scores -d sampledata</kbd>
+      <kbd>#This is a shell command, not a jx command</kbd>
+      <kbd>jx -s sh -c data.scores sampledata/test.json</kbd>
       <samp>
 name=Peter run=1 score=10<br/>
 name=Paul run=1 score=20<br/>
@@ -194,13 +195,11 @@ name=Mary run=3 score=40
       Those earlier examples were all interactive, and we assumed jx
       was configured to automatically load files from the "sampledata"
       directory.
-      Yo acieve the same autoload functionality in batch mode
-      (non-interactive like we're doing here)
-      you need to add "-d sampledata" to the command line.
     </div>
 
     <div class="example">
-      <kbd>jx -s sh -c test.scores -d sampledata | while read row<br/>
+      <kbd>#This is a shell command, not a jx command</kbd>
+      <kbd>jx -s sh -c data.scores sampledata/test.json | while read row<br/>
       do<div style="padding-left: 2em;">
       eval $row<br/>
       echo "$name scored $score in run# $run"
@@ -240,9 +239,9 @@ name=Mary run=3 score=40
       <kbd># These are shell commands, not jx commands<br/>
       file=/tmp/jx$$.json<br/>
       echo "{}" &gt;$file<br/>
-      jx -u -c'this.custno=custno' custno=12554 $file<br/>
-      jx -u -c'this.name=first - last' first=Steve last=Kirkendall $file<br/>
-      jx -u -c'this.contactok=contact' contact=false $file<br/>
+      jx -u -c'data.custno=custno' custno=12554 $file<br/>
+      jx -u -c'data.name=first - last' first=Steve last=Kirkendall $file<br/>
+      jx -u -c'data.contactok=contact' contact=false $file<br/>
       cat $file</kbd>
       <samp>{"custno":12554,"name":"Steve Kirkendall","contactok":false}</samp>
       In this example, we're building the JSON data piecemeal in a temporary file.

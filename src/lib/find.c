@@ -174,7 +174,6 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 			 * result array
 			 */
 			wasused = find->used;
-			wasindex = find->index;
 			snprintf(indexstr, sizeof indexstr, "[%d]", i);
 			help_find_cat(find, indexstr);
 			if (find->index == -1)

@@ -79,6 +79,7 @@ a.button {
 table.referencelist {
 	border-collapse: collapse;
 	border: thin solid black;
+	max-width: 95%;
 }
 table.referencelist th {
 	border: thin solid black;

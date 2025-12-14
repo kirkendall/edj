@@ -390,7 +390,7 @@ size_t jx_mbs_simple_key(char *dest, const char *src)
 			/* Convert to uppercase */
 			wc = towupper(wc);
 		}
-		if (dest && in >= (out = wctomb(dummy, wc)))
+		if (in >= (out = wctomb(dummy, wc)) && dest)
 			wctomb(dest + len, wc);
 		len += out;
 	}

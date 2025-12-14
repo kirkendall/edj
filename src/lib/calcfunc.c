@@ -978,7 +978,7 @@ jx_t *jfn_groupBy(jx_t *args, void *agdata)
 				name = name->first;
 			while (name && name->type != JX_STRING)
 				name = name->next; /* undeferred */
-			dot = strrchr(name->text, '.');
+			dot = name ? strrchr(name->text, '.') : NULL;
 			text = dot ? dot + 1 : name->text;
 			if (name)
 				jx_append(totals, jx_key(text, jx_copy(args->first->next->next))); /* undeferred */
@@ -2199,7 +2199,7 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 	/* If we were searching through the default table, then prepend its
 	 * expression to the "expr" members of the results.  Note that since
 	 * the default table is always an array, "expr" currently begins with
-	 * a subscript, not a member name, so we don't need to * add a "."
+	 * a subscript, not a member name, so we don't need to add a "."
 	 * between them.
 	 */
 	if (result->type == JX_ARRAY && defaulttable) {
@@ -2212,7 +2212,7 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 			expr = jx_text_by_key(other, "expr");
 			assert(expr && *expr == '[');
 			totlen = dtlen + strlen(expr);
-			if (totlen + 1 > bufsize) {
+			if (!buf || totlen + 1 > bufsize) {
 				if (buf)
 					free(buf);
 				bufsize = (totlen | 0x1f) + 1;
@@ -2449,9 +2449,9 @@ static jx_t *jfn_wrap(jx_t *args, void *agdata)
 		len = jx_mbs_wrap_word(NULL, str, width);
 	result = jx_string("", len);
 	if (width < 0)
-		len = jx_mbs_wrap_char(result->text, str, -width);
+		(void)jx_mbs_wrap_char(result->text, str, -width);
 	else
-		len = jx_mbs_wrap_word(result->text, str, width);
+		(void)jx_mbs_wrap_word(result->text, str, width);
 	return result;
 }
 

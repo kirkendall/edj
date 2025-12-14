@@ -264,8 +264,10 @@ char *jx_file_path(const char *prefix, const char *name, const char *suffix)
 
 	/* Get the path from jx_config */
 	path = jx_by_key(jx_system, "path");
-	if (!path || path->type != JX_ARRAY)
+	if (!path || path->type != JX_ARRAY) {
+		free(pathname);
 		return NULL;
+	}
 
 	/* For each entry in the path... */
 	first = 1;

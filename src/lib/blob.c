@@ -233,7 +233,7 @@ jx_t *jx_blob_convert(const char *data, size_t len, jxblobconv_t conversion)
 		/* Convert it */
 		c = result->text;
 		for (scan = data; scan < &data[len]; scan++) {
-			if (*scan == 0) {
+			if ('\0' == *scan) {
 				/* U+ffff, which is designated as an
 				 * internal-use-only non-character.
 				 * In UTF-8 that represented by efbfbf.

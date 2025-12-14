@@ -139,7 +139,7 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 	size_t len;
 	va_list ap;
 	int	newstyle;
-	int	nounderline;
+	int	nounderline = 0;
 	char	escbuf[32];
 
 	/* If no format specified, use default */

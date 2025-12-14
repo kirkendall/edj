@@ -247,6 +247,7 @@ jx_t *jx_error_null(const char *where, const char *fmt, ...)
 	if (len <= sizeof buf - 1) {
 		result = jx_simple(buf, len, JX_NULL);
 		result->first = (jx_t *)where;
+		return result;
 	}
 
 	/* Allocate a larger buffer to hold the string, and use it */

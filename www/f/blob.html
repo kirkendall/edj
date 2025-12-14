@@ -12,15 +12,71 @@
     <dl>
       <dt>blob(<var>data</var>:string|array, <var>convin</var>?:number, <var>convin</var>?:number):string|array
       <dd>
-      Describe blob here.
+      A "blob" is a chunk of binary data.
+      The comes from SQL where it supposedly is short for "Binary Large Object".
+      In jx, binary data is internally stored as compact bytes
+      but externally it is presented as a deferred array of numbers
+      representing the byte values.
+      <p>
+      The <tt>blob()</tt> function lets you convert the bytes to strings or
+      vice-versa.
+      By default, if you pass it a string it will return the bytes of the
+      UTF-8 representation of that string; if you pass it an array of bytes
+      it will convert those bytes to a string.
+      You can also pass extra parameters to <tt>blob()</tt> to interpret
+      a string differently, or to generate other formats.
+      There is a <tt>Blob</tt> object which defines the following values
+      that you can pass as conversion numbers:
+      <table class="referencelist">
+        <tr><td>Blob.any</td><td>
+          This tells <tt>blob()</tt> to make its own choice, by examining
+          the <var>data</var>.
+          This is the default input conversion.
+	</td></tr>
+        <tr><td>Blob.string</td><td>
+          This tells <tt>blob()</tt> to choose a string type by examining
+          the <var>data</var>.
+          This is the default output conversion, when the input data is
+          an array of bytes.
+	</td></tr>
+        <tr><td>Blob.utf8</td><td>
+          Interprets <var>data</var> as a UTF-8 string.
+          If you pass an array of bytes that doesn't represent valid
+          UTF-8 character sequences, you'll get an error.
+	</td></tr>
+        <tr><td>Blob.latin1</td><td>
+          Interprets <var>data</var> as a Latin-1 string.
+          Latin-1 is a one-byte-per-character encoding that is limited to
+          the first 256 UTF-8 characters.
+          Internally, jx always stores strings in UTF-8,
+          so if you request a Latin-1 conversion,
+          you'll get bytes interpreted to Latin-1 converted UTF-8.
+	</td></tr>
+        <tr><td>Blob.bytes</td><td>
+          Interprets <var>data</var> as random bytes.
+          This is more useful as an output conversion than an input one,
+          because it's pretty obvious when the input is an array of bytes.
+	</td></tr>
+      </table>
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>blob()</kbd>
-	<samp>Returned value</samp>
-        Description of the example.  Explain why it works.
+	<kbd>blob("Test")</kbd>
+	<samp>[84,101,115,116]</samp>
+	<kbd>blob([84,101,115,116])</kbd>
+	<samp>"Test"</samp>
+        First we convert a string to a blob, which is represented as an array
+        of byte values.
+        Then we do the reverse to get the original string back.
+      </div>
+
+      <div class="example">
+	<kbd>blob("Test").deferTypeOf()</kbd>
+	<samp>"Blob"</samp>
+        This shows that blobs are implemented as deferred arrays.
+        You shouldn't be afraid to load up very large binary files.
       </div>
 
     </details>
@@ -29,8 +85,23 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Quirks and tips get described here.  Use examples.
+        <li>The constants defined in the <tt>Blob</tt> object are negative
+            numbers.  This is so that <tt>blob()</tt> can some day be
+            extended to allow byte offsets to return slices of binary data.
 
+	<li>The <a target="_PARENT" href="../index.html?f=charCodeAt">charCodeAt()</a>
+            and <a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</a>
+            convert characters to numbers and vice-versa.
+            The numbers are Unicode code points though, not byte values.
+            If you're only dealing with the first 256 Unicode characters though,
+            that's basically the same as Latin-1 which <tt>blob()</tt> can
+            also handle, so there is some overlap of functionality here.
+
+	<li>The <a target="_PARENT" href="../index.html?p=curl">curl plugin</a>'s
+	    <a target="_PARENT" href="../index.html?f=curl/unmime64">unmime64()</a>
+	    function can return a blob.
+	    It uses the same <tt>Blob.xxx</tt> constants to control the
+	    conversion style.
       </ul>
     </details>
 

@@ -197,7 +197,6 @@ jx_t *jx_explain(jx_t *columns, jx_t *row, int depth)
 			oldwidth = jx_int(jx_by_key(stats, "width"));
 			if (newwidth > oldwidth)
 				jx_append(stats, jx_key("width", jx_from_int(newwidth)));
-
 		} else {
 			/* No, this is a new column.  Add it. */
 			stats = jx_object();
@@ -215,7 +214,9 @@ jx_t *jx_explain(jx_t *columns, jx_t *row, int depth)
 			jx_append(stats, jx_key("width", jx_from_int(newwidth)));
 			jx_append(stats, jx_key("nullable", jx_boolean(!strcmp(newtype, "null") || !firstrow)));
 			jx_append(columns, stats);
+#if 0
 			oldtype = newtype;
+#endif
 		}
 
 		/* Do we want to recurse for opjects/tables? */

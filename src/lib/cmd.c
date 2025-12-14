@@ -73,8 +73,6 @@ static jxcmdout_t *print_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 static jxcmd_t    *set_parse(jxsrc_t *src, jxcmdout_t **referr);
 static jxcmdout_t *set_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 /* delete lvalue */
-/* throw [code],msg[,args] */
-/* help topic subtopic */
 static jxcmdout_t *calc_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 
 /* Linked list of command names */
@@ -1333,7 +1331,7 @@ static jxcmd_t *throw_parse(jxsrc_t *src, jxcmdout_t **referr)
 		}
 	}
 
-	/* Allow error text (a string literal).  If none, then use "Throw" */
+	/* Allow error text (a string literal).  If none, then use "throw" */
 	if (!jc)
 		parsed->key = strdup("throw");
 	else if (jc->u.literal->type != JX_STRING)
@@ -2106,7 +2104,7 @@ static jxcmd_t *explain_parse(jxsrc_t *src, jxcmdout_t **referr)
 
 	/* Detect cruft after the arguments */
 	if (*src->str && (*src->str != ';' && *src->str != '}')) {
-		*referr = jx_cmd_error(src->str, "Syntax error near %.10s", end);
+		*referr = jx_cmd_error(src->str, "Syntax error near %.10s", src->str);
 		jx_cmd_free(cmd);
 		return NULL;
 	}
@@ -2230,6 +2228,7 @@ static jxcmd_t *file_parse(jxsrc_t *src, jxcmdout_t **referr)
 		jx_cmd_parse_whitespace(src);
 		if (*src->str && *src->str != ';' && *src->str != '}') {
 			*referr = jx_cmd_error(src->str, "Bad use of \"%s\" or \"%s\"", "file+", "file-");
+			jx_cmd_free(cmd);
 			return NULL;
 		}
 		cmd->key = strdup(ch);
@@ -2374,6 +2373,7 @@ static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 	 */
 	if (filename[0] == '/' || strstr(filename, "../")) {
 		*referr = jx_cmd_error(start.str, "Unsafe file name to import: \"%s\"", filename);
+		free(filename);
 		return NULL;
 	}
 
@@ -2396,6 +2396,7 @@ static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 	 */
 	cmd = NULL;
 	code = jx_cmd_parse_file(filename);
+	free(filename);
 	if (code && code != JX_CMD_ERROR) {
 		cmd = jx_cmd(&start, &jcn_import);
 		cmd->sub = code;
@@ -2461,6 +2462,7 @@ static jxcmd_t *plugin_parse(jxsrc_t *src, jxcmdout_t **referr)
 			*referr = jx_cmd_error((char *)err->first, "%s", err->text);
 		else
 			*referr = jx_cmd_error(src->str, "%s", err->text);
+		free(str);
 		return NULL;
 	}
 
@@ -2471,6 +2473,7 @@ static jxcmd_t *plugin_parse(jxsrc_t *src, jxcmdout_t **referr)
 		section = jx_by_key(section, str);
 		if (!section) {
 			*referr = jx_cmd_error(src->str, "The \"%s\" plugin doesn't use settings", str);
+			free(str);
 			return NULL;
 		}
 
@@ -2481,12 +2484,14 @@ static jxcmd_t *plugin_parse(jxsrc_t *src, jxcmdout_t **referr)
 				*referr = jx_cmd_error((char *)err->first, "%s", err->text);
 			else
 				*referr = jx_cmd_error(src->str, "%s", err->text);
+			free(str);
 			return NULL;
 		}
 
 	}
 
 	/* No action needed at runtime */
+	free(str);
 	return NULL;
 }
 

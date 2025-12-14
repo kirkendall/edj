@@ -126,6 +126,8 @@ jx_t *jcnjoin(jx_t *jl, jx_t *jr, int left, int right)
 		 * an error null.
 		 */
 		if (jx_interrupt) {
+			if (rightmatch)
+				free(rightmatch);
 			jx_free(result);
 			jx_break(jl);
 			return jx_error_null(NULL, "intr:Interrupted");
@@ -183,6 +185,7 @@ jx_t *jcnjoin(jx_t *jl, jx_t *jr, int left, int right)
 			if (!*r)
 				jx_append(result, jx_copy(scan));
 		}
+		free(rightmatch);
 	}
 
 	/* Return the result */
@@ -404,7 +407,8 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 		for (g = 0, scan = jx_first(arr); scan; scan = jx_next(scan)) {
 			if (jx_interrupt) {
 				jx_break(scan);
-				return jx_error_null(NULL, "intr:Interrupted");
+				result = jx_error_null(NULL, "intr:Interrupted");
+				goto ReturnResult;
 			}
 
 			/* Is this element a nested array? */
@@ -414,10 +418,12 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 					if (jx_interrupt) {
 						jx_break(gscan);
 						jx_break(scan);
-						return jx_error_null(NULL, "intr:Interrupted");
+						result = jx_error_null(NULL, "intr:Interrupted");
+						goto ReturnResult;
 					}
 
 					/* Invoke the aggregators on "this" */
+					assert(groupag != NULL);
 					local = jx_context(context, gscan, JX_CONTEXT_THIS | JX_CONTEXT_NOFREE);
 					jcag(calc->u.ag, local, groupag[g]);
 					if (nongroup)
@@ -453,15 +459,16 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 				 * and return an error null.
 				 */
 				if (jx_interrupt) {
-					jx_free(result);
 					jx_break(gscan);
 					jx_break(scan);
-					return jx_error_null(NULL, "intr:Interrupted");
+					jx_free(result);
+					result = jx_error_null(NULL, "intr:Interrupted");
+					goto ReturnResult;
 				}
 
 				/* Evaluate with element as "this" */
 				local = jx_context(context, gscan, JX_CONTEXT_THIS | JX_CONTEXT_NOFREE);
-				tmp = jx_calc(calc, local, ag ? groupag[g] : NULL);
+				tmp = jx_calc(calc, local, groupag ? groupag[g] : NULL);
 				jx_context_free(local);
 
 				/* If null/false, skip it, if true add element*/
@@ -484,8 +491,8 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 			 * and return an error null.
 			 */
 			if (jx_interrupt) {
-				jx_free(result);
-				return jx_error_null(NULL, "intr:Interrupted");
+				result = jx_error_null(NULL, "intr:Interrupted");
+				goto ReturnResult;
 			}
 
 			local = jx_context(context, scan, JX_CONTEXT_THIS | JX_CONTEXT_NOFREE);
@@ -503,6 +510,7 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 		}
 	}
 
+ReturnResult:
 	/* Clean up */
 	jx_calc_ag(NULL, ag);
 	if (ngroups > 0) {
@@ -830,7 +838,7 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 			/* Evaluate using blank agdata */
 			localag = jx_calc_ag(calc, NULL);
 			result = jx_calc(calc->u.ag->expr, context, localag);
-			localag = jx_calc_ag(NULL, localag);
+			(void)jx_calc_ag(NULL, localag);
 		} else {
 			/* Evaluate expr, but use *this* agdata to do it */
 			result = jx_calc(calc->u.ag->expr, context, agdata);

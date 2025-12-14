@@ -97,7 +97,6 @@ void jx_grid(jx_t *json, jxformat_t *format)
 		wdata = jx_mbs_width(text);
 		if (wdata > width) {
 			pad[c] = wdata - width;
-			width = wdata;
 		}
 
 		/* If this is the highest key, then increase rowheight */
@@ -250,6 +249,8 @@ void jx_grid(jx_t *json, jxformat_t *format)
 
 	/* Discard the "explain" data */
 	jx_free(explain);
+	free(widths);
+	free(pad);
 
 	/* Done! */
 	return;

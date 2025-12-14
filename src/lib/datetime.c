@@ -1117,6 +1117,10 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 			sprintf(s, "%dS", jdt.second);
 			s += strlen(s);
 		}
+
+		/* If all units were 0, then as at least want "P0D" */
+		if (s == &buf[1])
+			strcpy(s, "0D");
 		return jx_string(buf, -1);
 	} else if (aslocale) {
 		/* Start by converting to binary, and then back struct tm.

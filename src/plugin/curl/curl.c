@@ -26,6 +26,7 @@ typedef enum {
 	OPT_USERNAME_,		/* (user) Use Authentication: Basic */
 	OPT_PASSWORD_,		/* (pass) Password to pair with OPT_USERNAME_ */
 	OPT_BEARER_,		/* (token) Use Authentication: Bearer */
+	OPT_INSECURE,		/* Don't verify remote site's certificate */
 	OPT_CONTENT,	 	/* Send content with the request */
 	OPT_CONTENTTYPE_,	/* (mimetype) Define the Content-Type of the request content */
 	OPT_HEADER_,		/* (headerlines) Add header request lines */
@@ -293,6 +294,9 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
 			break;
+		case OPT_INSECURE:
+			curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+			break;
 		case OPT_CONTENT:
 			if (!data)
 				return jx_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
@@ -358,6 +362,13 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 
 	}
 	return NULL;
+}
+
+/* This is normally used for progress meters, but we use it to abort big
+ * downloads when the user hits ^C.
+ */
+static int curlProgress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
+	return jx_interrupt;
 }
 
 /* Construct a CURL request, send it, and receive the response.  "fn" is the
@@ -523,6 +534,8 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curlreceive);
 		curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&hdr);
 	}
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, curlProgress);
 
 	/* Do it */
 	result = curl_easy_perform(curl);
@@ -910,6 +923,7 @@ char *plugincurl()
 	jx_append(curl, jx_key("username_", jx_from_int(OPT_USERNAME_)));
 	jx_append(curl, jx_key("password_", jx_from_int(OPT_PASSWORD_)));
 	jx_append(curl, jx_key("bearer_", jx_from_int(OPT_BEARER_)));
+	jx_append(curl, jx_key("insecure", jx_from_int(OPT_INSECURE)));
 	jx_append(curl, jx_key("content", jx_from_int(OPT_CONTENT)));
 	jx_append(curl, jx_key("contentType_", jx_from_int(OPT_CONTENTTYPE_)));
 	jx_append(curl, jx_key("header_", jx_from_int(OPT_HEADER_)));

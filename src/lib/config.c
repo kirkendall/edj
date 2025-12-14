@@ -470,6 +470,7 @@ void jx_config_save(const char *name)
 		fclose(fp);
 	}
 	jx_free(copy);
+	free(pathname);
 }
 
 /* Look up the section in config.styles for a given style.  There are two ways

@@ -50,7 +50,12 @@ do
 			echo "<tr class=\"$sections\"><td>$dir</td><td><a target=\"_PARENT\" href=\"../index.html?f=${i/.html/}\">$f</a></td><td>$description</td></tr>" >>INTRO.html
 
 			# Generate the sidebar's list
-			echo "<a id=\"$f\" class=\"$sections function\" href=\"../index.html?f=${i/.html}\" target=\"_PARENT\">$f()</a>" >>sidebar.html
+			if  [ "$f" = length ]
+			then
+				echo "<a id=\"$f\" class=\"$sections function\" href=\"../index.html?f=${i/.html}\" target=\"_PARENT\">$f</a>" >>sidebar.html
+			else
+				echo "<a id=\"$f\" class=\"$sections function\" href=\"../index.html?f=${i/.html}\" target=\"_PARENT\">$f()</a>" >>sidebar.html
+			fi
 		done
 		;;
 	esac

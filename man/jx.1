@@ -76,7 +76,7 @@ but if you want to use some of those flags then
 option makes it clear.
 
 .TP
--u
+.B -u
 This option allows jx to update any data files named on the command line,
 if their data was changed via assignments.
 This is often used when jx is constructing JSON documents from other data
@@ -379,6 +379,8 @@ The types of text that can have their attributes set this way include
 and
 .B gridline
 (Column separators in "table=grid").
+The full list is stored in config.styles and may vary depending on which
+plugins are loaded.
 Their attributes are:
 .TS
 c c l.
@@ -404,7 +406,7 @@ specify the "daily" rollover method for the "log" plugin via
 or
 .B -llog,daily
 or
-.B -llog -splugin.log=daily.
+.B -llog -splugin.log.rollover=daily.
 
 .SS "SH OUTPUT"
 The "sh" table output format deserves a bit more discussion.
@@ -435,23 +437,23 @@ For a full description of the syntax, see the
 jx web page.
 In short, though, the extensions are:
 .IP \ \(bu 3n
-.IB array @ filter
+.IB array # filter
 and
-.IB array @@ filter
+.IB array ## filter
 operators to transform arrays.
 .IP \ \(bu 3n
 A
-.IB table @= table,
-.IB table @< table
+.IB table #= table,
+.IB table #< table
 and
-.IB table @> table
+.IB table #> table
 
 database join operators.
-.B @=
+.B #=
 is natural join,
-.B @<
+.B #<
 is left natural join, and
-.B @>
+.B #>
 is right natural join.
 A table is simply an array of objects.
 .IP \ \(bu 3n
@@ -461,12 +463,24 @@ A table is simply an array of objects.
 .IB table .unroll ( nest_list )
 functions to organize arrays of objects.
 .IP \ \(bu 3n
-.IB expr .find( value )
+.IB data .find( value )
 to search for a value within a large data structure.
 Also,
 .IB table [ key:value ]
 notation to locate return an element from an array of objects, based on the
 contents of the object.
+.IP \ \(bu 3n
+.IB data @ expr
+Searches through
+.I data
+for any values that make
+.I expr
+true.
+.IP \ \(bu 3n
+A
+.BI diff( old , new )
+function for comparing two arrays or objects, and returning a list of their
+differences.
 .IP \ \(bu 3n
 Aggregate functions including
 .IB min( expr ),
@@ -480,6 +494,11 @@ A
 notation for appending to an array variable.
 .IP \ \(bu 3n
 A rather full-featured SQL "SELECT" statement.
+.IP \ \(bu 3n
+A version of MySQL's "EXPLAIN" command.
+Also an
+.BI explain( table )
+function.
 .P
 jx also implements many JavaScript operators, functions, and commands.
 It does not support classes though, or functions that alter data such as
@@ -568,13 +587,13 @@ This outputs 7.
 makes a pretty decent calculator.
 
 .TP
-1..10
+1...10
 Output an array of integers from 1 to 10.
 
 .TP
-1..10@{n:this, \"n^2\":this*this}
+1...10#{n:this, \"n^2\":this*this}
 For each element of the array, construct an object.
-The @ operator loops over the elements from the left operand (an array)
+The # operator loops over the elements from the left operand (an array)
 and applies the right operand (an expression) to them with "this" set to
 the array element's value.  The {...} notation is an object generator.
 The result is an array of objects, which
@@ -608,34 +627,34 @@ test.scores.orderBy(["name","run"])
 Output the same table, but sorted by name and run.
 
 .TP
-test.scores@run==1
+test.scores#run==1
 Only output rows for run 1.
-The @ and @@ operators take an array as the left operand and an expression
+The # and ## operators take an array as the left operand and an expression
 on the right to filter the array.
 If the expression returns a boolean value, then the element is omitted or
 kept.
 
 .TP
-test.scores@{run,score}
+test.scores#{run,score}
 Only output the "run" and "score" columns.
-If the right-hand operand of @ or @@ returns a value other than
+If the right-hand operand of # or ## returns a value other than
 .B null, true
 or
 .B false
 then it is used instead of the array's element.
 
 .TP
-test.scores.groupBy("run")@{run,avgScore:avg(score)}
+test.scores.groupBy("run")#{run,avgScore:avg(score)}
 This groups the records by score, and then computes the average score
 within each group.
 .BI avg( x )
 is an aggregate function, meaning it first accumulates data across all rows
 of the data (or all in the group, in this case) and goes back and makes the
 cumulative result available when evaluating each row.
-The @ operator only adds one row per group.
+The # operator only adds one row per group.
 
 .TP
-test.scores.groupBy("run","total")@{run,avgScore:avg(score)}
+test.scores.groupBy("run","total")#{run,avgScore:avg(score)}
 The difference here is, groupBy() is passed an extra parameter that causes
 an extra row to be added for showing the overall average.
 
@@ -648,19 +667,17 @@ Internally, the SQL "SELECT" is translated to
 native expression syntax so it's about as efficient either way.
 
 .TP
-test.scores.groupBy("run")@@{run,avgScore:avg(score)}
-The difference between @@ and @ is that when groups are used, @ only outputs one
-value per group while @@ outputs one item per row.
+test.scores.groupBy("run")##{run,avgScore:avg(score)}
+The difference between ## and # is that when groups are used, # only outputs one
+item per group while ## outputs one item per row.
 In this example, we get a separate copy of each row for each name, even though
 the name isn't included in the resulting rows.
 
 .TP
-test.scores.orderBy("name").groupBy("name")@{name,avgScore:avg(score)}
+test.scores.groupBy("name")#{name,avgScore:avg(score)}
 Compute the average score for each name.
-Note that groupBy() only compares adjacent items when grouping, so we
-need to explicitly sort by name before we can group by name.
-This wasn't an issue when grouping by run because the data was already
-sorted by run.
+Note that test.scores is ordered by "run",
+so groupBy() must re-sort the data by "name" to achieve grouping by "name".
 
 .TP
 test..deepest
@@ -668,6 +685,8 @@ This outputs the value of test.deep.deeper.deepest,
 which happens to be 3.
 The ".." operator digs down through multiple layers of objects, if necessary,
 to find the requested name.
+(For clarity: two dots is "deep search", three dots is "integer range".
+Two dots has a much higher precedence than three dots.)
 
 .TP
 test.cust[0].contact[type:"address"]

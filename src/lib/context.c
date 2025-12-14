@@ -715,7 +715,7 @@ jx_t *jx_context_by_key(jxcontext_t *context, char *key, jxcontext_t **reflayer)
                 }
 
                 /* If context data is an object, check for a member */
-                if (context->data->type == JX_OBJECT) {
+                if (context->data && context->data->type == JX_OBJECT) {
                         val = jx_by_key(context->data, key);
                         if (val) {
 				if (reflayer)
@@ -1101,6 +1101,10 @@ int jx_context_declare(jxcontext_t **refcontext, char *key, jx_t *value, jxconte
 	/* Find the context layer.  Also scan for duplicate name. */
 	for (layer = NULL, scan = *refcontext; scan; scan = scan->older) {
 
+		/* Skip layers that don't have an object as their data */
+		if (!scan->data || scan->data->type != JX_OBJECT)
+			continue;
+
 		/* If this layer holds args/consts/vars, and one of them is
 		 * the name we're trying to declare, then return 0.  This
 		 * intentionally does NOT protect against the case where
@@ -1121,6 +1125,10 @@ int jx_context_declare(jxcontext_t **refcontext, char *key, jx_t *value, jxconte
 		if (!layer && (scan->flags & flags) == flags)
 			layer = scan;
 	}
+
+	/* If we didn't find a layer where we can vars/consts, then fail. */
+	if (!layer)
+		return 0;
 
 	/* Add it */
 	jx_append(layer->data, jx_key(key, value ? value : jx_null()));

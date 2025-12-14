@@ -226,18 +226,20 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 		/* Detect number or symbol.  If neither, we're done */
 		if (isdigit(*expr))
 		{
-			if (container->type != JX_ARRAY)
-			{
-			        /* EEE if (jx_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
-				if (defelem)
-					jx_break(defelem);
-			        return NULL;
-			}
-			step = jx_by_index(container, atoi(expr));
-			if (!step) {
-				if (defelem)
-					jx_break(defelem);
-				return NULL;
+			if (container) {
+				if (container->type != JX_ARRAY)
+				{
+					/* EEE if (jx_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
+					if (defelem)
+						jx_break(defelem);
+					return NULL;
+				}
+				step = jx_by_index(container, atoi(expr));
+				if (!step) {
+					if (defelem)
+						jx_break(defelem);
+					return NULL;
+				}
 			}
 			while (isdigit(*expr))
 				expr++;
@@ -250,39 +252,43 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 		}
 		else if (isalpha(*expr) || *expr == '_')
 		{
-			if (container->type != JX_OBJECT)
-			{
-			        /* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
-				if (defelem)
-					jx_break(defelem);
-			        return NULL;
+			if (container) {
+				if (container->type != JX_OBJECT)
+				{
+					/* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
+					if (defelem)
+						jx_break(defelem);
+					return NULL;
+				}
+				for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
+					key[i] = *expr++;
+				key[i] = '\0';
+				if (deep)
+					step = jx_by_deep_key(container, key);
+				else
+					step = jx_by_key(container, key);
 			}
-			for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
-				key[i] = *expr++;
-			key[i] = '\0';
-			if (deep)
-				step = jx_by_deep_key(container, key);
-			else
-				step = jx_by_key(container, key);
 		}
 		else if (*expr == '"' || *expr == '`')
 		{
-			if (container->type != JX_OBJECT)
-			{
-			        /* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
-				if (defelem)
-					jx_break(defelem);
-			        return NULL;
+			if (container) {
+				if (container->type != JX_OBJECT)
+				{
+					/* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
+					if (defelem)
+						jx_break(defelem);
+					return NULL;
+				}
+				quote = *expr++;
+				for (i = 0; i < sizeof key - 1 && *expr != quote; i++)
+					key[i] = *expr++;
+				key[i] = '\0';
+				expr++;
+				if (deep)
+					step = jx_by_deep_key(container, key);
+				else
+					step = jx_by_key(container, key);
 			}
-			quote = *expr++;
-			for (i = 0; i < sizeof key - 1 && *expr != quote; i++)
-				key[i] = *expr++;
-			key[i] = '\0';
-			expr++;
-			if (deep)
-				step = jx_by_deep_key(container, key);
-			else
-				step = jx_by_key(container, key);
 		}
 		else
 		{
@@ -302,7 +308,7 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 	/* If we were in a deferred array, then we need to make the returned
 	 * jx_t look like an element of that deferred array.
 	 */
-	if (defelem && !jx_is_deferred_element(container)) {
+	if (defelem && container && !jx_is_deferred_element(container)) {
 		/* We need to call jx_break() on the defelem to free up
 		 * the scanning resources.  Before we do that, though, we
 		 * need to make a copy of the returned value.

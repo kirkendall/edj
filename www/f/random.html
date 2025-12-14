@@ -36,6 +36,27 @@
         Returns a random integer from 0 to 5.
       </div>
 
+      <div class="example">
+        <kbd>function shuffle(arr:array):array {
+    var tmp, other, result = arr;
+    for (var i = 0 ... result.length-1) {
+        other = random(result.length);
+        if (other != i) {
+	    tmp = result[i];
+	    result[i] = result[other];
+	    result[other] = tmp;
+	}
+    }
+    return result;
+}</kbd>
+	<kbd>shuffle(["A","2","3","4","5","6","7","8","9","10","J","Q","K"])</kbd>
+	<samp>["2","3","Q","J","K","A","8","6","9","10","7","5","4"]</samp>
+	This defines a shuffle() function for randomly unsorting an array,
+	and then uses it on a typical array.
+	Please forgive the formatting of that function &mdash;
+	pasting into a jx command line only works properly for single lines.
+      </div>
+
     </details>
 
     <details>

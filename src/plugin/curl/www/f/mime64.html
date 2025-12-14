@@ -46,9 +46,9 @@
       </div>
 
       <div class="example">
-	<kbd>const headers = [ "Authentication: Basic " + mime64(userid + ":" + password) ]</kbd>
+	<kbd>const headers = [ Curl.header_, "Authentication: Basic " + mime64(userid + ":" + password) ]</kbd>
         This shows how you can build an "Authentication: Basic" header line.
-        It's wrapped in square brackets to make it an array because that's how the
+        It's in an array with <tt>Curl.header_</tt> because that's how the
         <a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</a>
         and
         <a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</a>
@@ -72,7 +72,7 @@
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?p=curl">plugin curl</a></td><td>Overview of the curl plugin</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlGet">curlGet()</td><td>Send an HTTP/HTTPS "GET" request</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=curl/curlPost">curlPost()</td><td>Send an HTTP/HTTPS "POST" request</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=blob">blob()</td><td>Convert binary data.</td></tr>

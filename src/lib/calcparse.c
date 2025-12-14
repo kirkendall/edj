@@ -874,6 +874,7 @@ static jxcalc_t *jcalloc(token_t *token)
 
 		/* Compile the regex */
 		err = regcomp((regex_t *)jc->u.regex.preg, tmp, ignorecase ? REG_ICASE : 0);
+		free(tmp);
 		if (err) {
 			char	buf[200];
 			/* Fetch the error messaged */

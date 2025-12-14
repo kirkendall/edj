@@ -195,7 +195,7 @@
           You can also specify a protocol such as "https://" before the name
           or address.
         </td>
-        <td>CURLOPT_PROXY, CURLOPT_HTTPPROXYTUNNEL</td>
+        <td>CURLOPT_PROXY,<br/>CURLOPT_HTTPPROXYTUNNEL</td>
       </tr>
       <tr>
         <td>CURL.username_</td>
@@ -211,7 +211,7 @@
           add the appropriate header line yourself via the
           <tt>CURL.reqHeader_</tt> flag.
         </td>
-        <td>CURLOPT_HTTPAUTH, CURLOPT_USERNAME</td>
+        <td>CURLOPT_HTTPAUTH,<br/>CURLOPT_USERNAME</td>
       </tr>
       <tr>
         <td>CURL.password_</td>
@@ -233,7 +233,19 @@
           which will probably require a user name and password.
           Token strings are often fairly long, but that shouldn't be a problem.
         </td>
-        <td>CURLOPT_HTTPAUTH, CURLOPT_XOAUTH2_BEARER</td>
+        <td>CURLOPT_HTTPAUTH,<br/>CURLOPT_XOAUTH2_BEARER</td>
+      </tr>
+      <tr>
+        <td>CURL.insecure</td>
+        <td></td>
+        <td>
+          For HTTPS requests, cURL normally tries to verify the server's
+          certificate.
+          This is a good thing!
+          But sometimes during development of a new client/server it can be
+          handy to skip that, temporarily, so that's what this option does.
+        </td>
+        <td>CURLOPT_VERIFYPEER</td>
       </tr>
       <tr>
         <td>CURL.content</td>
@@ -293,7 +305,7 @@
 	  used, then the response object will also contain "reqContent" and/or
 	  "headers" members.
 	</td>
-        <td>CURLOPT_DEBUGFUNCTION, CURLOPT_DEBUGDATA, CURLOPT_VERBOSE</td>
+        <td>CURLOPT_DEBUGFUNCTION,<br/>CURLOPT_DEBUGDATA,<br/>CURLOPT_VERBOSE</td>
       </tr>
       <tr>
         <td>CURL.reqContent</td>
@@ -308,7 +320,7 @@
 	  used, then the response object will also contain "reqHeaders" and/or
 	  "headers" members.
         </td>
-        <td>CURLOPT_COOKIEFILE, CURLOPT_COOKIEJAR</td>
+        <td></td>
       </tr>
       <tr>
         <td>CURL.cookies</td>
@@ -322,7 +334,7 @@
           cookiejar contains cookies from multiple domains then it will only
           send the appropriate ones.
         </td>
-        <td>CURLOPT_COOKIEFILE, CURLOPT_COOKIEJAR</td>
+        <td>CURLOPT_COOKIEFILE,<br/>CURLOPT_COOKIEJAR</td>
       </tr>
       <tr>
         <td>CURL.raw</td>
@@ -353,7 +365,7 @@
           If <tt>CURL.reqHeaders</tt> is also used, there will also be a
           "reqHeaders" member.
 	</td>
-	<td>CURLOPT_HEADERFUNCTION, CURLOPT_HEADERDATA</td>
+	<td>CURLOPT_HEADERFUNCTION,<br/>CURLOPT_HEADERDATA</td>
       </tr>
       <tr>
         <td>CURL.debugrcv</td>

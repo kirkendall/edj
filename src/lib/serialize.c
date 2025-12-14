@@ -71,10 +71,8 @@ static size_t jcseriallen(jx_t *json, char *buf, jxformat_t *format)
 	  	len = 2; /* Quotes around the string */
                 sublen = jx_mbs_escape(buf, json->text, -1, '"', format);
                 len += sublen;
-	  	if (buf) {
-	  	        buf += sublen;
-	  	        *buf++ = '"';
-	  	}
+	  	if (buf)
+	  	        buf[sublen] = '"';
 		break;
 
 	  case JX_NUMBER:
@@ -85,26 +83,20 @@ static size_t jcseriallen(jx_t *json, char *buf, jxformat_t *format)
 		else
 			tmp = json->text;
 		len += strlen(tmp);
-		if (buf) {
+		if (buf)
 			strcpy(buf, tmp);
-			buf += strlen(buf);
-		}
 		break;
 
 	  case JX_BOOLEAN:
 		len += strlen(json->text); /* simple value */
-		if (buf) {
+		if (buf)
 			strcpy(buf, json->text);
-			buf += strlen(buf);
-		}
 		break;
 
 	  case JX_NULL:
 		len += 4;
-		if (buf) {
+		if (buf)
 			strcpy(buf, "null");
-			buf += 4;
-		}
 		break;
 
 	  default:
