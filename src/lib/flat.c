@@ -106,9 +106,19 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 		nestlist = nestlist->next; /* undeferred */
 	}
 
-	/*  If nesting list is empty, return a copy of the table */
-	if (!nestlist || (nestlist->type == JX_ARRAY && !nestlist->first))
+	/* If nesting list is empty, return a copy of the table. */
+	if (!nestlist || (nestlist->type == JX_ARRAY && !nestlist->first)) {
+		/* Actually, it's a bit more complicated.  If we were passed
+		 * an object instead of a table, then we should convert it to
+		 * table by stuffing it into an array.
+		 */
+		if (table->type == JX_OBJECT) {
+			result = jx_array();
+			jx_append(result, jx_copy(table));
+			return result;
+		}
 		return jx_copy(table);
+	}
 
 	/* Start with an empty response array */
 	result = jx_array();
@@ -119,15 +129,15 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 		value = jx_by_expr(table, nestlist->text, NULL);/* undeferred */
 
 		/* Recursively unroll the nested value.  Since the name of
-		 * this member was passed as part of nestlist, we expect it
+		 * this member was passed as part of nestlist, we expect value
 		 * to be a table but if it isn't then jx_unroll() will return
 		 * an empty array.  Either way, it's an array.
 		 */
 		nested = jx_unroll(value, nestlist->next);
 
-		/* If nested is empty, either skip it or stuff an empty object
-		 * into it.  The empty object will allow the remainder of the
-		 * loop to add a row containing the current object.
+		/* If nested is empty, either skip the row or allow the
+		 * remainder of the loop to add a row containing the current
+		 * object.
 		 */
 		if (!nested->first) {
 			if (skipempty) {
