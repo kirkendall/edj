@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>try</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx try - Catch errors">
+    <meta name="keywords" content="command, command reference, try">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>try - Catch errors</h1>
+    <dl>
+      <dt>try <var>cmd</var> catch <var>catchcmd</var>
+      <br/>try <var>cmd</var> catch (<var>name</var>) <var>catchcmd</var>
+      <dd>
+      Execute <var>cmd</var>.
+      If it fails (generates an error) then run <var>catchcmd</var>.
+      <p>
+      Usually <var>cmd</var> will be a pair of curly braces containing a
+      series of commands.
+      It can also be a single statement terminated with a semicolon.
+      <p>
+      If you provide a parenthesized name after the <tt>catch</tt>
+      keyword, then a variable with that name will be created and set
+      to an object describing the error, while the <var>catchcmd</var>
+      is running.
+      The members of the object are:
+      <table>
+        <tr><td><tt>filename</tt></td><td>The name of the script file containing the code where the error was detected.  If there is no applicable file name (such as for interactively entered commands), this member may be omitted.</td></tr>
+        <tr><td><tt>line</tt></td><td>The line number within the script file where the error was detected. Also omitted for interactive commands.</td></tr>
+        <tr><td><tt>key</tt></td><td>A key (member name) intended to uniquely indicate the error type, and also guide translation to the user's preferred language.</td></tr>
+        <tr><td><tt>message</tt></td><td>Human-readable text describing the error.</td></tr>
+      </table>
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>try { 1/0; } catch (err) { {Oops:err}; }</kbd>
+	<samp>{
+<br/>&nbsp;&nbsp;"Oops":{
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;"key":"div0"
+<br/>&nbsp;&nbsp;&nbsp;&nbsp;"message":"division by 0"
+<br/>&nbsp;&nbsp;}
+<br/>}</samp>
+        The <var>cmd</var> contains a not-so-subtle division by zero error.
+        This is caught, and the <var>catchcmd</var> is run with <tt>err</tt>
+        set to an object describing the error.  To keep this example simple,
+        we just output it.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>JavaScript allows a <tt>finally</tt> <var>finalcmd</var> clause
+            as part of its <tt>try</tt> statement.
+            jx doesn't support <tt>finally</tt>.
+
+	<li>The "key" field, if present, is used to translate the message
+	    via the "messages" object.
+	    That object is loaded from a locale-specific file, typically
+	    /usr/share/jx/locale/$LC_MESSAGES/messages.json.
+
+	<li>The "message" field of the error object is human readable.
+	    It may be translated, so if you want to detect specific error types
+	    then you should use "key" instead of "message".
+
+	<li>In a future version of jx,
+	    the parenthesized name after the <tt>catch</tt> keyword
+	    may be extended to support a way to selectively catch some errors
+	    while allowing others to "percolate" out to either an outer
+	    <tt>try/catch</tt> or be reported to the user in the normal
+	    fashion.  I've often wished JavaScript could do that, but they
+	    don't seem to be in a rush.
+
+      </ul>
+    </details>
+
+  </body>
+</html>

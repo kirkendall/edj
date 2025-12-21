@@ -1248,8 +1248,9 @@ static jxcmdout_t *try_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 	if (!cmd->more)
 		return NULL;
 
-	/* If there's a key, then we need to add a context where that name
-	 * is an object describing the error.
+	/* If there's a key (a name in parentheses before "catch"), then we
+	 * need to add a context where that name is an object describing the
+	 * error.
 	 */
 	if (cmd->key) {
 
@@ -1302,7 +1303,7 @@ static jxcmd_t *throw_parse(jxsrc_t *src, jxcmdout_t **referr)
 	/* Allocate the jxcmd_t for it */
 	parsed = jx_cmd(src, &jcn_throw);
 
-	/* Parse the first (only?) argument. */
+	/* Parse the first (only?) argument.  It should be a string literal. */
 	jc = NULL;
 	end = err = NULL;
 	if (*src->str && *src->str != ';' && *src->str != '}') {
@@ -1310,25 +1311,6 @@ static jxcmd_t *throw_parse(jxsrc_t *src, jxcmdout_t **referr)
 		if (!jc || jc->op != JXOP_LITERAL)
 			goto BadArgs;
 		src->str = end;
-
-		/* Allow an error code */
-		if (jc && jc->u.literal->type == JX_NUMBER) {
-			/* Store the number in 'var' */
-			parsed->var = jx_int(jc->u.literal);
-
-			/* Don't need this expression anymore */
-			jx_calc_free(jc);
-			jc = NULL;
-
-			/* Try for another expression, if "," */
-			if (*end == ',') {
-				src->str = end + 1;
-				jc = jx_calc_parse(src->str, &end, &err, 0);
-				if (!jc || err || jc->op != JXOP_LITERAL)
-					goto BadArgs;
-				src->str = end;
-			}
-		}
 	}
 
 	/* Allow error text (a string literal).  If none, then use "throw" */
@@ -1371,7 +1353,7 @@ static jxcmd_t *throw_parse(jxsrc_t *src, jxcmdout_t **referr)
 		jc = NULL;
 	}
 
-	/* Must not be anymore arguments */
+	/* Must not be any more arguments */
 	if (*src->str && *src->str != ';' && *src->str != '}')
 		goto BadArgs;
 
