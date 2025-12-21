@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>common</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx common - Show which values occur in each array">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, common">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>common - Show which values occur in each array</h1>
+    <dl>
+      <dt>common(<var>arrays</var>:object|array, ..., <var>style</var>?:number)
+      <dd>
+      This function gives you a way to to compare two or more datasets to see
+      if anything is missing from some of them.
+      <p>
+      Given a set of arrays, <tt>common()</tt> returns a table with one row for
+      each distinct value from those arrays.
+      Each row includes the value, plus a column for each array indicating
+      whether that value occurs in that array.
+      <p>
+      Arrays may be passed either as members of an object, or separately.
+      The advantage of passing them in an object is that the member keys
+      will be used to label each array's column.
+      Arrays that are passed separately have no name, so their column labels
+      will simply be letters.
+      <p>
+      You may also optionally pass a <var>style</var> argument to control
+      the output format.
+      If you don't pass a <var>style</var> argument then the value of
+      <tt>config.common.style</tt> is used.
+      The value is a number, representing a bitmap of available features.
+      The's a <tt>Common</tt> object which defines constants representing
+      the style features, and the idea is that you'll use a
+      <a target="_PARENT" href="../index.html?op=bitwise">| (bitwise-OR)</a>
+      operator to combine the features you want.
+      There's also a <tt>Common.bits</tt> field which you can use with
+      <a target="_PARENT" href="../index.html?f=nameBits">nameBits()</a>
+      to decode a style.
+      The style features are:
+      <table class="referencelist">
+        <tr><td>Common.index<br/>Common.count<br/>Common.check<br/>Common.in</td><td>
+	  You can choose one of these to select what gets shown in the column
+	  of an array that does contain the value.
+	  <tt>Common.index</tt> shows the index number within the array where the value occurs.
+	  <tt>Common.count</tt> shows how many times the value occurs in the array.
+	  <tt>Common.check</tt> shows a checkmark (or heavy checkmark if it's the only one in the row).
+	  <tt>Common.in</tt> shows the value of the <tt>config.common.in</tt>
+	  option, which is "Y" by default.
+	</td></tr>
+	<tr><td>Common.all</td><td>
+	  This controls whether the values that are present in all arrays
+	  should be included in the result.
+	  The are included in the default style, but you might want to turn off
+	  this bit to omit those rows, allowing you to focus on the rows that
+	  show missing data.
+	</td></tr>
+	<tr><td>Common.inOnly<br/>Common.outOnly<br/>Common.mix<br/>Common.none</td><td>
+	  You can choose one of these to select what gets shown for rows
+	  where only some of the arrays contain the value (the opposite of
+	  <tt>Common.all</tt>).
+	  <tt>Common.inOnly</tt> shows rows where the value exists in only one array.
+	  <tt>Common.outOnly</tt> shows rows where the value is missing from only one array.
+	  <tt>Common.mix</tt> shows all rows where the value is missing from at least one array.
+	  <tt>Common.none</tt> doesn't show any rows where the value is missing from an array.
+	</td></tr>
+	<tr><td>Common.stats</td><td>
+	  This adds some extra rows to the result table, giving statistics
+	  about the status rows.
+	  These are: <ul>
+	    <li><tt>length</tt>: number of items in each input array.
+	    <li><tt>inOnly</tt>: number of rows where this array was the only one containing the value.
+	    <li><tt>outOnly</tt>: number of rows where this array was the only one <em>not</em> containing the value.
+	    <li><tt>spread</tt>: number of rows containing 1 match, 2 matches, etc.
+	  </ul>
+	  Note that the values in the <tt>spread</tt> row don't correspond to
+	  individual arrays.
+	  The first column is always a count of rows with one matching value
+	  (i.e., rows whose value exists in only one input array) regardless
+	  of which array that value comes from.
+	  The second column does the same for rows with two matches, and so on.
+	<tr><td>Common.noSort</td><td>
+	  Normally rows are sorted by the value column, similar to
+	  <a target="_PARENT" href="../index.html?f=oerderBy">.orderBy("value")</a>
+	  except that if you also use <tt>Common.stats</tt> then this will still
+	  leave the statistics rows at the bottom of the table.
+	  The <tt>Common.noSort</tt> flag disables this sorting.
+	</td></tr>
+	<tr><td>Common.force</td><td>
+	  The <tt>common()</tt> function works best on arrays of strings or
+	  numbers
+	  Normally the <tt>common</tt> function complains if you pass tables
+	  instead of arrays, mostly because the "value" column would just show
+	  "{object}" for every row.
+	  Not real useful.
+	  But <tt>common</tt> works for arrays of any type, including objects,
+	  and if you're doing further processing on the returned value then
+	  maybe it is useful after all?
+	  The <tt>Common.force</tt> flag allows you to use tables.
+	</td></tr>
+	<tr><td>Common.recheck</td><td>
+	  For the sake of speed, <tt>common()</tt> usually just compares the
+	  <a target="_PARENT" href="../index.html?f=hash">hash()</a> number
+	  for each value.
+	  There's a slight chance that different values will have the same
+	  hash number though, which would cause the result table to be
+	  inaccurate.
+	  The <tt>Common.recheck</tt> flag causes it to compare both the hash
+	  number and the values themselves, using the "strict" rules of the
+	  <a target="_PARENT" href="../index.html?op=equal">===</a> operator.
+	</td></tr>
+      </table>
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>const digits = [0,1,2,3,4,5,6,7,8,9];</kbd>
+	<kbd>const bits = [1,2,4,8,16];</kbd>
+	<kbd>const primes = [2,3,5,7,11,13];</kbd>
+	<kbd>common(digits, bits, primes)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>value</th><th>A</th><th>B</th><th>C</th></tr>
+	    <tr><td>0</td><td>Y</td><td></td><td></td></tr>
+	    <tr><td>1</td><td>Y</td><td>Y</td><td></td></tr>
+	    <tr><td>2</td><td>Y</td><td>Y</td><td>Y</td></tr>
+	    <tr><td>3</td><td>Y</td><td></td><td>Y</td></tr>
+	    <tr><td>4</td><td>Y</td><td>Y</td><td></td></tr>
+	    <tr><td>5</td><td>Y</td><td></td><td>Y</td></tr>
+	    <tr><td>6</td><td>Y</td><td></td><td></td></tr>
+	    <tr><td>7</td><td>Y</td><td></td><td>Y</td></tr>
+	    <tr><td>8</td><td>Y</td><td>Y</td><td></td></tr>
+	    <tr><td>9</td><td>Y</td><td></td><td></td></tr>
+	    <tr><td>11</td><td></td><td></td><td>Y</td></tr>
+	    <tr><td>13</td><td></td><td></td><td>Y</td></tr>
+	    <tr><td>16</td><td></td><td>Y</td><td></td></tr>
+	  </table>
+	</samp>
+        First we define three arrays, and then we pass their values to
+        <tt>common()</tt>.
+        Since <tt>common()</tt> doesn't know their names,
+        it uses "A", "B", and "C" as the column names.
+      </div>
+
+      <div class="example">
+	<kbd>common({digits, bits, primes}, Common.index | Common.inOnly)</kbd>
+	<samp>
+	  <table>
+	    <tr><th>value</th><th>digits</th><th>bits</th><th>primes</th></tr>
+	    <tr><td>0</td><td>0</td><td></td><td></td></tr>
+	    <tr><td>6</td><td>6</td><td></td><td></td></tr>
+	    <tr><td>11</td><td></td><td></td><td>4</td></tr>
+	    <tr><td>9</td><td>9</td><td></td><td></td></tr>
+	    <tr><td>13</td><td></td><td></td><td>5</td></tr>
+	    <tr><td>16</td><td></td><td>4</td><td></td></tr>
+	  </table>
+	</samp>
+	This time we bundle the arrays into an object, from which
+	<tt>common()</tt> can derive both the array values and their names.
+	Thus we get meaningful column names.
+	(Remember, <tt>{digits, bits, primes}</tt> is equivalent to
+	<tt>{"digits":digits, "bits":bits, "primes":primes}</tt>.)
+	We also pass some style flags, to show the array index numbers where
+	the value can be found, and to only show rows for values that exist
+	in only one array.
+	For example, you can see that 13 occurs only in primes[5], and 16
+	occurs only in bits[4].
+      </div>
+
+      <div class="example">
+        <kbd>common({digits, bits, primes}, Common.stats)</kbd>
+        <samp>
+	  <table>
+	    <tr><th>value</th><th>digits</th><th>bits</th><th>primes</th></tr>
+	    <tr><td>length</td><td>10</td><td>5</td><td>6</td></tr>
+	    <tr><td>inOnly</td><td>3</td><td>1</td><td>2</td></tr>
+	    <tr><td>outOnly</td><td>0</td><td>3</td><td>3</td></tr>
+	    <tr><td>spread</td><td>6</td><td>6</td><td>1</td></tr>
+	  </table>
+        </samp>
+        <kbd>common({digits, bits, primes}, Common.stats)[value:"inOnly"].digits</kbd>
+        <samp>3</samp>
+        Here's an example of <tt>Common.stats</tt>.
+        The <tt>length</tt> row shows the length of each input array.
+        The <tt>inOnly</tt> row shows how many values were unique to each input array.
+        The <tt>outOnly</tt> row shows how many values occurred in every array except this column's array.
+        The <tt>spread</tt> row shows that 6 values occurred in only one input array, 6 in two arrays, and 1 value occurred in all three arrays.
+        <p>
+        For a little extra fun, we extract the "inOnly" row's "digits" column
+        to see that three values only occur in "digits".
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>There are some options that affect the behavior of this function.
+            <table class="referencelist">
+              <tr><th>set command</th><th>config constant</th><th>Meaning</th></tr>
+              <tr><td>set common.in=Y</td><td>config.common.in:"Y"</td><td>Mark to show in columns containing the value</td></tr>
+              <tr><td>set common.out=""</td><td>config.common.out:""</td><td>Mark to show in columns <em>not</em> containing the value</td></tr>
+              <tr><td>set common.style=4</td><td>config.common.out:4</td><td>Default style number</td></tr>
+              <tr><td>set common.hashTable=10</td><td>config.common.hashTable:10</td><td>Size of hash table (2^n, so 10 means 1024)</td></tr>
+	    </table>
+        <li>The <tt>Common</tt> object also defines a <tt>Common.bits</tt>
+            member which you can pass to the
+            <a target="_PARENT" href="../index.html?f=nameBits">nameBits()</a>
+            function to decode a style number.
+            <div class="example">
+              <kbd>nameBits(config.common.style, Common.bits, "|")</kbd>
+              <samp>"in|all|mix"</samp>
+	      This decodes the default style from <tt>config.common.style</tt>.
+	      The "all|mix" part of the settings means all value lines are shown
+	      (but not the statistics lines).
+	      The "in" part means if the value is present in an array, then
+	      the <tt>config.common.in</tt> value will be displayed.
+	    </div>
+
+	<li>Since this uses
+	    <a target="_PARENT" href="../index.html?f=hash">hash()</a>
+	    numbers as the first test, it is subject to the quirks of
+	    that function.
+	    For example, integer 2 is different from floating point 2.0,
+	    and strings are case-sensitive.
+
+	<li>The <a target="_PARENT" href="../index.html?f=diff">diff()</a>
+	    function also compares two arrays.
+	    You'll probably want to use both of them at times.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=hash">hash()</a></td><td>Generate a distinctive hash number for a value.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=nameBits">nameBits()</a></td><td>Decode bitmapped flags.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=diff">diff()</a></td><td>Find differences between two arrays.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

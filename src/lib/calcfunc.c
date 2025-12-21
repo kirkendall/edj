@@ -94,6 +94,7 @@ static jx_t *jfn_parseFloat(jx_t *args, void *agdata);
 static jx_t *jfn_find(jx_t *args, void *agdata);
 static jx_t *jfn_hash(jx_t *args, void *agdata);
 static jx_t *jfn_diff(jx_t *args, void *agdata);
+static jx_t *jfn_common(jx_t *args, void *agdata);
 static jx_t *jfn_date(jx_t *args, void *agdata);
 static jx_t *jfn_time(jx_t *args, void *agdata);
 static jx_t *jfn_dateTime(jx_t *args, void *agdata);
@@ -196,7 +197,8 @@ static jxfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", 
 static jxfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
 static jxfunc_t hash_jf        = {&find_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
 static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new?:array|object, style?:number=config.diffstyle", "table", jfn_diff};
-static jxfunc_t date_jf        = {&diff_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
+static jxfunc_t common_jf      = {&diff_jf,        "common", 	  "columns: object, style?:number", "table", jfn_common};
+static jxfunc_t date_jf        = {&common_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
 static jxfunc_t time_jf        = {&date_jf,        "time",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_time};
 static jxfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
 static jxfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, action?:string|number|true, ...", "null",	jfn_timeZone};
@@ -2271,6 +2273,85 @@ static jx_t *jfn_diff(jx_t *args, void *agdata)
 			style = (jxdiffstyle_t)jx_int(args->first->next);
 	}
 	return jx_diff(oldjx, newjx, style);
+}
+
+static jx_t *jfn_common(jx_t *args, void *agdata)
+{
+	int	ncols;
+	const char **keys;
+	jx_t	**columns;
+	int	style;
+	jx_t	*arg, *mem;
+	const char *anon[] = {"A","B","C","D","E","F","G","H","I","J",NULL};
+	int	anonCounter;
+	jx_t	*result;
+
+	/* Count columns.  They could be members of an object, or anonymous
+	 * arrays.
+	 */
+	style = jx_config_get_int("common", "style");
+	for (ncols = 0, arg = args->first; arg; arg = arg->next) { /* undeferred */
+		if (arg->type == JX_NUMBER)
+			style = jx_int(arg);
+		else if (arg->type == JX_ARRAY)
+			ncols++;
+		else if (arg->type == JX_OBJECT) {
+			for (mem = arg->first; mem; mem = mem->next) {
+				if (mem->first->type == JX_ARRAY)
+					ncols++;
+			}
+		}
+	}
+
+	/* Collect the names and data for each column */
+	keys = calloc(ncols + 1, sizeof(char *));
+	columns = calloc(ncols + 1, sizeof(jx_t *));
+	anonCounter = 0;
+	for (ncols = 0, arg = args->first; arg; arg = arg->next) { /* undeferred */
+		if (arg->type == JX_NUMBER)
+			; /* Already handled */
+		else if (arg->type == JX_ARRAY) {
+			if ((style & JX_COMMON_FORCE) == 0 && jx_is_table(arg))
+				goto ShouldNotBeTable;
+			keys[ncols] = anon[anonCounter++];
+			if (keys[ncols] == NULL)
+				goto TooManyAnons;
+			columns[ncols] = arg;
+			ncols++;
+		} else if (arg->type == JX_OBJECT) {
+			for (mem = arg->first; mem; mem = mem->next) {
+				if (mem->first->type == JX_ARRAY) {
+					if ((style & JX_COMMON_FORCE) == 0 && jx_is_table(arg))
+						goto ShouldNotBeTable;
+					keys[ncols] = mem->text;
+					columns[ncols] = mem->first;
+					ncols++;
+				}
+			}
+		} else
+			goto BadArgs;
+	}
+
+	/* Generate the result table */
+	result = jx_common(keys, columns, style);
+	free(keys);
+	free(columns);
+	return result;
+
+ShouldNotBeTable:
+	free(keys);
+	free(columns);
+	return jx_error_null(NULL, "noTable:The %s() function doesn't like tables", "common");
+
+TooManyAnons:
+	free(keys);
+	free(columns);
+	return jx_error_null(NULL, "tooManyAnons:The %s() function can't handle that many anonymous arrays.", "common");
+
+BadArgs:
+	free(keys);
+	free(columns);
+	return jx_error_null(NULL, "badArgs:The %s() accepts arrays, objects of arrays, and maybe a style number.", "common");
 }
 
 
