@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>length</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx length - Return the length of a string or array">
+    <meta name="keywords" content="string, array, jx, function reference, length">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>length - Return the length of an string or array</h1>
+    <dl>
+      <dt><var>str</var>.length
+      <br/><var>arr</var>.length
+      <dd>
+      This returns the number of characters in a string, or the number of
+      elements in an array.
+      It isn't really a function, so you aren't expected to put parentheses
+      after the name.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Fortune".length</kbd>
+	<samp>7</samp>
+        There are 7 characters in "Fortune".
+      </div>
+
+      <div class="example">
+	<kbd>["North","East","South","West"].length</kbd>
+	<samp>4</samp>
+        There are 4 elements in the array.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Probably this should have been a function,
+            but it isn't in JavaScript so for the sake of compatibility it
+            isn't here either.
+
+        <li>This is often used to loop over the elements of an array.
+            When doing that, remember that array subscripts start at 0
+            so the highest subscript is <tt>length-1</tt>.
+            <div class="example">
+              <kbd>for (i = 0 ... config.styles.length - 1) print config.styles[i].style + "\n"</kbd>
+              <samp>normal<br/>
+                prompt<br/>
+                result<br/>
+                error<br/>
+                debug<br/>
+                gridhead<br/>
+                gridcell</samp>
+	      The <tt>config.styles</tt> array stores the colors and other
+	      character attributes that jx uses for various meanings.
+	      Here we're looping over the array and printing the style names.
+	      Note the use of <tt>length-1</tt> in the for-loop.
+            </div>
+
+        <li>Since some Unicode characters are zero-width and some are
+	    double-width, length and width are different.
+	    See the <a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a>
+	    function for width.
+
+	<li>In UTF-8, the number of bytes required for each character varies.
+	    <tt>length</tt> counts characters, not bytes.  If you want to count
+	    the number of bytes in a string, probably the cleanest way to do it
+	    is to convert the string to hexadecimal and divide the hex string's
+	    length by 2.
+	    <div class="example">
+	      <kbd>const smile="\U0001f600"</kbd>
+	      <kbd>smile.length</kbd>
+	      <samp>1</samp>
+	      <kbd>smile.width()</kbd>
+	      <samp>2</samp>
+	      <kbd>smile.hex().length / 2</kbd>
+	      <samp>4</samp>
+	      First we define <tt>smile</tt> to be the smile-face emoji.
+	      Its length is 1 character, but its width is two columns,
+	      and its internal UTF-8 representation requires 4 bytes.
+	    </div>
+
+	<li>JavaScript uses UTF-16 internally, so characters outside Unicode's
+	    Basic Multilingual Plane must be represented by surrogate pairs.
+	    This causes JavaScript to count some characters (such as emoji)
+	    as having length 2.
+	    In jx, though, all characters are counted as having length 1.
+
+	<li>Attempting to use <tt>length</tt> on an object will yield weird
+	    results.  If the object actually contains a member named "length"
+	    then that will be returned.  Otherwise 1 is returned, because
+	    that makes some XML-tainted data easier to process.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a></td><td>Return the width of a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=hex">hex()</a></td><td>Convert a string or number to hexadecimal</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=ellipsis">...</a></td><td>Operator to return an array of integers</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>
