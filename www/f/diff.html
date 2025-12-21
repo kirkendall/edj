@@ -48,7 +48,7 @@
 	  With <tt>Diff.span</tt> though, each cluster of differing lines
 	  will get a row instead, resulting in a more concise table.
 	  This adds a "span" column (or "oldspan" and "newspan" when used
-	  with <tt>Duff.beside</tt>).
+	  with <tt>Diff.beside</tt>).
 	</td></tr>
 	<tr><td>Diff.beside</td><td>
 	  Without this, each differing entry from either input array/object
@@ -157,6 +157,11 @@
 	  Because of this, there's a very slight chance that it could fail to
 	  spot some differences.
 
+	<li>There is also a
+	  <a target="_PARENT" href="../index.html?f=common">common()</a>
+	  function which compares arrays in a different way.
+	  You'll probably find uses for both.
+
 </samp>
 
 </ul>
@@ -166,6 +171,7 @@
 <summary>See Also</summary>
 <table>
 <tr><td><a target="_PARENT" href="../index.html?f=hash">hash()</a></td><td>Generate a hash number for any value</td></tr>
+<tr><td><a target="_PARENT" href="../index.html?f=common">common()</a></td><td>Return a table showing which values occur in which arrays.</td></tr>
 </table>
 </details>
 

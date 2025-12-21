@@ -446,9 +446,26 @@ typedef enum {
 	JX_DIFF_EDIT = 8,
 	JX_DIFF_CONTEXT = 16
 } jxdiffstyle_t;
+typedef enum {
+	JX_COMMON_INDEX = 1,
+	JX_COMMON_COUNT = 2,
+	JX_COMMON_CHECK = 3,
+	JX_COMMON_IN = 0,
+	JX_COMMON_ALL = 4,
+	JX_COMMON_IN_ONLY = 8,
+	JX_COMMON_OUT_ONLY = 16,
+	JX_COMMON_NONE = 24,
+	JX_COMMON_MIX = 0,
+	JX_COMMON_STATS = 32,
+	JX_COMMON_NOSORT = 64,
+	JX_COMMON_FORCE = 128,
+	JX_COMMON_RECHECK = 256
+} jxcommonstyle_t;
 extern int jx_hash(jx_t *json, int seed);
 extern jx_t *jx_diff(jx_t *jxold, jx_t *jxnew, jxdiffstyle_t diff);
 extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
+extern jx_t *jx_common(const char **keys, jx_t **values, int style);
+
 
 /* Configuration data */
 jx_t *jx_config, *jx_system;

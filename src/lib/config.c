@@ -45,6 +45,12 @@ static const char *defaultconfig = "{"
 		"\"null\":\"\","
 	"},"
 	"\"diffstyle\":13," /* JX_DIFF_BESIDE|JX_DIFF_VALUE|JX_DIFF_EDIT */
+	"\"common\":{"
+		"\"in\":\"Y\","
+		"\"out\":\"\","
+		"\"style\":4,"
+		"\"hashTable\":10"
+	"},"
 	"\"emptyobject\":\"object\","
 	"\"defersize\":10000000,"
 	"\"deferexplain\":100,"
@@ -377,6 +383,24 @@ void jx_config_load(const char *name)
 		jx_append(value, jx_key("context", jx_from_int(JX_DIFF_CONTEXT)));
 		jx_append(value, jx_key("bits", jx_parse_string("[\"value\",\"span\",\"beside\",\"edit\",\"context\"]")));
 		jx_append(jx_system, jx_key("Diff", value));
+
+		/* Add a "Common" object with constants for selecting the format */
+		value = jx_object();
+		jx_append(value, jx_key("index", jx_from_int(JX_COMMON_INDEX)));
+		jx_append(value, jx_key("count", jx_from_int(JX_COMMON_COUNT)));
+		jx_append(value, jx_key("check", jx_from_int(JX_COMMON_CHECK)));
+		jx_append(value, jx_key("in", jx_from_int(JX_COMMON_IN)));
+		jx_append(value, jx_key("all", jx_from_int(JX_COMMON_ALL)));
+		jx_append(value, jx_key("inOnly", jx_from_int(JX_COMMON_IN_ONLY)));
+		jx_append(value, jx_key("outOnly", jx_from_int(JX_COMMON_OUT_ONLY)));
+		jx_append(value, jx_key("none", jx_from_int(JX_COMMON_NONE)));
+		jx_append(value, jx_key("mix", jx_from_int(JX_COMMON_MIX)));
+		jx_append(value, jx_key("stats", jx_from_int(JX_COMMON_STATS)));
+		jx_append(value, jx_key("noSort", jx_from_int(JX_COMMON_NOSORT)));
+		jx_append(value, jx_key("force", jx_from_int(JX_COMMON_FORCE)));
+		jx_append(value, jx_key("recheck", jx_from_int(JX_COMMON_RECHECK)));
+		jx_append(value, jx_key("bits", jx_parse_string("[[\"index\",\"count\",\"check\",\"in\"],\"all\",[\"inOnly\",\"outOnly\",\"none\",\"mix\"],\"stats\",\"noSort\",\"force\",\"recheck\"]")));
+		jx_append(jx_system, jx_key("Common", value));
 
 		/* Add members to jx_system, describing the environment */
 		jx_append(jx_system, jx_key("runmode", jx_string("interactive", -1)));

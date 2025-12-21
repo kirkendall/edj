@@ -91,7 +91,7 @@ static struct {
 	{"BITXOR",	"^",	160,	0,	JCOP_INFIX},
 	{"BOOLEAN",	"BOO",	-1,	0,	JCOP_OTHER},
 	{"COALESCE",	"??",	130,	0,	JCOP_INFIX},
-	{"COLON",	":",	121,	0,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
+	{"COLON",	":",	114,	0,	JCOP_RIGHTINFIX}, /* sometimes part of ?: */
 	{"COMMA",	",",	110,	0,	JCOP_INFIX},
 	{"DESCENDING",	"DES",	3,	1,	JCOP_POSTFIX},
 	{"DISTINCT",	"DIS",	2,	1,	JCOP_OTHER},
@@ -2011,6 +2011,11 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 				} else if (top[-1]->op != JXOP_NAME) {
 					return "The . operator requires a name on the right";
 				}
+			} else if (top[-2]->op == JXOP_COLON) {
+				if (stack->sp < 3
+				 || (top[-3]->op != JXOP_NAME
+				 && (top[-3]->op != JXOP_LITERAL || top[-3]->u.literal->type != JX_STRING)))
+					return "The : should be preceded by a name, not an expression";
 			}
 
 			/* Use x's as parameters */

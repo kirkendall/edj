@@ -198,7 +198,18 @@
 	<tt>.length</tt> attribute instead of <tt>count()</tt>.
       </div>
 
-
+      <div class="example">
+        <kbd>test.scores # score</kbd>
+        <samp>[10,20,30,25,30,35,30,25,40]</samp>
+        The <tt>#</tt> operator is a convenient way to extract a single column
+        from a table.
+        Here we're extracting the <tt>score</tt> column
+        from the <tt>test.scores</tt> table.
+        There's no magic here &mdash;
+        we're looping over the rows, evaluating <tt>score</tt> for each row,
+        and collecting the results in an array.
+        This does omit <tt>null</tt> or <tt>false</tt> values though.
+      </div>
 
     </details>
 
