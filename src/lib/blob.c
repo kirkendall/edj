@@ -233,7 +233,7 @@ jx_t *jx_blob_convert(const char *data, size_t len, jxblobconv_t conversion)
 		/* Convert it */
 		c = result->text;
 		for (scan = data; scan < &data[len]; scan++) {
-			if ('\0' == *scan) {
+			if (!*scan) {
 				/* U+ffff, which is designated as an
 				 * internal-use-only non-character.
 				 * In UTF-8 that represented by efbfbf.
@@ -245,7 +245,7 @@ jx_t *jx_blob_convert(const char *data, size_t len, jxblobconv_t conversion)
 				/* ASCII */
 				*c++ = *scan;
 			} else if (*(unsigned char *)scan < 192) {
-				/* UTF-8 in range 127-191 starts with c2 */
+				/* UTF-8 in range 128-191 starts with c2 */
 				*c++ = (char)0xc2;
 				*c++ = *scan;
 			} else {
