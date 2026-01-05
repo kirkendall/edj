@@ -1191,6 +1191,23 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 			result = jx_from_int(~jx_int(right));
 		break;
 
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+		if (left->type == JX_NUMBER && right->type == JX_NUMBER) {
+			/* Convert to binary */
+			il = jx_int(left);
+			ir = jx_int(right);
+
+			/* Do the bitwise math */
+			if (calc->op == JXOP_BITLEFT)
+				result = jx_from_int(il << ir);
+			else /* JXOP_BITRIGHT */
+				result = jx_from_int(il >> ir);
+		}
+		break;
+
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:

@@ -86,8 +86,10 @@ static struct {
 	{"ASSIGN",	"ASGN",	110,	0,	JCOP_INFIX},
 	{"BETWEEN",	"BTWN",	121,	0,	JCOP_INFIX},
 	{"BITAND",	"&",	160,	0,	JCOP_INFIX},
+	{"BITLEFT",	"<<",	200,	0,	JCOP_INFIX},
 	{"BITNOT",	"~",	240,	0,	JCOP_PREFIX},
 	{"BITOR",	"|",	150,	0,	JCOP_INFIX},
+	{"BITRIGHT",	">>",	200,	0,	JCOP_INFIX},
 	{"BITXOR",	"^",	160,	0,	JCOP_INFIX},
 	{"BOOLEAN",	"BOO",	-1,	0,	JCOP_OTHER},
 	{"COALESCE",	"??",	130,	0,	JCOP_INFIX},
@@ -268,6 +270,8 @@ void jx_calc_dump(jxcalc_t *calc)
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
 	  case JXOP_NOT:
 	  case JXOP_AND:
 	  case JXOP_OR:
@@ -1011,6 +1015,8 @@ void jx_calc_free(jxcalc_t *jc)
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
 	  case JXOP_NOT:
 	  case JXOP_AND:
 	  case JXOP_OR:
@@ -1213,6 +1219,8 @@ static int jcisag(jxcalc_t *jc)
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
 	  case JXOP_NOT:
 	  case JXOP_AND:
 	  case JXOP_OR:
@@ -2311,6 +2319,8 @@ static int parsecolon(jxcalc_t *jc)
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
 	  case JXOP_NOT:
 	  case JXOP_AND:
 	  case JXOP_OR:
@@ -2424,6 +2434,8 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 	  case JXOP_BITAND:
 	  case JXOP_BITOR:
 	  case JXOP_BITXOR:
+	  case JXOP_BITLEFT:
+	  case JXOP_BITRIGHT:
 	  case JXOP_NOT:
 	  case JXOP_AND:
 	  case JXOP_OR:
