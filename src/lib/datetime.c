@@ -375,6 +375,8 @@ static int parsetime(const char *str, jxdatetime_t *dt)
 			&dt->hour, ampm);
 	if (fields < 2)
 		return 1;
+	if (strncasecmp(ampm, "AM", 2) && strncasecmp(ampm, "PM", 2))
+		return 1;
 
 	/* If we got an am/pm indicator, then tweak the hour accordingly */
 	if (*ampm == 'A' || *ampm == 'a') {
@@ -387,6 +389,19 @@ static int parsetime(const char *str, jxdatetime_t *dt)
 
 	/* Parse the timezone */
 	parsetz(str, dt);
+	return 0;
+}
+
+/* Convert a 3-letter month abbreviation to a month number.  Return 0 if not
+ * a valid month.
+ */
+static int convertMonthName(char mon[3])
+{
+	const char *names = "JanFebMarAprMayJunJulAugSepOctNovDec";
+	int	month;
+	for (month = 0; month < 12; month++)
+		if (!strncasecmp(&names[month * 3], mon, 3))
+			return month + 1;
 	return 0;
 }
 
@@ -433,16 +448,29 @@ static int parsedatetime(const char *str, jxdatetime_t *dt)
 				return 0;
 			}
 
+			/* Military/Aviation DDMONYY format */
+			fields = sscanf(str, "%2d%3[A-Za-z]%2d", &dt->day, mon, &dt->year);
+			if (fields == 3) {
+				if (dt->day < 1 || dt->day > 31)
+					return 1; /* bad day of month */
+				dt->month = convertMonthName(mon);
+				if (!dt->month)
+					return 1; /* bad month */
+				if (dt->year < 70)
+					dt->year += 2000;
+				else
+					dt->year += 1900;
+				return 0;
+			}
+
 			/* RFC 5322 format, (used in email for example) */
 			if (sscanf(str, "%*[A-Za-z], %d %3[A-Za-z] %4d %2d:%2d:%2d %[-+]%2d%2d",
 			    &dt->day, mon, &dt->year,
 			    &dt->hour, &dt->minute, &dt->second,
 			    sign, &tzhour, &tzminute) == 9) {
-				/* Convert month to a number */
-				const char *names = "xxxJanFebMarAprMayJunJulAugSepOctNovDec";
-				for (dt->month = 1; strncmp(names + 3 * dt->month, mon, 3); dt->month++)
-					if (dt->month == 12)
-						return 1; /* bad month */
+				dt->month = convertMonthName(mon);
+				if (!dt->month)
+					return 1; /* bad month */
 
 				/* Convert time zone */
 				tzminute += 60 * tzhour;
