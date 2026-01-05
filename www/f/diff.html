@@ -122,7 +122,7 @@
 
 	<li>Often, <tt>diff()</tt> will be used to compare two tables
 	  (arrays of objects).
-	  If <tt>diff()</tt> says that an object has changed between the
+	  If <tt>diff()</tt> says that a row/object has changed between the
 	  two tables, you can then use <tt>diff()</tt> on the two objects
 	  to see what that change is.
 	  <div class="example">
@@ -149,6 +149,22 @@
 	    between the old and new version of that row.
 	    This shows that <tt>boxed</tt> was changed from <tt>false</tt>
 	    to <tt>true</tt>.
+	  </div>
+
+	<li>Sometimes all you want to do is list two or more objects, one above
+	  the other, with their members aligned so you can visually spot the
+	  differences.
+	  This is trivially easy!  Just bundle the objects into an array, and
+	  let it be displayed in the default "grid" format.
+	  <div class="example">
+	    <kbd>[ origstyles[3], config.styles[3] ]</kbd>
+	    <samp>
+	      <table>
+		<tr><th>style</th><th>bold</th><th>dim</th><th>italic</th><th>underlined</th><th>blinking</th><th>boxed</th><th>strike</th><th>fg</th><th>fg-list</th><th>bg</th><th>bg-list</th><th>stderr</th></tr>
+		<tr><td>error</td><td>true</td><td>false</td><td>false</td><td>false</td><td>false</td><td>false</td><td>false</td><td>red</td><td>[array]</td><td>on normal</td><td>[array]</td><td>true</td></tr>
+		<tr><td>error</td><td>true</td><td>false</td><td>false</td><td>false</td><td>false</td><td>true</td><td>false</td><td>red</td><td>[array]</td><td>on normal</td><td>[array]</td><td>true</td></tr>
+	      </table>
+	    </samp>
 	  </div>
 
 	<li>For the sake of speed, the <tt>diff()</tt> function compares the

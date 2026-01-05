@@ -85,7 +85,7 @@
     </div>
 
     <h2>Built-In Variables</h2>
-    There are some built-in functions for accessing the system clock.
+    There are some built-in variables for accessing the system clock.
     These are listed below.
     <table class="referencelist">
       <tr><th>Name</th><th>Example</th><th>Meaning</th></tr>
@@ -97,11 +97,17 @@
       <tr><td>current_tz</td><td>"-08:00"</td><td>Current time zone as a ISO-8601 string</td></tr>
     </table>
     <p>
-    The <tt>current_</tt><var>xxxxx</var> variables are mostly meant to mimic
-    similarly-named variables in MySQL.
+    The <tt>current_</tt><var>xxxxx</var> variables are inspired by
+    similarly-named variables/functions in MySQL, but there are differences.
+    MySQL's <tt>CURRENT_TIMESTAMP</tt> is in the local timezone, and returns
+    an RFC 3335 date/time instead of ISO 8601 date/time.
+    MySQL's <tt>NOW()</tt> is a function, not a variable, and it returns
+    the same value as <tt>CURRENT_TIMESTAMP</tt>
+    instead of the current Unix <tt>time_t</tt> value.
+    MySQL has nothing like jx's <tt>current_datetime</tt>.
     <p>
-    The values of <tt>current_time</tt> and <tt>current_datetime</tt> are in
-    the local time zone, and have no explicit time zone appended to them.
+    The values of jx's <tt>current_time</tt> and <tt>current_datetime</tt> are
+    in the local time zone, and have no explicit time zone appended to them.
     If you need to have the time zone explicitly present, you can append
     the <tt>current_tz</tt> string to them.
     If you live in a region that's subject to Daylight Savings Time/Summer Time,
@@ -134,7 +140,7 @@
     <div class="example">
       <kbd>"2025-02-14" - "2025-01-31"</kbd>
       <samp>"P14D"</samp>
-      This reverses the example from the second examle above,
+      This reverses the example from the second example above,
       showing that the difference between the two dates is 14 days.
     </div>
 
@@ -218,7 +224,7 @@
     Passing a unit name with a number will change that unit in the
     date/time/datetime/period and return the result.
     The order of these parameters doesn't matter.
-    You can pass multple name/value pairs to change multiple units.
+    You can pass multiple name/value pairs to change multiple units.
     <div class="example">
       <kbd>"14:23:00".time("h", 12)</kbd>
       <samp>"12:23:00"</samp>
@@ -316,13 +322,16 @@
 
     <h2>Parsing Other Date/Time Formats</h2>
     jx is case-insensitive when parsing periods.
-    The "T" separateing date from time in a datetime can also be lowercase "t".
+    The "T" separating date from time in a datetime can also be lowercase "t".
     <p>
     jx can also parse RFC 3335 datetimes,
     which look like ISO 8601 datetimes except the "T" is replaced with a space.
     This datetime format is used by MySQL.
     It can also parse RFC 5322 datetimes, which look like "Wed, 25 Dec 2024 18:10:21 -0800" and are used in email headers.
-    It can alse parse dates in "MM/DD/YYYY" format, and times with an "AM" or "PM" suffix, both of which are common in the US.
+    It can parse dates like "04JUL76"
+    (two digit day, 3 letter month, 2 digit year)
+    which is used in some military and aviation contexts.
+    It can also parse dates in "MM/DD/YYYY" format, and times with an "AM" or "PM" suffix, both of which are common in the US.
     <p>
     Only the
     <a target="_PARENT" href="../index.html?f=date">date()</a>,
@@ -331,7 +340,7 @@
     functions support those non-ISO 8601 formats though.
     The testing functions such as
     <a target="_PARENT" href="../index.html?f=isDateTime">isDateTime()</a>
-    won't recognize them, and you can't to arithmetic on them like you can
+    won't recognize them, and you can't do arithmetic on them like you can
     with ISO 8601 strings.
     So use these functions to convert to ISO 8601, then perform any necessary
     computations on the ISO 8601 strings, and maybe convert them back to

@@ -44,6 +44,9 @@
     a <tt>jx_t</tt> result.
     Here's a quick example:
     <pre>
+	/* This is C code, not jx script.  It defines a function which returns
+	 * a string of hyphens of a given length.
+	 */
 	jx_t *jfn_hrule(jx_t *<var>args</var>, <b>void</b> *<var>agdata</var>)
 	{
 		<b>int</b>	<var>length</var>, <var>i</var>;
@@ -123,8 +126,8 @@
     <p>
     Simple data types are easy to return, because there are functions to
     do exactly that:
-    <table>
-      <tr><th>Type</th><th>Function</th><th>Example<th></tr>
+    <table class="referencelist">
+      <tr><th>Type</th><th>Function</th><th>Example</th></tr>
       <tr><td>int</td><td>jx_from_int(i)</td><td><b>return</b> jx_from_int(12);</td></tr>
       <tr><td>double</td><td>jx_from_double(d)</td><td><b>return</b> jx_from_double(12.3);</td></tr>
       <tr><td>string</td><td>jx_string(s,len)</td><td><b>return</b> jx_string("Steve",-1);</td></tr>
@@ -149,34 +152,26 @@
 	jx_t *<var>object</var> = jx_<var>object</var>();
 	jx_append(<var>object</var>, jx_key("sample", <var>array</var>));
 
-	<em>/* The leaves object = {"sample":[1,1.5,"Hello World"]} */</em>
+	<em>/* This leaves object = {"sample":[1,1.5,"Hello World"]} */</em>
     </pre>
 
     <h2>Returning an error</h2>
     To return an error, use the
-    <tt>jx_error_null(</tt><var>code</var>, <var>format</var>, ...)</tt>
+    <tt>jx_error_null(</tt><var>where</var><tt>, </tt><var>format</var><tt>, ...)</tt>
     function.
     <p>
-    The <var>code</var> argument is the internal identifier for that type of
-    error.
-    I suggest you just pass 0 there, at least at first.
-    Later, if you find that your potential errors are very similar those used
-    elsewhere in jx, then you can use the same <var>code</var> and
-    <var>format</var> here too.
-    The main advantage of passing a non-0 <var>code</var> is that it may allow
-    the <var>format</var> to be translated to the locale's language.
-    <p>
-    On a related note, anything that you don't want translated, such as the
-    function name "hrule" in the example above, should probably not be part
-    of the error message format string.
-    Instead, it should be a separate argument, with a "%s" in the message format
-    to say where the untranslated text belongs.
+    The <var>where</var> argument is either NULL or a pointer into a
+    memory-mapped script file to indicate where the error was detected.
+    I suggest you just pass NULL there.
     <p>
     The <var>format</var> string is a printf-style format string, meaning
     %s gets replaced by a string parameter, %d by an int, and so on.
     It serves two purposes:
     to provide a default text message in case no translation is available, and
     to specify the quantity and types of any extra parameters.
+    The <var>format</var> may optionally include a translation key at the start
+    &mdash; an alphanumeric word followed by a colon,
+    used to guide message translation.
 
     <h2>Registering the function</h2>
 
