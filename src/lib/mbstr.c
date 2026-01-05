@@ -630,7 +630,7 @@ void jx_mbs_tomixed(char *s, jx_t *exceptions)
 	/* While we have words... */
 	for (firstword = 1; *s; firstword = 0) {
 		/* If the next char isn't wordy, leave it */
-                in = mbtowc(&wc, s, MB_CUR_MAX);
+                in = mbrtowc(&wc, s, MB_CUR_MAX, &state);
                 if (!iswctype(wc, alnum)) {
 			s += in;
 			continue;
