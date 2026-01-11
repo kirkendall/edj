@@ -32,7 +32,7 @@
     and there's a lot of it.
     I need to compare what was downloaded to what ended up in our own database.
     <p>
-    I also generate requests to send to the service providers.
+    Sometimes I also generate requests to send to the service providers.
     Those tend to be small, real-time requests, in contrast to the downloads
     which are large batch files.
     <p>
@@ -69,12 +69,13 @@
     That isn't the goal.
     Instead, it's meant to be a simple little language for doing simple
     little things.
-    The similarity to JavaScript and SQL is only intended to help new users
-    guess the names of common features.
+    The similarity to JavaScript and SQL is only intended
+    to help users guess the names of common features.
     </blockquote>
     You can also declare variables, and define functions.
-    That can be handy in scripts, but my big motivator was that variables
-    and functions can save you some typing when you're using it interactively
+    That can be handy in scripts, obviously,
+    but my big motivator was that variables and functions
+    can save you some typing when you're using it interactively
     to explore a big dataset.
     <p>
     An expression on a line by itself (no assignment or <tt>return</tt>)
@@ -277,9 +278,11 @@ name=Mary run=3 score=40
       <li>Arrays of objects ("tables") can be output in multiple formats,
           including a nice grid format.
       <li>There are commands and functions designed specifically for
-          interactive data exploration, such as <tt>explain</tt> to describe
-          the columns of a table, and <tt>find()</tt> to search for a value in a
-          large data structure.
+          interactive data exploration, such as an
+          <a target="_PARENT" href="../index.html?cmd=explain">explain</a> command
+          to describe the columns of a table, and a
+          <a target="_PARENT" href="../index.html?f=find">find()</a> function
+          to search for a value in a large data structure.
       <li>It has very good support for ISO-8601 dates/times/periods.
           You can do arithmetic on them, convert timezones, and more...
           all of it a lot easier than in JavaScript.
@@ -333,7 +336,7 @@ name=Mary run=3 score=40
     script functions (defined in <tt>calcfunc.c</tt>) are mostly segregated
     from the rest of the code, so you don't need to learn <em>everything</em>
     about jx's anatomy to add a function.
-    A few basic <tt>json_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
+    A few basic <tt>jx_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
     But all the source code is there if you need it.
     Similarly, commands are segregated into the <tt>cmd.c</tt> source file.
     <p>
