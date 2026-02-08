@@ -211,6 +211,28 @@
         This does omit <tt>null</tt> or <tt>false</tt> values though.
       </div>
 
+      <div class="example">
+	<kbd>find("2061189904") # index # data.appointments[this] # {FirstName,LastName,ApptDate,ApptTime,ApptID}</kbd>
+	<samp>
+	  <table>
+	    <tr><th>FirstName</th><th>LastName</th><th>ApptDate</th><th>ApptTime</th><th>ApptID</th></tr>
+	    <tr><td>Lena</td><td>Cloud</td><td>2026-01-31</td><td>09:30:00</td><td>3861183765747</td></tr>
+	  </table>
+	</samp>
+	Here's a rather extreme example that I've used in real life.
+	First we use
+	<a target="_PARENT" href="../index.html?f=find">find()</a>
+	to search for a value in the default table
+	(<tt>data.appointments</tt> in this instance).
+	Then we use <tt>#index</tt> to extract the index from each row
+	of the <tt>find()</tt> result.
+	Then we use <tt>#data.appointments[this]</tt> to plug each index
+	into the array, to fetch the subset of appointments that contain
+	the search value.
+	Finally, we use <tt>#{...}</tt> to extract a few columns from
+	those appointments.
+      </div>
+
     </details>
 
     <details>

@@ -37,6 +37,18 @@
     </details>
 
     <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>If you've loaded plugins for parsing other data formats, then
+            the <tt>parse()</tt> function can recognize and parse them too.
+            <div class="example">
+              <kbd>plugin xml; parse("&lt;foo&gt;&lt;bar&gt;1&lt;/bar&gt;&lt;bar&gt;2&lt;/bar&gt;&lt;zot&gt;true&lt;/zot&gt;&lt;/foo&gt;");</kbd>
+              <samp>{"foo":{"bar":[1,2],"zot":true}}</samp>
+	    </div>
+      </ul>
+    </details>
+
+    <details>
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?f=stringify">stringify()</td><td>Convert data to a JSON string</td></tr>

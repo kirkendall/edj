@@ -40,9 +40,9 @@
         <a target="_PARENT" href="index.html?main=interactive">Examples of interactive use</a>
         <a target="_PARENT" href="index.html?main=download">How to download/install jx</a>
         <p>
-        <strong>jx</strong> is a C library for manipulating JSON data,
-        and a program that uses that library.  The program is intended to be
-        used for exploring JSON data, or converting it to other formats.
+        <strong>jx</strong> is a program for manipulating JSON data.
+	It is intended to be used for generating or exploring JSON data,
+	or converting it to other formats.
         <p>
         The program can be run interactively or as part of a shell script.
         It has a rather powerful set of features inspired by JavaScript
@@ -50,6 +50,11 @@
         intended to be close enough to JavaScript and SQL that if you're
         familiar with those two languages then you can be productive with
         <strong>jx</strong> right away.
+        <p>
+        It is implemented mostly in a library, making it easy to embed in
+        other programs.
+        The library also contains low-level JSON functions that may be useful
+        in special-purpose programs.
       </div>
 
       <div>

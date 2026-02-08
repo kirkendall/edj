@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>match</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx match - Find all matches within a string">
+    <meta name="keywords" content="string, jx, function reference, match">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>match - Find all matches within a string</h1>
+    <dl>
+      <dt>match(<var>str</var>:string, <var>search</var>:string, <var>ignorecase</var>?:boolean=false):array|null
+      <br/>match(<var>arg</var>, <var>search</var>:regex):array|null
+      <dd>
+      The <tt>match()</tt> function searches through <var>str</var> for
+      any text that matches <var>search</var>, and returns the
+      first match as the first (and only) element of an array.
+      If there are no matches, it returns <tt>null</tt>.
+      <p>
+      The search value can be either a literal string, or a
+      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>.
+      Either way, it's normally case-sensitive but you can make it
+      ignore uppercase/lowercase distinctions by adding a <tt>true</tt>
+      parameter (when <var>search</var> is a string) or by adding an "i"
+      flag to the regular expression.
+      You can also add a "g" flag to a regular expression to return all
+      matches.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Once upon a time".match("on", true)</kbd>
+	<samp>["On","on"]</samp>
+        This finds "On" at the start of "Once".
+        We added <tt>true</tt> after the search string to make it search
+        case-insensitively.
+      </div>
+
+      <div class="example">
+	<kbd>"Once upon a time".match(/[aeiou]/i)</kbd>
+	<samp>["O"]</samp>
+        This finds the first vowel.
+        Since <var>search</var> is a regular expression, we made it be
+        case-insensitive by appending an "i" flag after the regular expression.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>If you use a regular expression and add a "g" flag,
+	    then it will find all matches
+	    (like <a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a>)
+	    instead of just the first.
+
+        <li>Just to repeat: If no match is found, this returns <tt>null</tt>
+            instead of an empty array.
+            jx does this because JavaScript also returns <tt>null</tt> and
+            we're trying to avoid unnecessary incompatibilities.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a></td><td>Find matches within a string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

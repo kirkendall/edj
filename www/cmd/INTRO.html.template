@@ -51,7 +51,7 @@
 <tr><td><a target="_PARENT" href="../index.html?cmd=for"><b>for</b> (<b>var</b> <var>name</var> = <var>arr</var>) <var>cmds</var></a></td><td>Execute <var>cmds</var> with <var>name</var> set to each element of array <var>arr</var></td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=function"><b>function</b> <var>name</var> (<var>args</var>) <var>cmds</var></a></td><td>Define a function.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=if"><b>if</b> (<var>bool</var>) <var>cmds</var> <b>else</b> <var>cmds</var></a></td><td>Conditionally execute one code block or another.</td></tr>
-<tr><td><a target="_PARENT" href="../index.html?cmd=import"><b>import</b> <var>name</var></a></td><td>Load a script from <var>name</var>.<b>jc</b>.</td></tr>
+<tr><td><a target="_PARENT" href="../index.html?cmd=import"><b>import</b> <var>name</var></a></td><td>Load a script from <var>name</var>.<b>jx</b>.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=plugin"><b>plugin</b> <var>name</var></a></td><td>Load a plugin, if it isn't loaded already.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=print"><b>print</b> <var>expr</var>, ...</a></td><td>Output a raw string &mdash; no quotes or backslashes</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=return"><b>return</b> <var>expr</var></a></td><td>Exit from the body of a function, and define the function's return value.</td></tr>

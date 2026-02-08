@@ -116,6 +116,7 @@ div.example {
 	margin-left: 2.5em;
 	margin-right: 0.5em;
 	padding-left: 5em;
+	overflow-x: auto;
 }
 div.example kbd {
 	display: block;

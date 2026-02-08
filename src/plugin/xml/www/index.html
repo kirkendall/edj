@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>An XML Plugin</title>
+    <title>Parse and Generate XML</title>
     <link rel="stylesheet" type="text/css" href="../jx.css">
     <meta name="description" content="jx xml plugin summary">
     <meta name="keywords" content="jx, xml plugin">
@@ -23,8 +23,10 @@
     Some of these quirks, and the way this plugin works around them, are:
     <ul>
       <li>XML can use many different character encodings.
-          JSON is nearly always UTF-8, and that's all jx supports, so
-          the XML plugin just assumes UTF-8 is the encoding of choice there too.
+          JSON is nearly always UTF-8
+          (it's part of the <a href="https://www.rfc-editor.org/rfc/rfc8259#page-9">RFC 8259</a> JSON standard),
+          and that's all jx supports, so the XML plugin just assumes UTF-8
+          is the encoding of choice there too.
       <li>In XML, the outermost data wrapper always has a name.
           In JSON, it's normally just anonymous curly braces.
           This plugin's parser uses an outer object that contains a single
@@ -181,7 +183,7 @@
     <h2 id="other">Other Features</h2>
     As mentioned above, XML will be automatically recognized and parsed.
     This happens when reading files, receiving network data
-    (via the <a target="_PARENT" href="../index.html?p=curl">curl plugin</a),
+    (via the <a target="_PARENT" href="../index.html?p=curl">curl plugin</a>),
     or even the <a target="_PARENT" href="../index.html?f=parse">JSON.parse()</a> function.
     <p>
     There is no way to switch the output format from JSON to XML.

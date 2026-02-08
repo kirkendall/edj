@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>matchAll</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx matchAll - Find all matches within a string">
+    <meta name="keywords" content="string, jx, function reference, matchAll">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>matchAll - Find all matches within a string</h1>
+    <dl>
+      <dt>matchAll(<var>str</var>:string, <var>search</var>:string, <var>ignorecase</var>?:boolean=false):array|null
+      <br/>matchAll(<var>arg</var>, <var>search</var>:regex):array|null
+      <dd>
+      The <tt>matchAll()</tt> function searches through <var>str</var> for
+      any text that matches <var>search</var>, and stores the matches in an
+      array.
+      If there are no matches, it returns <tt>null</tt>.
+      <p>
+      The search value can be either a literal string, or a
+      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>.
+      Either way, it's normally case-sensitive but you can make it
+      ignore uppercase/lowercase distinctions by adding a <tt>true</tt>
+      parameter (when <var>search</var> is a string) or by adding an "i"
+      flag to the regular expression.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Once upon a time".matchAll("on", true)</kbd>
+	<samp>["On","on"]</samp>
+        This finds "On" at the start of "Once" and "on" at the end of "upon".
+        We added <tt>true</tt> after the search string to make it search
+        case-insensitively.
+      </div>
+
+      <div class="example">
+	<kbd>"Once upon a time".matchAll(/[aeiou]/i)</kbd>
+	<samp>["O","e","u","o","a","i","e"]</samp>
+        This finds all of the vowels.
+        Since <var>search</var> is a regular expression, we made it be
+        case-insensitive by appending an "i" flag after the regular expression.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Just to repeat: If no match is found, this returns <tt>null</tt>
+            instead of an empty array.
+            jx does this because JavaScript also returns <tt>null</tt> and
+            we're trying to avoid unnecessary incompatibilities.
+
+	<li>JavaScript gets weird when you search for a plain string.
+	    Instead of returning an array, it returns a RegExpStringIterator
+	    object.  Since jx doesn't have classes, it just returns an array.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=match">match()</a></td><td>Find the first match only</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>
