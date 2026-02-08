@@ -80,6 +80,8 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata);
 static jx_t *jfn_fromCharCode(jx_t *args, void *agdata);
 static jx_t *jfn_replace(jx_t *args, void *agdata);
 static jx_t *jfn_replaceAll(jx_t *args, void *agdata);
+static jx_t *jfn_match(jx_t *args, void *agdata);
+static jx_t *jfn_matchAll(jx_t *args, void *agdata);
 static jx_t *jfn_includes(jx_t *args, void *agdata);
 static jx_t *jfn_indexOf(jx_t *args, void *agdata);
 static jx_t *jfn_lastIndexOf(jx_t *args, void *agdata);
@@ -183,7 +185,9 @@ static jxfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str:string, p
 static jxfunc_t fromCharCode_jf= {&charCodeAt_jf,  "fromCharCode","what:number|string|array, ...", "string",	jfn_fromCharCode};
 static jxfunc_t replace_jf     = {&fromCharCode_jf,"replace",     "str:string, find:string|regex, replace:string", "string",	jfn_replace};
 static jxfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str:string, find:string|regex, replace:string", "string",	jfn_replaceAll};
-static jxfunc_t includes_jf    = {&replaceAll_jf,  "includes",    "subj:string|array, find:string|regex, ignorecase?:true", "boolean",	jfn_includes};
+static jxfunc_t match_jf       = {&replaceAll_jf,  "match",       "str:string, find:string|regex", "array|null",	jfn_match};
+static jxfunc_t matchAll_jf    = {&match_jf,       "matchAll"  ,  "str:string, find:string|regex", "array|null",	jfn_matchAll};
+static jxfunc_t includes_jf    = {&matchAll_jf,    "includes",    "subj:string|array, find:string|regex, ignorecase?:true", "boolean",	jfn_includes};
 static jxfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_indexOf};
 static jxfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_lastIndexOf};
 static jxfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_startsWith};
@@ -1704,6 +1708,108 @@ static jx_t *jfn_replaceAll(jx_t *args, void *agdata)
 		return help_replace(args, regex->u.regex.preg, 1);
 	else
 		return help_replace(args, NULL, 10);
+}
+
+static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
+{
+	const char	*subject, *search, *replace;
+	size_t		searchlen;
+	int		ignorecase;
+	const char	*found;
+	regmatch_t	matches[10];
+	int		m, scan, chunk, in;
+	jx_t		*result;
+
+	/* Check parameters */
+	if (args->first->type != JX_STRING
+	 || args->first->next == NULL /* undeferred */
+	 || (!preg && args->first->next->type != JX_STRING)) /* undeferred */
+		return NULL;
+
+	/* Copy parameter strings into variables */
+	subject = args->first->text;
+	search = (preg ? NULL : args->first->next->text); /* undeferred */
+	ignorecase = jx_is_true(args->first->next->next); /* undeferred */
+
+	/* Start building the result array */
+	result = jx_array();
+
+	/* Find the first/next match */
+	if (preg) {
+		/* REGULAR EXPRESSION VERSION */
+
+		/* For each match... */
+		while (0 == regexec(preg, subject, 10, matches, 0)) {
+			jx_append(result, jx_string(subject + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so));
+
+			/* Move past this match */
+			subject += matches[0].rm_eo;
+
+			/* If that last match was empty, then skip 1 character */
+			if (matches[0].rm_eo == matches[0].rm_so && *subject) {
+				/* Find the byte-length of the next character */
+				wchar_t wc;
+				int in = mbtowc(&wc, subject, MB_CUR_MAX);
+				if (in > 0)
+					subject += in;
+			}
+
+			/* If only supposed to do once, break out of the loop */
+			if (!globally)
+				break;
+		}
+
+	} else {
+		/* STRING VERSION */
+
+		/* For each match...  */
+		while ((found = jx_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
+			jx_append(result, jx_string(found, searchlen));
+
+			/* Move past the match. */
+			subject = found + searchlen;
+			if (!globally)
+				break;
+
+			/* If the match was zero-length, then skip a character */
+			if (*subject && searchlen == 0) {
+				wchar_t wc;
+				in = mbtowc(&wc, subject, MB_CUR_MAX);
+				if (in > 0)
+					subject += in;
+			}
+		}
+	}
+
+	/* If no matches found, return null */
+	if (!result->first) {
+		jx_free(result);
+		result = jx_null();
+	}
+
+	return result;
+}
+
+/* Replace the first instance of a substring or regular expression */
+static jx_t *jfn_match(jx_t *args, void *agdata)
+{
+	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
+	jxcalc_t *regex = recon->regex;
+	if (regex)
+		return help_match(args, regex->u.regex.preg, regex->u.regex.global);
+	else
+		return help_match(args, NULL, 0);
+}
+
+/* Replace all instances of a substring or regular expression */
+static jx_t *jfn_matchAll(jx_t *args, void *agdata)
+{
+	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
+	jxcalc_t *regex = recon->regex;
+	if (regex)
+		return help_match(args, regex->u.regex.preg, 1);
+	else
+		return help_match(args, NULL, 10);
 }
 
 /* This is a helper function for indexOf(), lastIndexOf(), and includes().
