@@ -1072,8 +1072,11 @@ static jxcmdout_t *for_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 	array = jx_calc(cmd->calc, *refcontext, NULL);
 	if (!array || array->type != JX_ARRAY) {
 		if (jx_is_error(array))
-			return jx_cmd_error(cmd->where, "%s", array->text);
-		return jx_cmd_error(cmd->where, "forNotArray:\"%s\" expression is not an array", "for");
+			result = jx_cmd_error(cmd->where, "%s", array->text);
+		else
+			result = jx_cmd_error(cmd->where, "forNotArray:\"%s\" expression is not an array", "for");
+		jx_free(array);
+		return result;
 	}
 
 	/* Without "var", look for an existing variable to use for the loop. */
