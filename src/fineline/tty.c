@@ -50,8 +50,9 @@ static struct {
 	{FINELINE_PAGE_DOWN,	"\033[6~"},	/* scroll page forward */
 	{FINELINE_ENTER,	"\r"},		/* process line or add newline */
 	{FINELINE_ENTER,	"\n"},		/* process line or add newline */
-	{FINELINE_SAVE,		"\033"},	/* Save to history but don't process */
-	{FINELINE_QUIT,		"\004"}		/* exit without processing the line */
+	{FINELINE_EXIT,		"\004"},	/* ^D exit, only if line is empty */
+	{FINELINE_SAVE,		"\013"},	/* ^S Save to history but don't process */
+	{FINELINE_QUIT,		"\011"}		/* ^Q exit without processing the line */
 };
 
 static int doingresize;
@@ -111,7 +112,7 @@ static void fineline_active(int timeout)
 #ifdef IUTF8
 	stty.c_iflag |= IUTF8;
 #endif
-	stty.c_oflag &= ~OPOST;
+	stty.c_oflag &= ~(OPOST|ONLCR);
 	stty.c_lflag &= ~(ICANON|ECHO);
 	stty.c_cc[VMIN] = 1;
 	stty.c_cc[VTIME] = timeout;
@@ -279,7 +280,8 @@ static void ttyright(int n)
 
 static void ttyhome(void)
 {
-	fputc('\r', stderr);
+	/*fputc('\r', stderr);*/
+	fputs("\033[1G", stderr);
 }
 
 static void ttyclear(void)
@@ -290,6 +292,14 @@ static void ttyclear(void)
 static void ttytext(const char *style, const char *text, size_t size)
 {
 	fwrite(text, 1, size, stderr);
+}
+
+static void ttyscroll(int n)
+{
+	if (n > 0)
+		fprintf(stderr, "\033[%dL", n);
+	else if (n < 0)
+		fprintf(stderr, "\033[%dM", -n);
 }
 
 
@@ -305,7 +315,7 @@ fineline_t *fineline_tty_alloc()
 	fine->left = ttyleft;
 	fine->right = ttyright;
 	fine->home = ttyhome;
-	fine->home = ttyclear;
+	fine->clear = ttyclear;
 	fine->text = ttytext;
 
 	/* Return it */
@@ -321,6 +331,7 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 {
 	long	key;
 	char	*line;
+	int	result;
 
 	/* If called with NULL, then use a generic fineline_t */
 	if (!fine) {
@@ -341,7 +352,10 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 		fineline_draw(fine);
 		key = fineline_get_key();
 		if (key > FINELINE_MIN && key < FINELINE_MAX) {
-			if (fineline_edit(fine, (fineline_edit_t)key) == 1)
+			result = fineline_edit(fine, (fineline_edit_t)key);
+			if (result < 0)
+				fputc('\007', stderr);
+			else if (result > 0)
 				break;
 		} else {
 			 fineline_edit_char(fine, (wchar_t)key);
@@ -349,9 +363,14 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 	}
 	fineline_active(-1);
 
+	/* Detect end */
+	if (result == 2)
+		return NULL;
+
 	/* Return a copy of the line */
 	line = strdup(fine->line);
 	*fine->line = '\0';
+	fine->cursor = 0;
 	return line;
 }
 

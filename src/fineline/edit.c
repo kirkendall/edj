@@ -130,6 +130,19 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 		break;
 
 	case FINELINE_ENTER:
+		/* If the line is known to be incomplete, then just add a
+		 * newline to the input.
+		 */
+		/*!!!*/
+
+		/* else fall through to save */
+	case FINELINE_SAVE:
+		/* If we were looking at a history line (without editing it
+		 * yet) then make it the current line before we do anything
+		 * else.
+		 */
+		fineline_history_edit(fine);
+
 		/* Save the current line to history */
 		fineline_history_add(fine, fine->line);
 
@@ -137,13 +150,22 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 		if (!fine->runner || (*fine->runner)(fine->line) != 0)
 			return 1;
 		*fine->line = '\0';
+		fine->cursor = 0;
 		break;
+
+	case FINELINE_EXIT:
+		/* Fail if line is not empty */
+		if (*fine->line)
+			return -1;
+
+		/* else fall though to quit... */
+	case FINELINE_QUIT:
+		/* return 2, indicating quit-no-processing */
+		return 2;
 
 	/* The case following indicate special conditions */
 	case FINELINE_PAGE_DOWN:/* scroll forward */
 	case FINELINE_PAGE_UP:	/* scroll back */
-	case FINELINE_QUIT:	/* quit editor without saving */
-	case FINELINE_SAVE:	/* quit editor, saving changes */
 	case FINELINE_RESIZE:	/* the window was resized */
 		return 0;
 
@@ -174,14 +196,15 @@ void fineline_edit_text(fineline_t *fine, const char *text, size_t len)
 		fine->line = fine->history[0] = realloc(fine->line, fine->linesize);
 	}
 
-	/* Shift the end of the line to make room, unless at end */
-	if (fine->line[fine->cursor])
-		memmove(&fine->line[fine->cursor + len], &fine->line[fine->cursor], strlen(&fine->line[fine->cursor]) + 1);
+	/* Shift the end of the line to make room.  Even if the cursor is at
+	 * the end of the line, we still want to shift the '\0' there.
+	 */
+	memmove(&fine->line[fine->cursor + len], &fine->line[fine->cursor], strlen(&fine->line[fine->cursor]) + 1);
 
 	/* Copy the new text */
 	strncpy(&fine->line[fine->cursor], text, len);
 
-	/* Move the cursor to the end of the text */
+	/* Move the cursor to the end of the new text */
 	fine->cursor += len;
 }
 

@@ -75,11 +75,10 @@ int fineline_char_column_number(const char *buf, int cursor)
 
 	/* Count widths out to the cursor */
 	memset(&state, 0, sizeof state);
-	for (pos = buf, col = 0; pos < buf + cursor; pos++) {
+	for (pos = buf, col = 0; pos < buf + cursor; pos += len) {
 		len = mbrtowc(&wc, pos, MB_CUR_MAX, &state);
 		if (len <= 0)
 			return -1;
-		pos += len;
 		if (wc == '\n' || wc == '\r')
 			col = 0;
 		else

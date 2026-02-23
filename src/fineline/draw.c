@@ -78,7 +78,7 @@ void fineline_draw(fineline_t *fine)
 	(*fine->text)("prompt", fine->prompt, strlen(fine->prompt));
 	row = 0;
 	linenum = 1;
-	col = promptwidth;
+	col = 1 + promptwidth;
 	cursorrow = cursorcol = -1;
 
 	/* If line coloring starts with NULL, assume that means "normal" */
@@ -103,6 +103,16 @@ void fineline_draw(fineline_t *fine)
 		 * a bit complicated.
 		 */
 		for (span = 0; ; span += fineline_char_size(&fine->line[offset + span], 1)) {
+			/* cursor?  Only marks end if there's hint or completesame */
+			if (offset + span == fine->cursor) {
+				cursorrow = row;
+				cursorcol = col;
+				if (fine->hint || fine->completesame) {
+					why = BECAUSE_HINT;
+					break;
+				}
+			}
+
 			/* end of the line? */
 			if (fine->line[offset + span] == '\0') {
 				why = BECAUSE_END;
@@ -119,16 +129,6 @@ void fineline_draw(fineline_t *fine)
 			if (fine->colors && fine->colors[offset + span] && fine->colors[offset + span] != style) {
 				why = BECAUSE_STYLE;
 				break;
-			}
-
-			/* cursor?  Only marks end if there's hint or completesame */
-			if (offset + span == fine->cursor) {
-				cursorrow = row;
-				cursorcol = col;
-				if (fine->hint || fine->completesame) {
-					why = BECAUSE_HINT;
-					break;
-				}
 			}
 
 			/* wrapped line? */
@@ -173,8 +173,8 @@ void fineline_draw(fineline_t *fine)
 	}
 
 	/* Move the terminal's cursor back to fineline's cursor */
-	if (cursorrow > row)
-		(*fine->up)(cursorrow - row);
+	if (cursorrow < row - 1)
+		(*fine->up)(row - cursorrow);
 	if (cursorcol > col)
 		(*fine->right)(cursorcol - col);
 	else if (cursorcol < col)

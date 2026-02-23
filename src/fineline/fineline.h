@@ -23,6 +23,7 @@ typedef enum {
 	FINELINE_PAGE_DOWN,	/* scroll forward */
 	FINELINE_PAGE_UP,	/* scroll back */
 	FINELINE_ENTER,		/* Process the line or add newline */
+	FINELINE_EXIT,		/* Process the line or add newline */
 	FINELINE_SAVE,		/* Save the line to history without processing */
 	FINELINE_QUIT,		/* Expect no more lines (exit program) */
 	FINELINE_RESIZE,	/* the window was resized */
@@ -49,10 +50,23 @@ typedef struct {
 	fineline_attributes_t at;/* bitmap of other attributes such as bold */
 } fineline_color_t;
 
+/* draw2.c */
 typedef struct {
 	int	linenum;	/* line number, or 0 if continuation of a long line */
 	int	start;		/* Where the line starts */
 } fineline_row_t;
+
+/* draw3.c */
+typdef struct {
+	char	**row;		/* dynamic char *row[] array */
+	char	***style;	/* dynamic char **style[] array */
+	int	rowsize;
+	int	toprow;
+	int	height;
+	int	width;
+	int	cursorrow, cursorcol;	/* where to display the cursor */
+	int	cursorcol;
+} fineline_image_t;
 
 /* This contains all of the info needed to draw the current line. */
 typedef struct fineline_s {
@@ -67,6 +81,7 @@ typedef struct fineline_s {
 	int	columns, rows, usedrows;
 	fineline_row_t *row; /* array of row info */
 	int	cursorrow, cursorcolumn;
+	fineline_image_t *image; /* data describing the line as currently shown */
 
 	/* Callbacks related to drawing a line. "before" is called at the start
 	 * of inputting a line, and may be used to adjust "columns" and "rows",
@@ -94,7 +109,7 @@ typedef struct fineline_s {
 	void	(*home)(void);
 	void	(*clear)(void);
 	void	(*text)(const char *style, const char *text, size_t size);
-	int	(*addrow)(void);
+	int	(*scroll)(int n);
 
 	/* This is a callback, invoked when a complete line has been entered.
 	 * This "line" may contain newline characters, for multiline commands.
@@ -114,6 +129,7 @@ typedef struct fineline_s {
 	 */
 
 	const char *prompt;	/* Main prompt string */
+	int	promptwidth;
 
 	char	*line;		/* Line buffer -- usually history[0] */
 	size_t	linesize;	/* size of the history[0] buffer */

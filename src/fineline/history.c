@@ -57,8 +57,7 @@ void fineline_history_add(fineline_t *fine, const char *line)
 
 	/* Store a copy of the new line */
 	fine->history[1] = strdup(line);
-	if (fine->historyused < fine->historysize)
-		fine->historyused++;
+	fine->historyused++;
 }
 
 /* Load history from a file. */
@@ -153,7 +152,11 @@ void fineline_history_show(fineline_t *fine, int delta)
 	fine->historyshown = absolute;
 }
 
-/* Copy the currently shown line into fine->history[0] so we can edit it. */
+/* Copy the currently shown line into fine->history[0] so we can edit it.
+ * Usually this function does nothing, but if the user has scrolled back in
+ * history and starts editing a historic line, then this will copy it to the
+ * current line editor buffer in fine->history[0]
+ */
 void fineline_history_edit(fineline_t *fine)
 {
 	size_t len;
