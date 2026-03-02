@@ -115,7 +115,7 @@ jx_t jx_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
 jxcmdname_t *jx_cmd_hook(char *pluginname, char *cmdname, jxcmd_t *(*argparser)(jxsrc_t *src, jxcmdout_t **referr), jxcmdout_t *(*run)(jxcmd_t *cmd, jxcontext_t **refcontext))
 {
 	/* Allocate a jxcmdname_t for it */
-	jxcmdname_t *sn = (jxcmdname_t *)malloc(sizeof(jxcmdname_t));
+	jxcmdname_t *sn = malloc(sizeof(jxcmdname_t));
 
 	/* Fill it */
 	sn->pluginname = pluginname;
@@ -148,7 +148,7 @@ jxcmdout_t *jx_cmd_error(const char *where, const char *fmt, ...)
 	va_end(ap);
 
 	/* Allocate the error structure with enough space for the message */
-	result = (jxcmdout_t *)malloc(sizeof(jxcmdout_t) + size);
+	result = malloc(sizeof(jxcmdout_t) + size);
 
 	/* Fill the error structure */
 	memset(result, 0, sizeof(jxcmdout_t) + size);
@@ -309,7 +309,7 @@ void jx_cmd_parse_whitespace_or_type(jxsrc_t *src, char **refstr)
 		if (len <= 0)
 			*refstr = NULL;
 		else {
-			*refstr = (char *)malloc(len + 1);
+			*refstr = malloc(len + 1);
 			strncpy(*refstr, start, len);
 			(*refstr)[len] = '\0';
 		}
@@ -334,7 +334,7 @@ char *jx_cmd_parse_key(jxsrc_t *src, int quotable)
 		/* Unquoted alphanumeric name */
 		for (len = 1; isalnum(src->str[len]) || src->str[len] == '_'; len++){
 		}
-		key = (char *)malloc(len + 1);
+		key = malloc(len + 1);
 		strncpy(key, src->str, len);
 		key[len] = '\0';
 		src->str += len;
@@ -343,7 +343,7 @@ char *jx_cmd_parse_key(jxsrc_t *src, int quotable)
 		src->str++;
 		for (len = 0; src->str[len] && src->str[len] != '`'; len++){
 		}
-		key = (char *)malloc(len + 1);
+		key = malloc(len + 1);
 		strncpy(key, src->str, len);
 		key[len] = '\0';
 		src->str += len + 1;
@@ -354,7 +354,7 @@ char *jx_cmd_parse_key(jxsrc_t *src, int quotable)
 				len++;
 		}
 		unescapedlen = jx_mbs_unescape(NULL, src->str+1, len - 1);
-		key = (char *)malloc(unescapedlen + 1);
+		key = malloc(unescapedlen + 1);
 		jx_mbs_unescape(key, src->str+1, len - 1);
 		key[unescapedlen] = '\0';
 		src->str += len + 1;
@@ -407,7 +407,7 @@ char *jx_cmd_parse_paren(jxsrc_t *src)
 
 	/* Copy it into a dynamic string */
 	len = (size_t)(scan - src->str) - 2;
-	paren = (char *)malloc(len + 1);
+	paren = malloc(len + 1);
 	strncpy(paren, src->str + 1, len);
 	paren[len] = '\0';
 	src->str = scan;
@@ -422,7 +422,7 @@ char *jx_cmd_parse_paren(jxsrc_t *src)
 /* Allocate a statement, and initialize it */
 jxcmd_t *jx_cmd(jxsrc_t *src, jxcmdname_t *name)
 {
-	jxcmd_t *cmd = (jxcmd_t *)malloc(sizeof(jxcmd_t));
+	jxcmd_t *cmd = malloc(sizeof(jxcmd_t));
 	memset(cmd, 0, sizeof(jxcmd_t));
 	cmd->where = src->str;
 	cmd->name = name;
@@ -1902,7 +1902,7 @@ static jxcmd_t *case_parse(jxsrc_t *src, jxcmdout_t **referr)
 		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" expression", "case");
 		return parsed;
 	}
-	str = (char *)malloc(len + 1);
+	str = malloc(len + 1);
 	strncpy(str, src->str, len);
 	str[len] = '\0';
 
@@ -2244,7 +2244,7 @@ static jxcmd_t *file_parse(jxsrc_t *src, jxcmdout_t **referr)
 		}
 		while (end > src->str && end[-1] == ' ')
 			end--;
-		cmd->key = (char *)malloc(end - src->str + 1);
+		cmd->key = malloc(end - src->str + 1);
 		strncpy(cmd->key, src->str, end - src->str);
 		cmd->key[end - src->str] = '\0';
 
@@ -2338,7 +2338,7 @@ static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 	}
 	while (end > src->str && end[-1] == ' ')
 		end--;
-	filename = (char *)malloc(end - src->str + 4);
+	filename = malloc(end - src->str + 4);
 	strncpy(filename, src->str, end - src->str);
 	filename[end - src->str] = '\0';
 	src->str = end;
@@ -2426,7 +2426,7 @@ static jxcmd_t *plugin_parse(jxsrc_t *src, jxcmdout_t **referr)
 	}
 
 	/* Make a temp copy of the arguments */
-	str = (char *)malloc(len + 1);
+	str = malloc(len + 1);
 	strncpy(str, src->str, len);
 	str[len] = '\0';
 	src->str += len;
@@ -2608,7 +2608,7 @@ static jxcmd_t *set_parse(jxsrc_t *src, jxcmdout_t **referr)
 		 */
 		for (len = 0; src->str[len] && !strchr(";\n{", src->str[len]); len++) {
 		}
-		str = (char *)malloc(len + 1);
+		str = malloc(len + 1);
 		strncpy(str, src->str, len);
 		str[len] = '\0';
 		src->str += len;

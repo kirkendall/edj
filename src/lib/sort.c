@@ -137,7 +137,7 @@ static void jcsort(jx_t *array, jx_t *orderby, int grouping)
 			/* Maybe enlarge the bucket array */
 			if (used == nbuckets) {
 				nbuckets = used * 3 / 2 + 100;
-				bucket = (bucket_t *)realloc(bucket, nbuckets * sizeof(bucket_t));
+				bucket = realloc(bucket, nbuckets * sizeof(bucket_t));
 				memset(&bucket[used], 0, (nbuckets - used) * sizeof(bucket_t));
 				for (b2 = used; b2 < nbuckets; b2++)
 					bucket[b2].arraybuf.type = JX_ARRAY;

@@ -287,7 +287,7 @@ void jx_calc_aggregate_hook(
 	}
 
 	/* Add it */
-	f = (jxfunc_t *)malloc(sizeof(jxfunc_t));
+	f = malloc(sizeof(jxfunc_t));
 	memset(f, 0, sizeof *f);
 	f->name = (char *)name;
 	f->args = (char *)args;
@@ -379,7 +379,7 @@ int jx_calc_function_user(
 	fn = jx_calc_function_by_name(name);
 	if (!fn) {
 		/* Allocate a new jxfunc_t and link it into the table */
-		fn = (jxfunc_t *)malloc(sizeof(jxfunc_t));
+		fn = malloc(sizeof(jxfunc_t));
 		memset(fn, 0, sizeof(jxfunc_t));
 		fn->other = funclist;
 		funclist = fn;
@@ -1537,7 +1537,7 @@ static char *addstr(char *buf, size_t *refsize, size_t used, const char *str, si
 	/* If buf is too small, extend it */
 	if (used + len + 1 > *refsize) {
 		*refsize = ((*refsize + len) | 0xff) + 1;
-		buf = (char *)realloc(buf, *refsize);
+		buf = realloc(buf, *refsize);
 	}
 
 	/* Append the new string, and a trailing '\0' */
@@ -1575,7 +1575,7 @@ static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
 
 	/* Start building a replacement string */
 	bufsize = 128;
-	buf = (char *)malloc(bufsize);
+	buf = malloc(bufsize);
 	used = 0;
 	buf[0] = '\0';
 
@@ -1712,12 +1712,12 @@ static jx_t *jfn_replaceAll(jx_t *args, void *agdata)
 
 static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
 {
-	const char	*subject, *search, *replace;
+	const char	*subject, *search;
 	size_t		searchlen;
 	int		ignorecase;
 	const char	*found;
 	regmatch_t	matches[10];
-	int		m, scan, chunk, in;
+	int		in;
 	jx_t		*result;
 
 	/* Check parameters */
@@ -2324,7 +2324,7 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 				if (buf)
 					free(buf);
 				bufsize = (totlen | 0x1f) + 1;
-				buf = (char *)malloc(bufsize);
+				buf = malloc(bufsize);
 			}
 			strcpy(buf, defaulttable);
 			strcat(buf, expr);
@@ -3158,7 +3158,7 @@ static void  jag_join(jx_t *args, void *agdata)
 	if (data->ag == NULL) {
 		/* The first call always stores a string unchanged */
 		data->size = (strlen(text) | 0xff) + 1;
-		data->ag = (char *)malloc(data->size);
+		data->ag = malloc(data->size);
 		strcpy(data->ag, text);
 	} else {
 		/* Get the delimiter, default to "," */
@@ -3171,7 +3171,7 @@ static void  jag_join(jx_t *args, void *agdata)
 		newlen = strlen(data->ag) + strlen(delim) + strlen(text);
 		if (newlen + 1 > data->size) {
 			data->size = (newlen | 0x1ff) + 1;
-			data->ag = (char *)realloc(data->ag, data->size);
+			data->ag = realloc(data->ag, data->size);
 		}
 
 		/* Append the delimiter and text */

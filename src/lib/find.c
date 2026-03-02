@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <regex.h>
+#include <ctype.h>
 #include <jx.h>
 
 /* This stores the search criteria and a incremental results.  The help_find()
@@ -13,7 +14,7 @@
 typedef struct {
 	jx_t	*needle;	/* String or number to search for */
 	regex_t *regex;		/* Regular expression to search for */
-	jxcalc_t *calc;	/* Expression to search for (RHS of @ operator) */
+	jxcalc_t *calc;		/* Expression to look for (RHS of @ operator) */
 	jxcontext_t *context;	/* Context of the "calc" expression */
 	char	*needkey;	/* If not NULL, key must match this */
 	int	needint;	/* Integer to search for */
@@ -34,8 +35,22 @@ typedef struct {
  */
 static void help_find_cat(jxfind_t *find, char *str)
 {
-	size_t len = strlen(str);
-	size_t newsize = find->used + len + 1;
+	size_t len, quotes, newsize;
+
+	/* Compute the size of the string.  This will be the length of the
+	 * string, plus quotes and maybe a "." at the end.
+	 */
+	if (*str == '[') {
+		len = strlen(str);
+		quotes = 0;
+	} else {
+		for (len = quotes = 0; str[len]; len++)
+			if (!isalnum(str[len]) && str[len] != '_')
+				quotes = 2;
+	}
+
+	/* If necessary, expand ->expr */
+	newsize = find->used + len + quotes + 1;
 	if (find->used > 0 && *str != '[')
 		newsize++; /* because we'll need to add a "." */
 	if (newsize > find->size) {
@@ -50,8 +65,12 @@ static void help_find_cat(jxfind_t *find, char *str)
 	/* Append it */
 	if (find->used > 0 && *str != '[')
 		find->expr[find->used++] = '.';
+	if (quotes)
+		find->expr[find->used++] = '`';
 	strcpy(find->expr + find->used, str);
 	find->used += len;
+	if (quotes)
+		find->expr[find->used++] = '`';
 }
 
 /* Append a row to the find->result table */
@@ -298,7 +317,7 @@ static void help_find(jx_t *haystack, jxfind_t *find)
  * If no matches are found, an empty array is returned.  Parameter errors cause
  * a "null" jx_t to be returned containing an error message.
  */
-static jx_t *find(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, char *needkey, jxcalc_t *calc, jxcontext_t *context)
+static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, char *needkey, jxcalc_t *calc, jxcontext_t *context)
 {
 	jxfind_t find;
 
@@ -320,7 +339,7 @@ static jx_t *find(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, 
 	find.key = NULL;
 	find.size = 100;
 	find.used = 0;
-	find.expr = (char *)malloc(find.size);
+	find.expr = malloc(find.size);
 	find.result = jx_array();
 
 	/* If searching for a number, convert it to binary */
@@ -355,16 +374,16 @@ static jx_t *find(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, 
 /* Do a deep search for a value */
 jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
 {
-	return find(haystack, needle, ignorecase, NULL, needkey, NULL, NULL);
+	return find_any(haystack, needle, ignorecase, NULL, needkey, NULL, NULL);
 }
 
 /* Do a deep search for a regular expression */
 jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey)
 {
-	return find(haystack, NULL, 0, regex, needkey, NULL, NULL);
+	return find_any(haystack, NULL, 0, regex, needkey, NULL, NULL);
 }
 
 jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context)
 {
-	return find(haystack, NULL, 0, NULL, NULL, calc, context);
+	return find_any(haystack, NULL, 0, NULL, NULL, calc, context);
 }

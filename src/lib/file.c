@@ -36,7 +36,7 @@ jxfile_t *jx_file_load(const char *filename)
 	if (fd < 0)
 	{
 		if (jx_file_new_type == 'o' || jx_file_new_type == 'a') {
-			jf = (jxfile_t *)malloc(sizeof(jxfile_t));
+			jf = malloc(sizeof(jxfile_t));
 			jf->fd = -1;
 			jf->isfile = 0;
 			jf->size = 3;
@@ -63,11 +63,11 @@ jxfile_t *jx_file_load(const char *filename)
 	} else {
 		/* Read into a dynamically-allocated buffer */
 		size = 4096;
-		base = (char *)malloc(size);
+		base = malloc(size);
 		for (used = 0; (nread = read(fd, base + used, size - used)) > 0; used += nread) {
 			if (size - (used + nread) < 1024) {
 				size *= 2;
-				base = (char *)realloc(base, size);
+				base = realloc(base, size);
 			}
 		}
 
@@ -75,12 +75,12 @@ jxfile_t *jx_file_load(const char *filename)
 		 * 4096 and keeping one extra byte as a '\0'.
 		 */
 		size = ((used + 1) | 0x3ff) + 1;
-		base = (char *)realloc(base, size);
+		base = realloc(base, size);
 		st.st_size = size;
 	}
 
 	/* Return the info */
-	jf = (jxfile_t *)malloc(sizeof *jf);
+	jf = malloc(sizeof *jf);
 	jf->fd = fd;
 	jf->filename = strdup(filename);
 	jf->isfile = (st.st_mode & S_IFMT) == S_IFREG;
@@ -253,7 +253,7 @@ char *jx_file_path(const char *prefix, const char *name, const char *suffix)
 
 	/* Start with a modest pathname buffer */
 	pathsize = 64;
-	pathname = (char *)malloc(pathsize);
+	pathname = malloc(pathsize);
 
 	/* Get the home directory.  If not set, then assume ".".  We use this
 	 * when a path entry starts with "~/".
@@ -284,7 +284,7 @@ char *jx_file_path(const char *prefix, const char *name, const char *suffix)
 
 		/* If necessary, expand the buffer and try again */
 		if (needsize > pathsize) {
-			pathname = (char *)realloc(pathname, needsize);
+			pathname = realloc(pathname, needsize);
 			pathsize = needsize;
 			if (*path->text == '~')
 				snprintf(pathname, pathsize, "%s%s/%s%s%s", home, path->text + 1, prefix, name, suffix);

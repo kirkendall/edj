@@ -125,7 +125,7 @@ char *jx_serialize(jx_t *json, jxformat_t *format)
 	len++; /* for the terminating NUL */
 
 	/* Allocate the buffer */
-	buf = (char *)malloc(len);
+	buf = malloc(len);
 
 	/* Fill the buffer */
 	len = jcseriallen(json, buf, format);

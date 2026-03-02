@@ -32,7 +32,7 @@ static contexthook_t *extralayers = NULL;
  */
 void jx_context_hook(jxcontext_t *(*addcontext)(jxcontext_t *context))
 {
-	contexthook_t *hook = (contexthook_t *)malloc(sizeof(contexthook_t));
+	contexthook_t *hook = malloc(sizeof(contexthook_t));
 	hook->addcontext = addcontext;
 	hook->other = extralayers;
 	extralayers = hook;
@@ -128,7 +128,7 @@ jxcontext_t *jx_context(jxcontext_t *older, jx_t *data, jxcontextflags_t flags)
         jxcontext_t *context;
 
         /* Allocate it */
-        context = (jxcontext_t *)malloc(sizeof(jxcontext_t));
+        context = malloc(sizeof(jxcontext_t));
         memset(context, 0, sizeof(jxcontext_t));
 
         /* Initialize it. */
@@ -1189,7 +1189,7 @@ jx_t *jx_context_default_table(jxcontext_t *context, char **refexpr)
 			for (found = found->first; found; found = found->next) { /* object */
 				if (jx_is_table(found->first)) {
 					if (refexpr) {
-						*refexpr = (char *)malloc(6 + strlen(found->text));
+						*refexpr = malloc(6 + strlen(found->text));
 						strcpy(*refexpr, "data.");
 						strcat(*refexpr, found->text);
 					}

@@ -320,7 +320,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 	 * we'll reallocate it.
 	 */
 	keysize = 100;
-	key = (char *)malloc(keysize);
+	key = malloc(keysize);
 	*key = '\0';
 
 	/* Locate the end of the text */
@@ -362,7 +362,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 					if (bytes + 1 > keysize) {
 						free(key);
 						keysize = bytes + 20;
-						key = (char *)malloc(keysize);
+						key = malloc(keysize);
 					}
 
 					/* Decode escapes, copy key to keybuf */
@@ -373,7 +373,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 					if (tlen + 1 > keysize) {
 						free(key);
 						keysize = tlen + 20;
-						key = (char *)malloc(keysize);
+						key = malloc(keysize);
 					}
 
 					/* Copy the key */
@@ -716,7 +716,7 @@ void jx_parse_hook(
 	jxparser_t	*jp, *scan;
 
 	/* Allocate a new jxparser_t for it */
-	jp = (jxparser_t *)malloc(sizeof *jp);
+	jp = malloc(sizeof *jp);
 	jp->other = NULL;
 	jp->name = name;
 	jp->tester = tester;

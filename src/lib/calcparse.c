@@ -98,8 +98,9 @@ static struct {
 	{"DESCENDING",	"DES",	3,	1,	JCOP_POSTFIX},
 	{"DISTINCT",	"DIS",	2,	1,	JCOP_OTHER},
 	{"DIVIDE",	"/",	220,	0,	JCOP_INFIX},
+	{"DEEPDOT",	".@",	270,	0,	JCOP_INFIX}, /*!!!*/
 	{"DOT",		".",	270,	0,	JCOP_INFIX},
-	{"DOTDOT",	"..",	270,	0,	JCOP_INFIX}, /*!!!*/
+	{"DOUBLEDOT",	"..",	5,	0,	JCOP_INFIX},
 	{"EACH",	"##",	115,	0,	JCOP_INFIX}, /*!!!*/
 	{"ELLIPSIS",	"...",	127,	0,	JCOP_INFIX},
 	{"ENDARRAY",	"]",	0,	1,	JCOP_OTHER},
@@ -250,8 +251,9 @@ void jx_calc_dump(jxcalc_t *calc)
 	  case JXOP_LJOIN:
 	  case JXOP_RJOIN:
 	  case JXOP_SUBSCRIPT:
+	  case JXOP_DEEPDOT:
+	  case JXOP_DOUBLEDOT:
 	  case JXOP_DOT:
-	  case JXOP_DOTDOT:
 	  case JXOP_ELLIPSIS:
 	  case JXOP_COALESCE:
 	  case JXOP_QUESTION:
@@ -799,7 +801,7 @@ static jxcalc_t *jcalloc(token_t *token)
 		size = sizeof(*jc);
 	else
 		size = sizeof(*jc) - sizeof(jc->u) + len + 1;
-	jc = (jxcalc_t *)malloc(size);
+	jc = malloc(size);
 
 	/* Initialize it to all zeroes */
 	memset((void *)jc, 0, size);
@@ -846,7 +848,7 @@ static jxcalc_t *jcalloc(token_t *token)
 
 	/* SELECT needs some extra space allocated during parsing. */
 	if (token->op == JXOP_SELECT) {
-		jc->u.select = (jxselect_t *)calloc(1, sizeof(jxselect_t));
+		jc->u.select = calloc(1, sizeof(jxselect_t));
 	}
 
 	/* REGEX needs a buffer allocated, and then the text and flags need to
@@ -862,7 +864,7 @@ static jxcalc_t *jcalloc(token_t *token)
 		jc->u.regex.preg = malloc(sizeof(regex_t));
 
 		/* Extract the regex source from the token */
-		tmp = (char *)malloc(token->len);
+		tmp = malloc(token->len);
 		for (scan = token->full + 1, build = tmp; *scan && *scan != '/'; ) {
 			if (*scan == '\\' && scan[1] == '/')
 				scan++;
@@ -986,8 +988,9 @@ void jx_calc_free(jxcalc_t *jc)
 		jx_free(jc->u.literal);
 		break;
 
+	  case JXOP_DEEPDOT:
 	  case JXOP_DOT:
-	  case JXOP_DOTDOT:
+	  case JXOP_DOUBLEDOT:
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
@@ -1194,8 +1197,9 @@ static int jcisag(jxcalc_t *jc)
 	  case JXOP_REGEX:
 		return 0;
 
+	  case JXOP_DEEPDOT:
 	  case JXOP_DOT:
-	  case JXOP_DOTDOT:
+	  case JXOP_DOUBLEDOT:
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
@@ -1577,7 +1581,7 @@ static int pattern_single(jxcalc_t *jc, char pchar)
 	  case 'n': /* Name */
 		if (jc->op != JXOP_NAME
 		 && !JC_IS_STRING(jc)
-		 && jc->op != JXOP_DOT)
+		 && jc->op != JXOP_DOT && jc->op != JXOP_DOUBLEDOT)
 			return FALSE;
 		break;
 
@@ -1660,7 +1664,7 @@ static int pattern_single(jxcalc_t *jc, char pchar)
 		break;
 
 	  case '.': /* JXOP_DOT */
-		if (jc->op != JXOP_DOT)
+		if (jc->op != JXOP_DOT && jc->op != JXOP_DOUBLEDOT)
 			return FALSE;
 		break;
 
@@ -2007,7 +2011,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 		/* Binary operators should be resolved if high precedence */
 		if (PATTERN("x+x") && PREC(top[-2]->op)) {
 			/* Some special rules */
-			if (top[-2]->op == JXOP_DOT) {
+			if (top[-2]->op == JXOP_DOT || top[-2]->op == JXOP_DOUBLEDOT) {
 				if (JC_IS_STRING(top[-1])) {
 					/* Convert the string to a name */
 					t.op = JXOP_NAME;
@@ -2023,7 +2027,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 				if (stack->sp < 3 || (
 				    top[-3]->op != JXOP_QUESTION
 				 && top[-3]->op != JXOP_NAME
-				 && (top[-3]->op != JXOP_LITERAL || top[-3]->u.literal->type != JX_STRING)))
+				 && !JC_IS_STRING(top[-3])))
 					return "The : should be preceded by a name, not an expression";
 			}
 
@@ -2060,7 +2064,8 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 				startsp = stack->sp - 4;
 			else
 				startsp = stack->sp - 3;
-			if (stack->stack[startsp]->op == JXOP_DOT) {
+			if (stack->stack[startsp]->op == JXOP_DOT
+			 || stack->stack[startsp]->op == JXOP_DOUBLEDOT) {
 				jc = stack->stack[startsp]->LEFT;
 				jn = stack->stack[startsp]->RIGHT;
 			} else {
@@ -2100,7 +2105,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 
 			/* May be name(args) or arg1.name(args) */
 			jn = top[-4];
-			if (jn->op == JXOP_DOT)
+			if (jn->op == JXOP_DOT || jn->op == JXOP_DOUBLEDOT)
 				jn = jn->RIGHT;
 			if (jn->op != JXOP_NAME)
 				return "Syntax error - Function name expected";
@@ -2115,7 +2120,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 			 * name(arg1, args...).
 			 */
 			jc = fixcomma(top[-2], JXOP_ARRAY);
-			if (top[-4]->op == JXOP_DOT) {
+			if (top[-4]->op == JXOP_DOT || top[-4]->op == JXOP_DOUBLEDOT) {
 				jxcalc_t *tmp = top[-4];
 				tmp->op = JXOP_ARRAY;
 				tmp->RIGHT = jc;
@@ -2299,8 +2304,9 @@ static int parsecolon(jxcalc_t *jc)
 	  case JXOP_REGEX:
 		break;
 
+	  case JXOP_DEEPDOT:
 	  case JXOP_DOT:
-	  case JXOP_DOTDOT:
+	  case JXOP_DOUBLEDOT:
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_COALESCE:
@@ -2394,7 +2400,7 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 	/* If no aggregate list passed in, make one now.  Make it big */
 	addhere = 0;
 	if (!ag) {
-		ag = (jxag_t *)calloc(1, sizeof(*ag) + 100 * sizeof(jxcalc_t *));
+		ag = calloc(1, sizeof(*ag) + 100 * sizeof(jxcalc_t *));
 		addhere = 1;
 	}
 
@@ -2410,8 +2416,9 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 	  case JXOP_REGEX:
 		break;
 
+	  case JXOP_DEEPDOT:
 	  case JXOP_DOT:
-	  case JXOP_DOTDOT:
+	  case JXOP_DOUBLEDOT:
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
@@ -2516,7 +2523,7 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 	}
 
 	/* Resize ag to the right size, and insert it above jc */
-	ag = (jxag_t *)realloc(ag, sizeof(*ag) + ag->nags * sizeof(jxcalc_t *));
+	ag = realloc(ag, sizeof(*ag) + ag->nags * sizeof(jxcalc_t *));
 	ag->expr = jc;
 	t.op = JXOP_AG;
 	jc = jcalloc(&t);
@@ -2566,6 +2573,16 @@ jxcalc_t *jx_calc_parse(const char *str, const char **refend, const char **refer
 			err = reduce(&stack, jc, token.full);
 		if (err)
 			break;
+
+		/* The only difference between "." and ".." is that "." has
+		 * a very high precedence, and ".." is very low.  This allows
+		 * you to use "expr .. func(args)" to build complex expressions
+		 * incrementally/experimentally. The benefit of the lower
+		 * precedence is done now, though, and we want the function
+		 * call to be parsed in the normal way, so CONVERT .. TO .
+		 */
+		if (jc->op == JXOP_DOUBLEDOT)
+			jc->op = JXOP_DOT;
 
 		/* push it onto the stack */
 		shift(&stack, jc, token.full);

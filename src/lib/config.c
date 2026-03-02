@@ -686,7 +686,7 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 		/* Make a copy of the name */
 		if (namealloc < namelen + 1) {
 			namealloc = (namelen | 0x1f) + 1;
-			name = (char *)realloc(name, namealloc);
+			name = realloc(name, namealloc);
 		}
 		strncpy(name, settings, namelen);
 		name[namelen] = 0;
@@ -896,7 +896,7 @@ BreakBreak:
 			namelen = strlen(list->text) - 5;
 			if (namealloc < namelen + 1) {
 				namealloc = (namelen | 0x1f) + 1;
-				name = (char *)realloc(name, namealloc);
+				name = realloc(name, namealloc);
 			}
 			strncpy(name, list->text, namelen);
 			name[namelen] = '\0';

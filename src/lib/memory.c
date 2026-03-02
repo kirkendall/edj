@@ -165,7 +165,7 @@ jx_t *jx_simple(const char *str, size_t len, jxtype_t type)
         size = (size | 0x1f) + 1;
 
 	/* Allocate it.  Trust malloc() to be efficient */
-        json = (jx_t *)malloc(size);
+        json = malloc(size);
 
 	/* Initialize the fields */
 	memset(json, 0, size);
@@ -251,7 +251,7 @@ jx_t *jx_error_null(const char *where, const char *fmt, ...)
 	}
 
 	/* Allocate a larger buffer to hold the string, and use it */
-	bigbuf = (char *)malloc(len);
+	bigbuf = malloc(len);
 	va_start(ap, fmt);
 	vsnprintf(bigbuf, len, fmt, ap);
 	va_end(ap);
@@ -371,7 +371,7 @@ static int memory_slot(const char *file, int line)
                  * tracker slots.  We also want one more slot in case there
                  * are more than 4096 source lines that allocate jx_t's.
                  */
-                memory_tracker = (memory_tracker_t *)calloc(4097, sizeof(memory_tracker_t));
+                memory_tracker = calloc(4097, sizeof(memory_tracker_t));
 
                 /* Arrange for memory leaks to be reported at exit */
                 atexit(memory_check_leaks);
@@ -528,7 +528,7 @@ jx_t *jx_debug_error_null(const char *file, int line, char *fmt, ...)
 		return jx_debug_simple(file, line, buf, len - 1, JX_NULL);
 
 	/* Allocate a larger buffer to hold the string, and use it */
-	bigbuf = (char *)malloc(len);
+	bigbuf = malloc(len);
 	va_start(ap, fmt);
 	vsnprintf(bigbuf, len, fmt, ap);
 	va_end(ap);

@@ -1,12 +1,12 @@
 .TH jx 1
 .SH NAME
-jx \- JSON calculator and reformatter
+jx \- JSON explorer
 
 .SH SYNOPSIS
 .B jx
-.RI [ OPTION ] 
-.RI [ file.jc ]
-.RI [ "name\fB=\fIvalue" ]
+.RI [ option ]... 
+.RI [ file.jx ]
+.RI [ "name\fB=\fIvalue" ]...
 .RI [ file.json ]...
 
 .SH DESCRIPTION
@@ -388,6 +388,7 @@ bold	boolean	Boldface or bright
 dim	boolean	Dim
 italic	boolean	Italic or oblique
 underlined	boolean	A line under the text
+boxed	boolean	Reverse video, or enclosed in a rectangle
 linethru	boolean	A line through the midline of the text
 blinking	boolean	Nasty blinking text
 fg	string	Foreground color: normal, black, red, green, yellow, blue, magenta, cyan, or white
@@ -477,10 +478,20 @@ for any values that make
 .I expr
 true.
 .IP \ \(bu 3n
+A .. operator which is exactly like the standard . operator except that it
+has a very low precedence.
+Often you'll find yourself building and testing a long expression one clause
+at a time, appending new function calls or filters incrementally.
+Having a low-precedence member operator is handy for that, since it means
+you don't need to go back and add parentheses around the first part of the expression.
+.IP \ \(bu 3n
 A
 .BI diff( old , new )
 function for comparing two arrays or objects, and returning a list of their
 differences.
+There's also a
+.BI common( col1 , col2 ...)
+function to build a grid of values and the columns they appear in.
 .IP \ \(bu 3n
 Aggregate functions including
 .IB min( expr ),
@@ -680,13 +691,11 @@ Note that test.scores is ordered by "run",
 so groupBy() must re-sort the data by "name" to achieve grouping by "name".
 
 .TP
-test..deepest
+test.@deepest
 This outputs the value of test.deep.deeper.deepest,
 which happens to be 3.
-The ".." operator digs down through multiple layers of objects, if necessary,
+The ".@" operator digs down through multiple layers of objects, if necessary,
 to find the requested name.
-(For clarity: two dots is "deep search", three dots is "integer range".
-Two dots has a much higher precedence than three dots.)
 
 .TP
 test.cust[0].contact[type:"address"]

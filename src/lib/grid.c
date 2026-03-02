@@ -67,8 +67,8 @@ void jx_grid(jx_t *json, jxformat_t *format)
 
 	/* Allocate arrays to hold padding tips. */
 	c = jx_length(explain);
-	widths = (int *)calloc(c, sizeof(int));
-	pad = (int *)calloc(c, sizeof(int));
+	widths = calloc(c, sizeof(int));
+	pad = calloc(c, sizeof(int));
 
 	/* If any column's key is wider than their data, expand the column. */
 	rowheight = 1;

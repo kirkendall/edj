@@ -73,7 +73,7 @@ static jx_t *jcsimple(jxcalc_t *calc, jxcontext_t *context)
 		return jx_context_by_key(context, calc->u.text, NULL);
 
 	/* We can do name.name too */
-	if (calc->op == JXOP_DOT
+	if ((calc->op == JXOP_DOT || calc->op == JXOP_DOUBLEDOT)
 	 && calc->RIGHT->op == JXOP_NAME
 	 && (tmp = jcsimple(calc->LEFT, context)) != NULL
 	 && tmp->type == JX_OBJECT)
@@ -115,7 +115,7 @@ jx_t *jcnjoin(jx_t *jl, jx_t *jr, int left, int right)
 	/* If we're doing right join, then we need a list of flags to
 	 * keep track of which right elements never matched any left
 	 */
-	rightmatch = right ? (char *)calloc(jx_length(jr), sizeof(char)) : NULL;
+	rightmatch = right ? calloc(jx_length(jr), sizeof(char)) : NULL;
 
 	/* Start with an empty result array */
 	result = jx_array();
@@ -579,14 +579,14 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 			if (right->type == JX_STRING
 			 || right->type == JX_BOOLEAN
 			 || (right->type == JX_NUMBER && right->text[0])) {
-				name = (char *)malloc(strlen(calc->LEFT->u.text) + strlen(right->text) + 1);
+				name = malloc(strlen(calc->LEFT->u.text) + strlen(right->text) + 1);
 				strcpy(name, calc->LEFT->u.text);
 				strcat(name, right->text);
 				str = getenv(name);
 				free(name);
 			} else {
 				sub = jx_serialize(right, NULL);
-				name = (char *)malloc(strlen(calc->LEFT->u.text) + strlen(sub) + 1);
+				name = malloc(strlen(calc->LEFT->u.text) + strlen(sub) + 1);
 				strcpy(name, calc->LEFT->u.text);
 				strcat(name, sub);
 				str = getenv(name);
@@ -889,6 +889,7 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 		break;
 
 	  case JXOP_DOT:
+	  case JXOP_DOUBLEDOT:
 		/* NOTE: Function calls of the form data.func(args...) are
 		 * transformed to func(data, args...) during parsing, so we
 		 * only see the . operator while looking for a member of an
@@ -916,9 +917,9 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 		}
 		break;
 
-	  case JXOP_DOTDOT:
+	  case JXOP_DEEPDOT:
 		USE_LEFT_OPERAND(calc);
-		if (left->type != JX_OBJECT && calc->RIGHT->op == JXOP_NAME)
+		if (left->type == JX_OBJECT && calc->RIGHT->op == JXOP_NAME)
 			result = jx_copy(jx_by_deep_key(left, calc->RIGHT->u.text));
 		break;
 

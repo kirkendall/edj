@@ -123,7 +123,7 @@ jx_t *jx_plugin_load(const char *name)
 
 	/* Look for a binary plugin */
 #ifdef STATICPLUGINS
-	binfile = (char *)malloc(8 + strlen(name));
+	binfile = malloc(8 + strlen(name));
 	sprintf(binfile, "static %s", name);
 	if (!dlopen(binfile, 0)) {
 		free(binfile);

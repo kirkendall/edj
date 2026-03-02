@@ -254,7 +254,7 @@ void jx_print_table_hook(char *name, void (*fn)(jx_t *json, jxformat_t *format))
 	}
 
 	/* It's new.  Add it to the list */
-	t = (jctablefmt_t *)malloc(sizeof(jctablefmt_t));
+	t = malloc(sizeof(jctablefmt_t));
 	t->name = name;
 	t->fn = fn;
 	t->other = tablefmts;

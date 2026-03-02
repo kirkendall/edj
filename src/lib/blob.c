@@ -275,8 +275,8 @@ jx_t *jx_blob_convert(const char *data, size_t len, jxblobconv_t conversion)
 			blob->len = file->size;
 			file->refs++;
 		} else {
-			blob->data = (char *)malloc(len);
-			memcpy((char *)blob->data, data, len);
+			blob->data = malloc(len);
+			memcpy((void *restrict)blob->data, data, len);
 			blob->len = len;
 		}
 		JX_ARRAY_LENGTH(result) = len;
@@ -379,7 +379,7 @@ jx_t *jx_blob(jx_t *in, jxblobconv_t convout, jxblobconv_t convin)
 		len = jx_blob_unconvert(in, NULL, convin);
 		if (len == 0)
 			return jx_error_null(NULL, "badblob:Could not convert data to a blob");
-		data = mustfree = (char *)malloc(len);
+		data = mustfree = malloc(len);
 		(void)jx_blob_unconvert(in, data, convin);
 	}
 

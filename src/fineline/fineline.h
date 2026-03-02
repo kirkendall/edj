@@ -57,7 +57,7 @@ typedef struct {
 } fineline_row_t;
 
 /* draw3.c */
-typdef struct {
+typedef struct {
 	char	**row;		/* dynamic char *row[] array */
 	char	***style;	/* dynamic char **style[] array */
 	int	rowsize;
@@ -65,7 +65,6 @@ typdef struct {
 	int	height;
 	int	width;
 	int	cursorrow, cursorcol;	/* where to display the cursor */
-	int	cursorcol;
 } fineline_image_t;
 
 /* This contains all of the info needed to draw the current line. */

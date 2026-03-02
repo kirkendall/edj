@@ -164,7 +164,7 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 	/* Initial buffer size guess is fairly modest */
 	if (!buf) {
 		buflen = 1024;
-		buf = (char *)malloc(buflen);
+		buf = malloc(buflen);
 
 		/* While we're at it, let's figure out whether stdout and
 		 * stderr refer to ttys or files/pipes.
@@ -220,7 +220,7 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 		/* If it didn't fit, expand the buffer and try again */
 		if (len >= buflen) {
 			buflen = (len | 0x3ff) + 1;
-			buf = (char *)realloc(buf, buflen);
+			buf = realloc(buf, buflen);
 
 			va_start(ap, fmt);
 			len = vsnprintf(buf, buflen, fmt, ap);
