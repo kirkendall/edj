@@ -75,7 +75,27 @@
 
         <li>This only works on arrays of objects (i.e., tables) because it uses
 	names of object members to guide the sort comparisons.
-
+	If you want to sort an array of strings or numbers, you'll need to
+	convert it to an array of objects first.
+	<div class="example">
+	  <kbd>var colors=["red","orange","yellow","green","blue"];</kbd>
+	  <kbd>(colors # {x:this}).orderBy("x") # x</kbd>
+	  <samp>["blue","green","orange","red","yellow"]</samp>
+	  First we use <tt>colors # {x:this}</tt> to convert the array of
+	  strings into an array of objects.
+	  We can then sort the objects via <tt>orderBy()</tt>.
+	  Lastly, we extract the strings from the sorted objects.
+        </div>
+	<div class="example">
+	  <kbd>function sort(a:array):array { return (a # {x:this}).orderBy("x") # x; }</kbd>
+	  <kbd>colors.sort()</kbd>
+	  <samp>["blue","green","orange","red","yellow"]</samp>
+	  <kbd>[1,7,4,9,5].sort()</kbd>
+	  <samp>[1,4,5,7,9]</samp>
+          Building on the previous example, we define a <tt>sort()</tt>
+          function, and apply it to the array of color names, and then
+          to an array of numbers.
+        </div>
       </ul>
     </details>
   </body>

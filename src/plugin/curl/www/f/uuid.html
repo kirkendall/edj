@@ -25,12 +25,8 @@
       The digits are all random.
       If possible, they'll be derived from /dev/random or /dev/urandom.
       If that isn't available, it'll use the <i>lrand48</i>(3) function
-      which doesn't really have enough bits to really generate
+      which doesn't have enough bits to really generate
       32 hex digits (128 bits) randomly.
-      <p>
-      The full UUID standard specifies multiple ways to generate the
-      UUID value (e.g. by deriving some bits from a timestamp or counter
-      instead of random), but this <tt>uuid()</tt> function is always random.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -46,6 +42,13 @@
     <details>
       <summary>Notes</summary>
       <ul>
+
+        <li>The full UUID standard specifies a variety of ways to generate the
+            UUID value (e.g. by deriving some bits from a timestamp or counter
+            instead of random), but this <tt>uuid()</tt> function is always
+            random.  The all-random variety is known as "version 4" of UUIDs,
+            as indicated by the digit after the second hyphen &mdash;
+            it's always "4".
 
         <li>UUIDs are also sometimes refered to as GUIDs ("Globally" instead of
             "Universally") especially in the Microsoft world.

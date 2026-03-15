@@ -55,7 +55,7 @@
     of objects.
     There can be good reasons for doing this in any data language, but
     it happens more in XML.
-    jx has a <tt>..</tt> operator which is sort of a "deep search"
+    jx has a <tt>.@</tt> operator which is sort of a "deep search"
     version of the usual <tt>.</tt> operator to help with this.
 
     <h2>What is jx like?</h2>
@@ -114,6 +114,8 @@
       </samp>
       test.scores is a JSON array of objects.
       jx treats that as a table and, by default, outputs it as a grid.
+      (A web browser's debugging console can output arrays of objects as
+      a grid too, via its <tt>console.table()</tt> function.)
     </div>
 
     <div class="example">
@@ -273,7 +275,7 @@ name=Mary run=3 score=40
       <li>It is case-insensitive.  When looking up an object member, it first
           tries to find it in a case-sensitive way but if that fails then it
           tries case-insensitive.  This can save you from some frustration.
-      <li>In addition to the usual <tt>.</tt> operator, there's a <tt>..</tt>
+      <li>In addition to the usual <tt>.</tt> operator, there's a <tt>.@</tt>
           operator which will do a "deep" search for a member.
       <li>Arrays of objects ("tables") can be output in multiple formats,
           including a nice grid format.

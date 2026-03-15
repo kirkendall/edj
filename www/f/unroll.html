@@ -14,7 +14,7 @@
       <dd>
       JSON data often uses nested data structures to more accurately model the
       real-world phenomena that the data is meant to represent.
-      For example, if customer have purchase orders, and purchase orders have
+      For example, if customers have purchase orders, and purchase orders have
       a table of items purchased,
       then the corresponding JSON data structure might 
       have an array of "customer" objects, with each "customer"
@@ -100,6 +100,16 @@
         <li>For the sake of convenience, if you only need to unroll a single
             layer, you can give the name of the table as a string instead of
             an array of strings.
+
+	<li>There is also a <a target="_PARENT" href="../index.html?f=flat">flat()</a>
+	    function which removes layering from nested arrays.
+	    The difference between them is that <tt>unroll()</tt> handles
+	    nesting with an object-array-object-array pattern, while
+	    <a target="_PARENT" href="../index.html?f=flat">flat()</a>
+	    just handles an array-array nesting pattern.
+	    <tt>unroll()</tt> is much more complex since it requires
+	    duplicating members from the outer object layer,
+	    and merging them into each result row.
 
       </ul>
     </details>

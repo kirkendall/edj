@@ -31,7 +31,7 @@
     and the solutions used.
     <p>
     Most people can ignore this, since deferred arrays are intended to act
-    as much like normal on-memory arrays as possible.
+    as much like normal in-memory arrays as possible.
     The information here might be useful if you're implementing a plugin
     to access a database, and want tables to be represented by deferred arrays.
 
@@ -63,7 +63,7 @@
     point to the <tt>jx_t</tt> of the first element, it points to a
     <tt>JX_DEFER</tt>.
     In other words, for any deferred array, its
-    <tt>-&gt;first-&gt;->type=JX_DEFER</tt>.
+    <tt>-&gt;first-&gt;type=JX_DEFER</tt>.
     <p>
     Internally, though, there's some funny business going on.
     Instead of pointing to a real <tt>jx_t</tt>, it actually points to a
@@ -158,8 +158,9 @@
     then you need to call <tt>jx_break()</tt> to free the last element and
     all data that was allocated to support the scan.
     <p>
-    For simplicity's sake, if you can jx_break() with an element that didn't
-    come from a deferred array, or for a NULL pointer, then it does nothing.
+    For simplicity's sake, you can call jx_break() with an element that didn't
+    come from a deferred array, or for a NULL pointer,
+    in which case it does nothing.
     You can safely call <tt>jx_break()</tt> after breaking out of any
     array-scanning loop.
 
@@ -226,7 +227,7 @@
     <h2>Effects on jx_is_last()</h2>
 
     The <tt>jx_is_last()</tt> function detects whether a given element is
-    the last element; i.e. whether <tt>jx_last<tt> will return NULL.
+    the last element; i.e. whether the next <tt>jx_next()</tt> will return NULL.
     Usually you don't need to know this, but every so often you do.
     For example, if you're generating a text form of the array and don't
     want an extra comma after the last element.
@@ -241,7 +242,7 @@
           If it's one less than the array length, then that's the last one.
           This only works if the array length is known.
       <li>One of the function pointers in <tt>jxdeffns_t</tt> is
-          <tt>islast<tt>.
+          <tt>islast</tt>.
           Not all types of deferred arrays define that function, but if they
           do then that's the solution.
       <li>Start a copy of the scan, and try <tt>jx_next()</tt> on the copy.
@@ -262,11 +263,6 @@
     It's best to assume that any array could be nested unless you know
     exactly where the data comes from, and can trust it to only generate
     in-memory arrays.
-    <p>
-    One insidious problem is that when you're scanning nested arrays, even
-    if the inner array is not deferred (and hence its elements are not
-    from 
-
 
     <h2>The ... Operator</h2>
 
@@ -295,18 +291,62 @@
     <tt>jell_next()</tt> functions.
     Those functions return a <tt>jx_t</tt> for each successive integer,
     with the <tt>-&gt;next</tt> pointing to a copy of the array's
-    <tt>-&gt;first<tt>.
+    <tt>-&gt;first</tt>.
     <p>
-    It also defines <tt>jell_islast()</tt> and <tt>jell_byindex</tt> functions.
+    It also defines <tt>-&gt;islast()</tt> and <tt>-&gt;byindex()</tt> functions.
     It does <strong>not</strong> define a function for doing extra freeing
     because none is needed; that's mostly for things like database access
     where you need to free the result set when you're done with it.
     It also does <strong>not</strong> define a function for searching by a
     key and value because integers aren't objects and hence have no keys.
 
+    <h2>Blobs</h2>
+
+    A blob is a binary object.
+    They may be read from a binary file, or
+    created via the <a target="_PARENT" href="../index.html?f=blob">blob()</a>
+    function.
+    <p>
+    In <b>jx</b>, the data is stored internally as a nice compact span of bytes,
+    but you can access them as a deferred array.
+    This allows you to access the data as an array of numbers, where each
+    element corresponds to a single byte of data.
+
     <h2>Parsing Large JSON Files</h2>
 
-    I haven't done this yet.  Soon!
+    The JSON parser (in parse.c) detects large arrays, and makes them be
+    deferred.
+    When it encounters an array that isn't nested inside another array, and
+    starts more than <tt>defersize</tt> bytes before the end of the file,
+    then it calls a function named <tt>jskim()</tt> to parse the array
+    without storing any elements; if the array's source text is at least
+    <tt>defersize</tt> bytes long, then the array will be deferred.
+    <p>
+    Note that even the mere potential that an array could be deferred will
+    cause it to be skimmed, and then either parsed immediately anyway (if small)
+    or parsed piecemeal later (if deferred).
+    Skimming + parsing is always slower than just parsing so deferred
+    arrays will only save memory, not time.
+    You should set <tt>defersize</tt> to a fairly large value to avoid this
+    slowdown.
+    The default value is 10000000 (ten million bytes of JSON text,
+    which would typically consume about 50 megabytes of RAM if parsed)
+    but you might want to increase that.
+    <p>
+    If the parser decides to defer the array, it will allocate
+    <tt>jdefarray_t</tt> to store information about the location of the
+    array within the JSON file.
+    (The JSON files are mapped into memory, so this is simply a pair of
+    pointers to the start and end of the array's source text.  The file
+    will remain mapped into memory as long as there's a deferred array
+    continues to reference it.)
+    <p>
+    The <tt>jskim()</tt> function also counts the elements, and determines
+    whether every element is an object (and hence whether the array is a table).    <p>
+    Deferred arrays from JSON files use <tt>-&gt;first</tt>,
+    <tt>-&gt;next</tt>, and <tt>-&gt;islast</tt> function pointers.
+    They do <em>not</em> use <tt>-&gt;free</tt>, <tt>-&gt;byindex</tt>,
+    or <tt>-&gt;bykey</tt>.
 
 <h2>Where Deferred Arrays Can't Happen</h2>
     The <tt>jx_first()</tt>/<tt>jx_next()</tt> functions are used throughout

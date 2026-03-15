@@ -45,6 +45,26 @@
         All duplicates were detected, since the <var>strict</var> argument is <tt>true</tt>.
       </div>
 
+      <div class="example">
+        <kbd>var colors = [];</kbd>
+        <kbd>colors[] = {name:"black",r:0,g:0,b:0};</kbd>
+        <kbd>colors[] = {name:"white",r:255,g:255,b:255};</kbd>
+        <kbd>colors[] = {name:"snow",r:255,g:255,b:255};</kbd>
+        <kbd>colors.distinct(["r","g","b"]);</kbd>
+        <samp>
+	  <table>
+	  <tr><th>name</th><th>r</th><th>g</th><th>b</th></tr>
+	  <tr><td>black</td><td>0</td><td>0</td><td>0</td></tr>
+	  <tr><td>white</td><td>255</td><td>255</td><td>255</td></tr>
+	  </table>
+	</samp>
+	Here's an example that uses a list of member keys to compare.
+	First we define a table of colors, then we apply <tt>distinct()</tt>
+	with a list of the columns to compare.
+	Since the "white" and "snow" items have the same r/g/b values,
+	"snow" was removed.
+      </div>
+
     </details>
 
     <details>
