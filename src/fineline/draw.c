@@ -83,8 +83,8 @@ void fineline_draw(fineline_t *fine)
 
 	/* If line coloring starts with NULL, assume that means "normal" */
 	style = "normal";
-	if (fine->colors && fine->colors[0] == NULL)
-		fine->colors[0] = "normal";
+	if (fine->style && fine->style[0] == NULL)
+		fine->style[0] = "normal";
 
 	/* Output each chunk of the line, being mindful of coloring and
 	 * line wrap.  Detect when we reach the cursor.  If there's a hint,
@@ -92,10 +92,10 @@ void fineline_draw(fineline_t *fine)
 	 */
 	for (offset = 0; fine->line[offset]; offset += span) {
 		/* Get the style of this chunk.  If a chunk gets split due to
-		 * a line wrap, then fine->colors[offset] might be NULL.
+		 * a line wrap, then fine->style[offset] might be NULL.
 		 */
-		if (fine->colors && fine->colors[offset])
-			style = fine->colors[offset];
+		if (fine->style && fine->style[offset])
+			style = fine->style[offset];
 
 		/* Find the end of this chunk.  The chunk ends at the end
 		 * of the line, or a change of style/colors, or the cursor if
@@ -126,7 +126,7 @@ void fineline_draw(fineline_t *fine)
 			}
 
 			/* change of style/colors? */
-			if (fine->colors && fine->colors[offset + span] && fine->colors[offset + span] != style) {
+			if (fine->style && fine->style[offset + span] && fine->style[offset + span] != style) {
 				why = BECAUSE_STYLE;
 				break;
 			}

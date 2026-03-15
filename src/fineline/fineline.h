@@ -60,10 +60,11 @@ typedef struct {
 typedef struct {
 	char	**row;		/* dynamic char *row[] array */
 	char	***style;	/* dynamic char **style[] array */
-	int	rowsize;
-	int	toprow;
-	int	height;
-	int	width;
+	int	rowsize;	/* dimension of the row[] and style[] arrays */
+	int	toprow;		/* number of rows scrolled off the top */
+	int	height;		/* row that we're writing into now */
+	int	width;		/* number of columns per row */
+	int	col;		/* current column with the current row */
 	int	cursorrow, cursorcol;	/* where to display the cursor */
 } fineline_image_t;
 
@@ -136,8 +137,8 @@ typedef struct fineline_s {
 	int 	cursor;		/* byte-index into "line" of the cursor */
 
 	const char *(*colorer)(struct fineline_s *);
-	const char **colors;
-	const size_t colorsize;	/* dimension of colors */
+	const char **style;
+	const size_t stylesize;	/* dimension of style */
 
 	void (*completer)(struct fineline_s *);
 	char	*completesame;	/* Common part of name completion */

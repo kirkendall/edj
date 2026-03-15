@@ -164,11 +164,11 @@ static int draw_row(fineline_t *fine, int row)
 	 * then default to "normal".
 	 */
 	style = "normal";
-	if (fine->colors) {
+	if (fine->style) {
 		i = fine->row[row].start;
-		style = fine->colors[i];
+		style = fine->style[i];
 		if (!style) {
-			while (i >= 0 && (style = fine->colors[i]) == NULL)
+			while (i >= 0 && (style = fine->style[i]) == NULL)
 				i--;
 			if (!style)
 				style = "normal";
@@ -182,9 +182,9 @@ static int draw_row(fineline_t *fine, int row)
 		for (len = 1;
 		     fine->line[i + len]
 			&& i + len < fine->row[row + 1].start
-			&& (!fine->colors
-			 || !fine->colors[i + len]
-			 || !strcmp(fine->colors[i + len], style));
+			&& (!fine->style
+			 || !fine->style[i + len]
+			 || !strcmp(fine->style[i + len], style));
 		     len++) {
 		}
 
@@ -193,8 +193,8 @@ static int draw_row(fineline_t *fine, int row)
 
 		/* Prepare for the next chunk */
 		i += len;
-		if (fine->line[i] && fine->colors)
-			style = fine->colors[i + len];
+		if (fine->line[i] && fine->style)
+			style = fine->style[i + len];
 	}
 
 	/* If this is the last row, then we need to return the column number */

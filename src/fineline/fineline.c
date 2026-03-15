@@ -49,11 +49,11 @@ void fineline_free(fineline_t *fine)
 	if (fine->row)
 		free(fine->row);
 
-	/* Free the colors array too.  The individual strings that it points to
+	/* Free the style array too.  The individual strings that it points to
 	 * are static so they don't need to be freed.
 	 */
-	if (fine->colors)
-		free(fine->colors);
+	if (fine->style)
+		free(fine->style);
 
 	/* If there are completions, free them */
 	if (fine->complete) {
