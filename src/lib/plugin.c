@@ -57,7 +57,7 @@ static struct staticplugins_s {
 #ifdef STATICMATH
 	{"math", pluginmath},
 #endif
-#ifdef STATICMATH
+#ifdef STATICXML
 	{"xml", pluginxml},
 #endif
 	{NULL}
