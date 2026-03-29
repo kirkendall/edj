@@ -555,7 +555,6 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 
 				if (!*key) {
 					error = "Object member has no key";
-					jx_free(jc);
 					goto Error;
 				}
 
