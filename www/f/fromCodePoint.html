@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>codePointAt</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx codePointAt - Convert Unicode code points into a string">
+    <meta name="keywords" content="string, jx, function reference, codePointAt">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>fromCodePoint - Convert Unicode code points into a string</h1>
+    <dl>
+      <dt>fromCodePoint(<var>code</var>:number|array, ...)
+      <dd>
+      This is identical to <a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</a>.
+    </dl>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This function exists to avoid an incompatibility with JavaScript.
+            JavaScript uses UTF-16 character encoding internally, and the
+            <a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</a>
+            function converts numbers to single a UTF-16 character (potentially
+            half of UTF-16 surrogate pair) while <tt>fromCodePoint()</tt>
+            always generates whole Unicode characters.
+            However, <b>jx</b> uses UTF-8 internally (part of the JSON standard)
+            so the distinction makes no sense.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</td><td>Return a character code from a string.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

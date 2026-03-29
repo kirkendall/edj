@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>codePointAt</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx codePointAt - Convert characters in a string to Unicode code points">
+    <meta name="keywords" content="string, jx, function reference, codePointAt">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>codePointAt - Convert characters in a string to Unicode code points</h1>
+    <dl>
+      <dt>codePointAt(<var>str</var>:string, <var>index</var>?:number|array|true=true)
+      <dd>
+      This is identical to <a target="_PARENT" href="../index.html?f=charCodeAt">charCodeAt()</a>.
+    </dl>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This function exists to avoid an incompatibility with JavaScript.
+            JavaScript uses UTF-16 character encoding internally, and the
+            <a target="_PARENT" href="../index.html?f=charCodeAt">charCodeAt()</a>
+            function returns a UTF-16 character (potentially half of UTF-16
+            surrogate pair) while <tt>codePointAt()</tt> decodes surrogate pairs
+            to return a full Unicode code point.
+            However, <b>jx</b> uses UTF-8 internally (part of the JSON standard)
+            so the distinction makes no sense.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=charCodeAt">charCodeAt()</td><td>Return a character code from a string.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

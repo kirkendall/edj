@@ -23,7 +23,7 @@
       skips <var>num</var> characters into the string and returns the code for the
       next character.
       <p>
-      Unlike JavaScript, <strong>jx</strong> also allows you to pass an
+      <strong>jx</strong> also allows you to pass an
       array of position numbers, or a boolean <tt>true</tt> to indicate that
       all characters should be converted.
       When you do this, it returns a corresponding array of character codes.
@@ -69,11 +69,21 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Although some UTF-8 characters require more bytes than others, you can
-        ignore that here.
-        This function counts characters, not bytes.
+        <li>Although some UTF-8 characters require more bytes than others,
+            you can ignore that here.
+            This function counts characters, not bytes.
+
+	<li>JavaScript's version of this function only lets you pass a single
+	    index.  Passing an array of indexes, or <tt>true</tt> for all
+	    characters, is a <b>jx</b> extension.
 
       </ul>
     </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=codePointAt">codePointAt()</a></td><td>Alternate name for this function</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=fromCharCode">fromCharCode()</a></td><td>Converts character codes back to a string</td></tr>
   </body>
 </html>
