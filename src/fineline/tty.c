@@ -14,11 +14,7 @@
  * it has hardcoded escape sequences appropriate for an ANSI terminal.
  */
 
-/* Initially this contains the name of the terminfo attribute for each key.
- * Once the terminal has been loaded, the attribute names are replaced with
- * the attribute values.
- *
- * In addition to the keys listed here, '\n' or '\r' is FINELINE_ENTER,
+/* In addition to the keys listed here, '\n' or '\r' is FINELINE_ENTER,
  * <Esc> is FINELINE_EXIT, '\t' is FINELINE_TAB, '\b' is FINELINE_BACK_SPACE,
  * and '\177' is either * FINELINE_BACK_SPACE or FINELINE_DELETE depending on
  * stty settings.
@@ -291,7 +287,11 @@ static void ttyclear(void)
 
 static void ttytext(const char *style, const char *text, size_t size)
 {
+	if (style && !strcmp(style, "prompt"))
+		fwrite("\033[33;1m", 1, 7, stderr);
 	fwrite(text, 1, size, stderr);
+	if (style && !strcmp(style, "prompt"))
+		fwrite("\033[m", 1, 3, stderr);
 }
 
 static void ttyscroll(int n)
@@ -335,12 +335,13 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 
 	/* If called with NULL, then use a generic fineline_t */
 	if (!fine) {
-		if (!ttygeneric)
+		if (!ttygeneric) {
 			ttygeneric = fineline_tty_alloc();
+			fineline_history_lines(ttygeneric, 50);
+			fineline_history_add(ttygeneric, "Freely redistributable under the terms of GNU LGPL 3.0 or later");
+			fineline_history_add(ttygeneric, "fineline library 1.0, copyright 2026 by Steve Kirkendall");
+		}
 		fine = ttygeneric;
-		fineline_history_lines(fine, 50);
-		fineline_history_add(fine, "Freely redistributable under the terms of GNU LGPL 3.0 or later");
-		fineline_history_add(fine, "fineline library 1.0, copyright 2026 by Steve Kirkendall");
 	}
 
 	/* Store the prompt */

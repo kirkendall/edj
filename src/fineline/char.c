@@ -75,7 +75,7 @@ int fineline_char_column_number(const char *buf, int cursor)
 
 	/* Count widths out to the cursor */
 	memset(&state, 0, sizeof state);
-	for (pos = buf, col = 0; pos < buf + cursor; pos += len) {
+	for (pos = buf, col = 0; *pos && pos < buf + cursor; pos += len) {
 		len = mbrtowc(&wc, pos, MB_CUR_MAX, &state);
 		if (len <= 0)
 			return -1;
@@ -150,6 +150,8 @@ int fineline_char_delta(const char *buf, int cursor, int delta)
 	 * over those.
 	 */
 	do {
+		if (cursor == 0)
+			break;
 		cursor--;
 	} while ((buf[cursor] & 0xc0) == 0x80);
 

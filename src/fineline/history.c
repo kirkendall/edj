@@ -31,28 +31,34 @@ int fineline_history_lines(fineline_t *fine, int size)
 
 /* Shift a copy of a given line into history at slot 1. (slot 0 is used for the
  * current line). Exception: If the line is empty or identical to the previous
- * line, do nothing.
+ * line, then do nothing.
  */
 void fineline_history_add(fineline_t *fine, const char *line)
 {
-	/* If empty, do nothing */
+	/* If empty, then do nothing */
 	if (!line || !*line)
 		return;
 
-	/* Configured to not store history, then do nothing */
+	/* If configured to not store history, then do nothing */
 	if (fine->historysize == 1)
 		return;
 
-	/* If identical to history[1], do nothing */
+	/* If identical to history[1], then do nothing */
 	if (fine->historyused > 1 && !strcmp(fine->history[1], line))
 		return;
+
+	/* There should always be at least 1 line of history -- that's the
+	 * current line.  If 0 then set to 1.
+	 */
+	if (fine->historyused == 0)
+		fine->historyused = 1;
 
 	/* Shift the history.  If the history is full, this will involve
 	 * freeing the last history slot before shifting.
 	 */
 	if (fine->historyused == fine->historysize)
 		free(fine->history[--fine->historyused]);
-	if (fine->historyused > 2)
+	if (fine->historyused >= 2)
 		memmove(&fine->history[2], &fine->history[1], (fine->historyused - 1) * sizeof(char *));
 
 	/* Store a copy of the new line */
