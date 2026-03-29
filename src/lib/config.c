@@ -181,6 +181,44 @@ jx_t *jx_config;
  */
 jx_t *jx_system;
 
+static void merge(jx_t *old, jx_t *newload);
+
+/* Merge table "newload" into table "old".  Use the "key" to find the
+ * corresponding rows.  We assume both are known to be tables, and that
+ * "old" is undeferred.
+ */
+static void merge_table(jx_t *old, jx_t *newload, char *key)
+{
+	jx_t *newrow, *oldrow, *tmp;
+	char *value;
+
+	/* For each row from newload... */
+	for (newrow = jx_first(newload); newrow; newrow = jx_next(newrow)) {
+		/* Fetch the key value.  Skip if there is none */
+		tmp = jx_by_key(newrow, key);
+		if (!tmp || tmp->type != JX_STRING)
+			continue;
+		value = tmp->text;
+
+		/* Look for a corresponding row in the old table */
+		for (oldrow = jx_first(old); oldrow; oldrow = jx_next(oldrow)) {
+			tmp = jx_by_key(oldrow, key);
+			if (!tmp || tmp->type != JX_STRING)
+				continue;
+			if (!strcmp(value, tmp->text))
+				break;;
+		}
+
+		/* If we found a corresponding row, update it.  Otherwise,
+		 * append a copy of the "newrow" row to the "old" table.
+		 */
+		if (oldrow)
+			merge(oldrow, newrow);
+		else
+			jx_append(old, jx_copy(newload));
+	}
+}
+
 /* Merge new settings into old settings. */
 static void merge(jx_t *old, jx_t *newload)
 {
@@ -204,6 +242,12 @@ static void merge(jx_t *old, jx_t *newload)
 		/* If both are objects, merge recursively */
 		if (oldmem->type == JX_OBJECT && newkey->first->type == JX_OBJECT) {
 			merge(oldmem, newkey->first);
+			continue;
+		}
+
+		/* If both are tables, merge the tables. */
+		if (jx_is_table(oldmem) && jx_is_table(newkey->first)) {
+			merge_table(oldmem, newkey->first, oldmem->first->first->text);
 			continue;
 		}
 
@@ -301,7 +345,7 @@ static jx_t *configpath(const char *envvar)
 	return path;
 }
 
-/* Load the configuration data, and return it */
+/* Load the configuration data */
 void jx_config_load(const char *name)
 {
 	char	*pathname;
@@ -432,8 +476,8 @@ void jx_config_load(const char *name)
 }
 
 /* Select whether this part of jx_config gets saved.  It should save
- * everything except members that have names ending with "-list", and a
- * few others.
+ * everything except "batch", members that have names ending with "-list",
+ * and a few others.
  */
 static int notlist(jx_t *mem)
 {
