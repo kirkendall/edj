@@ -101,7 +101,7 @@ static struct {
 	{"DEEPDOT",	".@",	270,	0,	JCOP_INFIX}, /*!!!*/
 	{"DOT",		".",	270,	0,	JCOP_INFIX},
 	{"DOUBLEDOT",	"..",	5,	0,	JCOP_INFIX},
-	{"EACH",	"##",	115,	0,	JCOP_INFIX}, /*!!!*/
+	{"EACH",	"##",	122,	0,	JCOP_INFIX}, /*!!!*/
 	{"ELLIPSIS",	"...",	127,	0,	JCOP_INFIX},
 	{"ENDARRAY",	"]",	0,	1,	JCOP_OTHER},
 	{"ENDOBJECT",	"}",	0,	1,	JCOP_OTHER},
@@ -113,7 +113,7 @@ static struct {
 	{"FNCALL",	"F",	170,	0,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	0,	JCOP_OTHER},
 	{"GE",		">=",	190,	0,	JCOP_INFIX},
-	{"GROUP",	"#",	115,	0,	JCOP_INFIX},	/*!!!*/
+	{"GROUP",	"#",	122,	0,	JCOP_INFIX},	/*!!!*/
 	{"GROUPBY",	"GRO",	2,	1,	JCOP_OTHER},
 	{"GT",		">",	190,	0,	JCOP_INFIX},
 	{"HAVING",	"HAV",	2,	1,	JCOP_OTHER},
