@@ -70,7 +70,7 @@ Its main features are:
 * You can configure persistent (cross-invocation) autoload directories,
   plugins, and other settings... but for interactive use only.
   Persistent settings are intentionally inhibited for non-interactive scripts
-  that the scripts will have a consistent environment to run in.
+  so that the scripts will have a consistent environment to run in.
 
 * The JSON data parser is quick.  Also, it can process large documents
   incrementally.
@@ -87,6 +87,6 @@ Its main features are:
   - Online documentation is available at
     [https://www.jxhub.net](https://www.jxhub.net).
     This site is mostly intended to serve as a quick reference, but there
-    are also some tutorials there.
+    are also some tutorials and articles there.
 
   - It has a fairly extensive "help" command.
