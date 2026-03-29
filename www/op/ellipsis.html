@@ -49,6 +49,16 @@
 	    For example, the expression <tt>0...arr.length-1</tt> will return
 	    an array of subscript values for array <var>arr</var>.
 	    This works even if <var>arr</var> is empty.
+	<li>Internally, this is implemented as a deferred array.
+	    It does <em>not</em> allocate the whole array at once.
+	    <div class="example">
+	      <kbd>sizeOf(1 ... 1000000)</kbd>
+	      <samp>96</samp>
+	      The whole million-element array only takes 96 bytes of RAM
+	      because it really just stores the description of the array;
+	      if you loop over the array, each element will be generated
+	      one-at-a-time.
+	    </div>
 
   </body>
 </html>

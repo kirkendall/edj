@@ -29,9 +29,11 @@
       <div class="example">
 	<kbd>1/0 is null</kbd>
 	<samp>true</samp>
-        Division by zero returns <tt>null</tt>.
+        Errors are represented internally as <tt>null</tt> with the error
+        details embedded in them.
+        The <tt>IS NULL</tt> operator sees the <tt>null</tt> and hides the
+        error.
       </div>
-
 
     </details>
 
@@ -43,7 +45,13 @@
 	    Honestly, I'd rather just use
 	    <tt>=== null</tt> or <tt>!== null</tt>.
 
-	<li>Its worth noting once again that since standard JavaScript symbols such as
+	<li>Eventually I expect to make TypeScript-style types actually work,
+	    and replace <tt>IS NULL</tt> with a generic
+	    <tt>IS</tt> <var>type</var> operator.
+	    Since "NULL" is a perfectly valid type specifier, <tt>IS NULL</tt>
+	    will still work albeit in a different, more versatile way.
+
+	<li>It's worth noting once again that since standard JavaScript symbols such as
 	    <tt>undefined</tt> and <tt>NaN</tt> aren't valid in JSON,
 	    <strong>jx</strong> uses <tt>null</tt> to represent
 	    exceptional conditions and errors.

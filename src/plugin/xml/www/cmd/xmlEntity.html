@@ -42,10 +42,10 @@
 	<samp>
 	  <table>
 	    <tr><th>entity</th><th>codepoint</th><th>text</th></tr>
-	    <tr><td>&amp;amp;</td><td>U+00026</td><td>&</td></tr>
+	    <tr><td>&amp;amp;</td><td>U+00026</td><td>&amp;</td></tr>
 	    <tr><td>&amp;apos;</td><td>U+00027</td><td>'</td></tr>
-	    <tr><td>&amp;gt;</td><td>U+0003e</td><td>></td></tr>
-	    <tr><td>&amp;lt;</td><td>U+0003c</td><td><</td></tr>
+	    <tr><td>&amp;gt;</td><td>U+0003e</td><td>&gt;</td></tr>
+	    <tr><td>&amp;lt;</td><td>U+0003c</td><td>&lt;</td></tr>
 	    <tr><td>&amp;quot;</td><td>U+00022</td><td>"</td></tr>
 	  </table>
 	</samp>
@@ -64,13 +64,23 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>If the <tt>parseEntity</tt> option is turned on, then any
-            &lt;!ENTITY <var>name</var>=<var>text</var>&gt; entities will also
-            add entities to the table.
-
 	<li>The XML parser also understands <tt>&amp;#<var>decimal</var>;</tt>
 	    and <tt>&amp;#x<var>hex</var></tt> entities.
 	    These don't need to be in the table.
+
+	<li>The <a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a>
+	    function does not currently use this table to convert non-ASCII
+	    characters to entities.
+	    They'll just be output as UTF-8 characters.
+	    Exception: The five basic entities (&quot;, ', &amp;, &lt;, and &gt;)
+	    will be converted.
+
+        <li>I considered <em>but rejected</em> the idea of adding a
+            <tt>parseEntity</tt> option that would make the XML parser handle
+            <tt>&lt;!ENTITY</tt> <var>name</var> <var>text</var><tt>&gt;</tt>
+            tags by automatically adding entities to the table.
+            This notation is very clunky in XML and rarely used,
+            so supporting it just isn't a priority.
 
       </ul>
     </details>
