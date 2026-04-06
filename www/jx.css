@@ -234,9 +234,16 @@ table.opList span.op {
 blockquote.abstract {
 	text-align:center;
 	font-style: italic;
+	display: inline-block;
+	border: thin solid black;
+	padding:0.5em;
+	clear: left right;
+	max-width: 65vw;
 }
 blockquote.abstract::before {
-	content: "ABSTRACT: "
+	content: "ABSTRACT";
+	display: block;
+	margin-bottom: 0.5em;
 }
 article span.timestamp {
 	font-size: smaller;
