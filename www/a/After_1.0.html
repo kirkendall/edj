@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>After 1.0</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx After 1.0">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, article, After 1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>After 1.0</h1>
+    <h4 class="timestamp">2026-04-06</h4>
+    <center>
+    <blockquote class="abstract">
+      Some features have been more-or-less designed but not yet implemented.
+    </blockquote>
+    </center>
+
+    There are a number of potential features that I've explored and in some
+    cases even designed, but not implemented yet.
+    These are all useful things, but aren't so critical that I had to delay
+    release version 1.0 just to add them.
+    <p>
+    Obviously this isn't an exhaustive list.
+    The next version of jx will include features not listed here, I'm sure.
+
+    <h2>Screen</h2>
+    The existing command line interface is nice.
+    The interactive read-evaluate-print-loop is very nice.
+    But I want a full-screen terminal-based user interface,
+    implemented as a "-lscreen" plugin.
+    <p>
+    This would add the ability to open up panels/windows/tabs for
+    a variety of purposes:
+    <ul>
+      <li>Browsing JSON data, with expand/contract, click-to-copy-expression,
+          click-to-copy-value, editable value, and a search feature.
+      <li>Using the <a target="_PARENT" href="../index.html?f=diff">diff()</a>
+          or <a target="_PARENT" href="../index.html?f=find">find()</a>
+          output as a clickable index.
+      <li>Accessing the documentation, with clickable links and click-to-copy
+          examples.
+    </ul>
+    <p>
+    The "fineline" line input library was designed to work well in
+    applications that use the -lncursesw library, which the "screen" plugin
+    will undoubtedly use.
+    You won't lose any line-editing functionality by using the "screen" plugin.
+
+    <h2>Data Types</h2>
+    Currently, jx allows you to declare types for vars, consts, functions,
+    and function arguments, but it ignores those declarations.
+    They're currently useful only as comments.
+    <p>
+    The benefits of truly parsing data types are:
+    <ul>
+      <li>It'll catch errors in scripts, hopefully making them more reliable.
+      <li>The <a target="_PARENT" href="../index.html?cmd=case">case</a>
+          keyword can be modified to accept a type declaration instead of
+          a single literal.  Since literals are valid type declarations,
+          this won't break any scripts.  It will, however, add the ability
+          to use a "|"-delimited list of values, or even a complex data type
+          as a case.
+      <li>The <a target="_PARENT" href="../index.html?op=isnull">IS NULL and
+          IS NOT NULL</a> operators will be replaced with generic
+          <b>IS</b> <var>type</var> and <b>IS NOT</b> <var>type</var>
+          operators.
+          Since <a target="_PARENT" href="../index.html?lit=null">null</a>
+          is a valid type specifier, this won't break existing code.
+    </ul>
+    <p>
+    As in TypeScript, specifying data types will be entirely optional.
+    For quick-and-dirty scripts that you compose while debugging, you'll
+    probably want to skip type specifications and checking.
+    <p>
+    The current type parser is mostly there as a place holder for the "real"
+    type parser.
+
+    <h2>Registry of Global Vars/Consts</h2>
+    Currently, when you declare a global var or const, it simply adds the
+    key and initial value to the <tt>global.vars</tt> or <tt>global.consts</tt>
+    objects.
+    This change will add an internal registry of global vars and consts.
+    <p>
+    The registry will store the filename and line number where the var/const
+    was declared.
+    If some other file tries to redeclare it then that's an error.
+    When you load multiple script files, this will prevent them from interfering
+    with each other.
+    However, if you reload a script (after editing it, presumably) then it
+    will be allowed to redeclare its own vars/consts.
+    <p>
+    The registry can also store the declared type of vars/consts, and use that
+    to detect errors.
+    <p>
+    Also, I expect to add support for asynchronous events at some point
+    (see below)
+    and that will require data locks for global vars.
+    The registry gives me a place to store those locks.
+    None of the built-in functions alter variables, but you can write
+    functions in jx script that do.
+    <p>
+    There is already a global registry of functions, by the way.
+    This is subtly different from the var/const registry, in that functions
+    are shared across contexts, but global vars/consts are tied to a specific
+    context.
+
+    <h2>Pre-Command Hook</h2>
+    I have plans for a hook that will allow a C function to be called before
+    each script command is executed.
+    Some of the things this could be used for are:
+    <ul>
+      <li>Tracing execution.
+          Probably this would be implemented in the <a target="_PARENT" href="../index.html?p=log">log plugin</a>,
+          and would act sort of like automatically-generated
+          <a target="_PARENT" href="../index.html?cmd=log">log</a> commands.
+          You could control where the trace information is sent, that way.
+      <li>Debugging.
+          This would be a new plugin, and it would allow you to set breakpoints,
+          single-step, examine data... all the delightful things you expect
+          from a debugger.
+          It's likely to depend on the planned "screen" plugin.
+      <li>Detecting asynchronous events, such as the completion of an
+          HTTP request that was running in the background.
+    </ul>
+
+    <h2>Asynchronous Events</h2>
+    Sometimes you want to do things like
+    start multiple HTTP requests in the background
+    and react when they finish.
+    Not only does it make scripts run faster, but it also offers new ways
+    to design scripts.
+    <p>
+    The Pre-Command Hook (previous section) will play a big role in this.
+    It gives us a way to have the main task to detect when
+    some other task completes.
+    <p>
+    JavaScript's syntax for handling things like this won't work in jx,
+    because JavaScript's implementation depends on object classes and closures
+    (basically function pointers) which jx doesn't support.
+    <p>
+    This is separate from using multiple CPU cores, by the way.
+    JavaScript is single-threaded but still supports asynchronous events.
+    Both are nice, and there is some overlap in design requirements, so
+    <em>maybe</em> I'll support the use of multiple CPU cores.
+    (I'm trying to avoid the term "multithreading" here, because people
+    tend to assume multiple threads equals multiple cores, but that isn't
+    always the case.)
+    <p>
+    I chose to make jx run as a single thread because I often run it on live
+    web hosts, and I don't want my scripts to tie up all of the CPU cores.
+    As long as 7 out of 8 cores are still serving up the web app,
+    it'll run fast enough.
+    If jx ever supports the use of multiple CPU cores, it will need a way
+    to limit the number of cores used.
+
+    <h2>POSIX plugin</h2>
+    This would add support for some low-level things such as reading
+    directories and files, and opening network connections.
+    These are huge security holes, but there are legitimate uses for this too.
+    Sometimes you just need to chown() a file.
+    <p>
+    POSIX is huge, so honestly this will probably only ever be subset of it.
+    A useful subset.
+    <p>
+    I've deliberately avoided giving any jx scripting functions the same name
+    as a POSIX function, just to keep this potential alive.
+
+    <h2>Key Registry</h2>
+    Currently, member keys (and all names really) are stored as text.
+    When you look up a member, the search compares member names as strings.
+    This is rather slow!
+    The alternative is to create a registry that maps name strings to integers,
+    and then search by comparing those integers.
+    <p>
+    This could also improve name completion, since the registry would contain
+    every known name.
+    I'd still want it to be context-aware, but as a desperation move it could
+    still look across all names when trying for a completion.
+
+    <h2>Template Strings</h2>
+    Template strings are a JavaScript feature that lets you embed expressions
+    within plain text.
+    Clearly something like that could be useful when generating reports or
+    converting data to specific text format.
+    <p>
+    They are enclosed in backtick (`) characters, which jx (and SQL) uses for
+    quoting keys/names that contain problematic characters.
+    I don't think this will be a problem; if a backtick-quoted string contains
+    "${<var>expr</var>}" then it's a template string; otherwise its a quoted
+    key/name.
+    <p>
+    This is decided at compile time, not run time.
+    If a backtick-quoted string is a template, then it gets converted to a
+    function call, with the embedded expressions used as arguments to that
+    function.
+    <p>
+    JavaScript allows you to optionally put a magic word before the template
+    string to use a different parser.
+    I don't expect to support that.
+
+    <h2>XML Templates</h2>
+    The XML plugin already has an XML serializer that reverses the effect of
+    its parser, allowing you to rewrite XML that you've previously read.
+    That doesn't help when you're trying to generate a new XML document,
+    such as a request to a SOAP server.
+    XML tends to be very picky about formats, so there's a good chance you'll
+    need to painstakingly construct the string.
+    <p>
+    I plan to add a template-driven XML serializer.
+    This is much more complex than JavaScript template strings.
+    It'll have the ability to loop over arrays, and
+    to eliminate tags or attributes for which no data is available.
+    <p>
+    The next step would probably be a utility that
+    converts a WSDL specification into a set of XML templates.
+
+  </body>
+</html>
