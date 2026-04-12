@@ -731,7 +731,7 @@ static jx_t *jfn_mime64(jx_t *args, void *agdata)
 		if (args->first->next->type != JX_NUMBER)
 			goto BadArgs;
 		conv = jx_int(args->first->next);
-		if (conv < JX_BLOB_ANY || conv > JX_BLOB_BYTES)
+		if (conv < JX_BLOB_BYTES || conv > JX_BLOB_ANY)
 			goto BadArgs;
 	} else {
 		conv = JX_BLOB_UTF8;
@@ -846,7 +846,7 @@ static jx_t *jfn_unmime64(jx_t *args, void *agdata)
 	mimetext = args->first->text;
 	if (!args->first->next)
 		conversion = JX_BLOB_ANY;
-	else if (args->first->next->type != JX_NUMBER || (conversion = jx_int(args->first->next)) <= JX_BLOB_ANY || conversion > JX_BLOB_BYTES) {
+	else if (args->first->next->type != JX_NUMBER || (conversion = jx_int(args->first->next)) < JX_BLOB_BYTES || conversion > JX_BLOB_ANY) {
 		return jx_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
 	}
 
