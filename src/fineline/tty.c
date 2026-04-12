@@ -338,8 +338,7 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 		if (!ttygeneric) {
 			ttygeneric = fineline_tty_alloc();
 			fineline_history_lines(ttygeneric, 50);
-			fineline_history_add(ttygeneric, "Freely redistributable under the terms of GNU LGPL 3.0 or later");
-			fineline_history_add(ttygeneric, "fineline library 1.0, copyright 2026 by Steve Kirkendall");
+			fineline_history_add(ttygeneric, "fineline library 1.0, copyright 2026 by Steve Kirkendall\nFreely redistributable under the terms of GNU LGPL 3.0 or later");
 		}
 		fine = ttygeneric;
 	}
