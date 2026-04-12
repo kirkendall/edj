@@ -116,6 +116,18 @@
 	    notation.  This corresponds to jx's "\u{<var>XXXXX</var>}"
 	    or "\U<var>XXXXX</var>" notation.
 
+	<li>Functions such as
+	    <a target="_PARENT" href="../index.html?f=substr">substr()</a>
+	    index characters starting with 0.
+	    Zero-width characters such as composing diacritics
+	    count as characters for this, even though
+	    they don't take additional space on the screen.
+	    Similarly, double-width characters such as CJK ideograms and
+	    emoji each count as one character.
+	    You can use the
+	    <a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a>
+	    function to find the width of a character.
+
       </ul>
     </details>
 

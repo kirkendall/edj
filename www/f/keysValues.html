@@ -78,9 +78,58 @@
     </details>
 
     <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>JavaScript doesn't have a <tt>keysValues()</tt> function, but it
+            does have an <tt>entries()</tt> function which returns an array
+            of two-element sub-arrays containing each key and value pair.
+            If you need that in <b>jx</b>, that's easy to do.
+            <div class="example">
+              <kbd>function entities(obj) { return obj.keysValues() # [key, value]; }</kbd>
+	      <kbd>{foo:2,bar:true}.entities()</kbd>
+              <samp>[["foo",2],["bar",true]]</samp>
+	    </div>
+
+        <li>Remember, function names can be abbreviated to the first letter
+            and all uppercase letters.
+            This means <tt>keysValues()</tt> can be abbreviated
+            as <tt>kv()</tt>.
+            This is handy if you find yourself using it to display objects
+            in a prettier format that straight JSON.
+            <div class="example">
+              <kbd>config.plugin.csv.kv()</kbd>
+              <samp>
+		<table>
+		  <tr><th>key</th><th>value</th></tr>
+		  <tr><td>backslash</td><td>true</td></tr>
+		  <tr><td>crlf</td><td>false</td></tr>
+		  <tr><td>headless</td><td>false</td></tr>
+		  <tr><td>emptynull</td><td>false</td></tr>
+		  <tr><td>pad</td><td>false</td></tr>
+		</table>
+	      </samp>
+	      Here we're using the <tt>keysValues()</tt> function
+	      (abbreviated to <tt>kv()</tt> for convenience)
+	      to display an object as a table.
+	      For small objects, though, it often makes sense to just wrap the
+	      object in square brackets so it's effectively a table with a
+	      single row of values.
+              <kbd>[config.plugin.csv]</kbd>
+              <samp>
+		<table>
+		  <tr><th>backslash</th><th>crlf</th><th>headless</th><th>emptynull</th><th>pad</th></tr>
+		  <tr><td>true</td><td>false</td><td>false</td><td>false</td><td>false</td></tr>
+		</table>
+              </samp>
+            </div>
+      </ul>
+    </details>
+
+    <details>
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?f=objectAgg">objectAgg</a></td><td>Collect keys and values to form an object</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">#</a></td><td>Array filter operator</td></tr>
       </table>
     </details>
 

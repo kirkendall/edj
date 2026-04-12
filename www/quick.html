@@ -233,9 +233,9 @@ name=Mary run=3 score=40
     piecemeal.
 
     <h2>How can jx help for uploads?</h2>
-    jx allows you to construct JSON data, either in temporary files or
-    in environment variables.
-    You can also set jx variables on its command line, and use the
+    jx allows you to construct JSON data, either in memory or using temporary files.
+    You can also pass data into the script via <var>name</var>=</var>value</var>
+    arguments on the command line, and use the
     values of those variables in the script.
 
     <div class="example">
@@ -307,8 +307,8 @@ name=Mary run=3 score=40
     <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
     A full-fledged JavaScript interpreter would be at least 30 times larger
     than jx, and it wouldn't interface well with shell scripts, or
-    support plugins, or autoload data from directories, or have SQL-like
-    features or the
+    display tables in grid format, or support plugins, or
+    autoload data from directories, or have SQL-like features or the
     <a target="_PARENT" href="index.html?op=each">#</a> operator.
     <p>
     The internal representation of JSON data is likely to be around 5 times
@@ -320,9 +320,13 @@ name=Mary run=3 score=40
     to be aware of bulk.
     <p>
     Speed is hard to gauge because there are so many variables.
-    My computer isn't all that new, but
-    it can parse a 60 megabyte JSON file in about 300 milliseconds.
+    My computer isn't all that new (Intel I7-7700 3.6GHz), but
+    it can parse JSON at about 200 megabytes per second.
     That's fast enough for me.
+    <p>
+    It is single-threaded on purpose.
+    I sometimes run this on a live web host, and don't want to use up all of
+    the CPU.
 
     <h2>Can jx be extended?</h2>
     Yes, there are basically three ways to extend jx.

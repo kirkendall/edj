@@ -10,7 +10,7 @@
   <body>
     <h1>diff - List the differences between two arrays or objects</h1>
     <dl>
-      <dt>diff(<var>old</var>:array|object, <var>new</var>?:array|object, <var>style</var>:number):table
+      <dt>diff(<var>old</var>:array|object, <var>new</var>?:array|object, <var>style</var>?:number):table
       <dd>
       The <tt>diff()</tt> function returns a table listing the differences
       between two arrays or two objects.
@@ -154,7 +154,9 @@
 	<li>Sometimes all you want to do is list two or more objects, one above
 	  the other, with their members aligned so you can visually spot the
 	  differences.
-	  This is trivially easy!  Just bundle the objects into an array, and
+	  This is trivially easy!
+	  You don't even need <tt>diff()</tt>.
+	  Just bundle the objects into an array, and
 	  let it be displayed in the default "grid" format.
 	  <div class="example">
 	    <kbd>[ origstyles[3], config.styles[3] ]</kbd>

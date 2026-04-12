@@ -17,7 +17,8 @@
     </center>
 
     There are a number of potential features that I've explored and in some
-    cases even designed, but not implemented yet.
+    cases even designed and even done some coding on,
+    but are not implemented in version 1.0.
     These are all useful things, but aren't so critical that I had to delay
     release version 1.0 just to add them.
     <p>
@@ -214,6 +215,28 @@
     <p>
     The next step would probably be a utility that
     converts a WSDL specification into a set of XML templates.
+
+    <h2>Complex Blobs</h2>
+    Blobs are compact arrays of bytes.
+    The <a target="_PARENT" href="../index.html?f=blob">blob()</a>
+    function can convert that to text, but most binary data contains a
+    mixture of structs.
+    It would be nice if we could convert those structs into objects, or
+    arrays of objects.
+    I envision extending <tt>blob()</tt> to allow you to pass an offset,
+    length, and/or a string specifying the layout of an object.
+    <p>
+    All of the constants currently defined in the <tt>Blob</tt> object
+    are negative, so they won't clash with offset or length numbers.
+
+    <h2>Data Compression, and Support for Non-UTF-8 Text</h2>
+    These are obviously useful, but surprisingly hard to implement.
+    Normally, jx just maps a JSON file into memory and parses it with the
+    assumption that it contains UTF-8 text.
+    If the file is compressed, then we need to generate an uncompressed
+    version of the file that we can map into memory.
+    If it isn't UTF-8 then we need to run it through the
+    <a href="https://github.com/rrthomas/recode/">recode</a> utility.
 
   </body>
 </html>
