@@ -23,7 +23,7 @@ jx: $(OBJ)
 
 jxstatic: $(OBJ)
 	$(CC) -static $(LDFLAGS) $(OBJ) $(LDLIBS) $(LDSTATLIBS) -o jxstatic
-	strip jcstatic
+	strip jxstatic
 
 clean:
 	$(RM) jx
