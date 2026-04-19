@@ -2327,14 +2327,15 @@ static jxcmdout_t *file_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 {
 	const char	*end;
-	char	*filename;
+	char	*filename, *enddir;
 	FILE	*fp;
 	jxcmd_t *code, *cmd;
 	jxsrc_t start = *src;
+	jxfile_t *srcfile;
 
 	/* Parse the name. */
 	jx_cmd_parse_whitespace(src);
-	for (end = src->str; *end && *end != ';' && *end != '}'; end++){
+	for (end = src->str; *end && *end != ';' && *end != '}' && *end != '\n'; end++){
 	}
 	while (end > src->str && end[-1] == ' ')
 		end--;
@@ -2357,19 +2358,38 @@ static jxcmd_t *import_parse(jxsrc_t *src, jxcmdout_t **referr)
 	 * or contain "../"
 	 */
 	if (filename[0] == '/' || strstr(filename, "../")) {
-		*referr = jx_cmd_error(start.str, "Unsafe file name to import: \"%s\"", filename);
+		*referr = jx_cmd_error(start.str, "impunsafe:Unsafe file name to import: \"%s\"", filename);
 		free(filename);
 		return NULL;
 	}
 
+	/* If "import" is in a script, then the named file is probably
+	 * relative to the script file.  Look for the script's directory
+	 * name, and if it has one then look for the include file there.
+	 * Otherwise, hope it's in the current directory.
+	 */
+	srcfile = jx_file_containing(src->str, NULL);
+	if (srcfile && srcfile->isfile && (enddir = strrchr(srcfile->filename, '/')) != NULL) {
+		size_t dirlen = (enddir - srcfile->filename) + 1;
+		char *tmp = malloc(dirlen + strlen(filename) + 1);
+		strncpy(tmp, srcfile->filename, dirlen);
+		strcpy(tmp + dirlen, filename);
+		if (access(tmp, F_OK) >= 0) {
+			free(filename);
+			filename = tmp;
+		}
+	}
+
 	/* If the file doesn't exist or is unreadable, fail */
 	if (access(filename, F_OK) < 0) {
-		*referr = jx_cmd_error(start.str, "Import file \"%s\" does not exist", filename);
+		*referr = jx_cmd_error(start.str, "impnoex:Import file \"%s\" does not exist", filename);
+		free(filename);
 		return NULL;
 	}
 	fp = fopen(filename, "r");
 	if (!fp) {
-		*referr = jx_cmd_error(start.str, "Import file \"%s\" is unreadable", filename);
+		*referr = jx_cmd_error(start.str, "impunrd:Import file \"%s\" is unreadable", filename);
+		free(filename);
 		return NULL;
 	}
 	fclose(fp);
