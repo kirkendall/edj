@@ -50,6 +50,17 @@
           For example, <tt>&lt;price unit="usd">1.99&lt;/price&gt;</tt>
           would be represented as two members in the parsed data:
           <tt>"price_":{"unit":"usd"},"price":1.99</tt>.
+      <li>Boolean attributes are sometimes indicated by the presence or
+          absence of an attribute, without any value being specified.
+          When this plugin sees an attribute with no value, it assumes
+          the value is <tt>true</tt>.
+          (Note that if you try to access an attribute that isn't present,
+          you'll get <tt>null</tt>, but when <tt>null</tt> is used in a
+          context where a boolean is expected, it's treated as <tt>false</tt>.
+          So this is actually pretty convenient.)
+          When generating XML, attributes with a <tt>true</tt> value are
+          output as just their name with no value, and attributes with a
+          <tt>false</tt> value are omitted entirely.
       <li>XML has namespaces, represented by an abbreviation and a colon at
           the start of a tag name or attribute name.
           This plugin stores the namespace with the tag name or attribute name.

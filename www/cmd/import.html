@@ -27,6 +27,11 @@
       <p>
       If the filename you give doesn't include a filename extension, then
       ".jx" will be assumed.
+      <p>
+      The directory is assumed to be the same as the script file containing
+      the <tt>import</tt> command, or the current directory as a fallback.
+      In other words, if "scripts/fetchcustomers.jx" contains
+      "<tt>import&nbsp;common</tt>", then it'll load "scripts/common.jx".
     </dl>
     <details open>
       <summary>Examples</summary>

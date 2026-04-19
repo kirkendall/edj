@@ -138,12 +138,12 @@
     </pre>
     <p>
     One big "gotcha!" is that since <tt>jx_next()</tt> frees the current
-    element before moving onto the, you can't save a pointer to it, or any
+    element before moving onto the next, you can't save a pointer to it, or any
     other <tt>jx_t</tt> node within the element.
     If you need to save an element, or part of an element, that is scanned
     this way then you need to make a copy of it via <tt>jx_copy()</tt>.
     You can use the <tt>jx_is_deferred_element()</tt> function to decide
-    wither copying is necessary... or just always copy.
+    whether copying is necessary... or just always copy.
     <p>
     Another thing to watch out for is that if you have nested arrays and
     the outer is deferred but the inner one isn't, then applying
@@ -209,7 +209,7 @@
     table flag.
     This is 't' if the array is a table, 'n' if it is not a table, or
     anything else (usually '\0') if unknown.
-    For unknown, we do indeed to scan the whole array.
+    For unknown, we do still need to scan the whole array.
     <p>
     The length is stored in <var>array</var><tt>-&gt;text[2]</tt> through
     <tt>[5]</tt>.
