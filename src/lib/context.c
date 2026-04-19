@@ -1189,9 +1189,30 @@ jx_t *jx_context_default_table(jxcontext_t *context, char **refexpr)
 			for (found = found->first; found; found = found->next) { /* object */
 				if (jx_is_table(found->first)) {
 					if (refexpr) {
-						*refexpr = malloc(6 + strlen(found->text));
+						/* Determine whether the table
+						 * name needs quoting by looking
+						 * for non-alphanumeric or
+						 * non-ASCII characters.
+						 */
+						char *scan = found->text;
+						while (*scan == '_'
+						   || (*scan >= 'A' && *scan <= 'Z')
+						   || (*scan >= 'a' && *scan <= 'z')
+						   || (*scan >= '0' && *scan <= '9'))
+							scan++;
+						if (*found->text >= '0' && *found->text <= '9')
+							scan = "";
+
+						/* Allocate storage for the combined string */
+						*refexpr = malloc(8 + strlen(found->text));
+
+						/* Generate the string */
 						strcpy(*refexpr, "data.");
+						if (*scan)
+							strcat(*refexpr, "`");
 						strcat(*refexpr, found->text);
+						if (*scan)
+							strcat(*refexpr, "`");
 					}
 					return found->first;
 				}
