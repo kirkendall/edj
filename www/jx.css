@@ -124,6 +124,7 @@ div.example kbd {
 	font-weight: bold;
 	margin-left: -4em;
 	user-select: all;
+	cursor: copy;
 }
 div.example samp {
 	display: block;
