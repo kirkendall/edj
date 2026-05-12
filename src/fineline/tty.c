@@ -51,7 +51,8 @@ static struct {
 	{FINELINE_QUIT,		"\011"}		/* ^Q exit without processing the line */
 };
 
-static int doingresize;
+static fineline_t *ttygeneric;
+static int doingresize, newrows, newcolumns;
 static void resized(int signum)
 {
 	struct winsize w;
@@ -59,6 +60,12 @@ static void resized(int signum)
 	ioctl(0, TIOCGWINSZ, &w);
 	printf("rows=%d, columns=%d\r\n", w.ws_row, w.ws_col);
 	doingresize = 1;
+	newrows = w.ws_row;
+	newcolumns = w.ws_col;
+	if (ttygeneric) {
+		ttygeneric->rows = newrows;
+		ttygeneric->columns = newcolumns;
+	}
 }
 
 
@@ -258,10 +265,16 @@ static void ttyup(int n)
 	fprintf(stderr, "\033[%dA", n);
 }
 
-/* Called to move the cursor down */
+/* Called to move the cursor down.  If it moves past the bottom of the screen
+ * then we want to force the screen to scroll.
+ */
 static void ttydown(int n)
 {
-	fprintf(stderr, "\033[%dB", n);
+	if (n == 0)
+		return;
+	if (n > 1)
+		fprintf(stderr, "\033[%dB", n - 1);
+	fputc('\n', stderr);
 }
 
 static void ttyleft(int n)
@@ -316,13 +329,13 @@ fineline_t *fineline_tty_alloc()
 	fine->right = ttyright;
 	fine->home = ttyhome;
 	fine->clear = ttyclear;
+	fine->scroll = ttyscroll;
 	fine->text = ttytext;
 
 	/* Return it */
 	return fine;
 }
 
-static fineline_t *ttygeneric;
 
 /* Read a line and return it.  The line will be in a dynamically-allocated
  * buffer, which the calling function is responsible for freeing.
@@ -334,7 +347,11 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 	int	result;
 
 	/* If called with NULL, then use a generic fineline_t */
-	if (!fine) {
+	if (fine) {
+		if (ttygeneric && ttygeneric != fine)
+			fineline_free(ttygeneric);
+		ttygeneric = fine;
+	} else {
 		if (!ttygeneric) {
 			ttygeneric = fineline_tty_alloc();
 			fineline_history_lines(ttygeneric, 50);
@@ -363,7 +380,10 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 	}
 	fineline_active(-1);
 
-	/* Detect end */
+	/* Move the cursor to the line below the input */
+	fineline_draw_after(fine);
+
+	/* Detect whether this was the final input from the user */
 	if (result == 2)
 		return NULL;
 

@@ -50,22 +50,20 @@ typedef struct {
 	fineline_attributes_t at;/* bitmap of other attributes such as bold */
 } fineline_color_t;
 
-/* draw2.c */
-typedef struct {
-	int	linenum;	/* line number, or 0 if continuation of a long line */
-	int	start;		/* Where the line starts */
-} fineline_row_t;
-
-/* draw3.c */
 typedef struct {
 	char	**row;		/* dynamic char *row[] array */
-	char	***style;	/* dynamic char **style[] array */
-	int	rowsize;	/* dimension of the row[] and style[] arrays */
-	int	toprow;		/* number of rows scrolled off the top */
-	int	height;		/* row that we're writing into now */
+	const char ***style;	/* dynamic char **style[] array */
+	int	height;		/* dimension of the row[] and style[] arrays */
 	int	width;		/* number of columns per row */
-	int	col;		/* current column with the current row */
-	int	cursorrow, cursorcol;	/* where to display the cursor */
+	int	usedrows;	/* number of used rows */
+	int	toprow;		/* number of rows scrolled off the top */
+	int	thisrow;	/* current row number */
+	int	thiscol;	/* current column number */
+	int	virtualcol;	/* column ignoring line wraps */
+	int	rowpos;		/* where to add next character */
+	int	rowsize;	/* allocated size of ->row[->thisrow] */
+	int	cursorrow;	/* row containing cursor (after subtracting toprow) */
+	int	cursorcol;	/* column containing the cursor */
 } fineline_image_t;
 
 /* This contains all of the info needed to draw the current line. */
@@ -79,9 +77,9 @@ typedef struct fineline_s {
 
 	/* Values describing the terminal size, in single-width characters */
 	int	columns, rows, usedrows;
-	fineline_row_t *row; /* array of row info */
-	int	cursorrow, cursorcolumn;
-	fineline_image_t *image; /* data describing the line as currently shown */
+
+	/* data describing the line as currently shown */
+	fineline_image_t *image;
 
 	/* Callbacks related to drawing a line. "before" is called at the start
 	 * of inputting a line, and may be used to adjust "columns" and "rows",
@@ -90,9 +88,9 @@ typedef struct fineline_s {
 	 * back to "noraw" mode. "draw" is used to draw the line in a very
 	 * interface-specific way.  The "up", "down", "left", "right", and
 	 * "home" functions move the cursor for displaying text, or actually
-	 * displaying a cursor on the screen.  "text" draws text.  "addrow"
-	 * inserts a blank row at the cursor position, scrolling the bottom
-	 * part of the screen down.
+	 * displaying a cursor on the screen.  "text" draws text.  "scroll"
+	 * inserts blank rows at the cursor position, or (for negative "n")
+	 * deletes rows, scrolling the bottom part of the screen down.
 	 *
 	 * Most interfaces won't define a "draw" function, and instead depend
 	 * on the cursor motion functions and "text".  If an interface does
@@ -109,7 +107,7 @@ typedef struct fineline_s {
 	void	(*home)(void);
 	void	(*clear)(void);
 	void	(*text)(const char *style, const char *text, size_t size);
-	int	(*scroll)(int n);
+	void	(*scroll)(int n);
 
 	/* This is a callback, invoked when a complete line has been entered.
 	 * This "line" may contain newline characters, for multiline commands.
@@ -129,7 +127,6 @@ typedef struct fineline_s {
 	 */
 
 	const char *prompt;	/* Main prompt string */
-	int	promptwidth;
 
 	char	*line;		/* Line buffer -- usually history[0] */
 	size_t	linesize;	/* size of the history[0] buffer */
@@ -203,3 +200,8 @@ void fineline_color_hook(int *(*fn)(fineline_t *fine));
 
 /* draw.c */
 void fineline_draw(fineline_t *fine);
+void fineline_draw_after(fineline_t *fine);
+
+/* image.c */
+fineline_image_t *fineline_image(fineline_t *fine);
+void fineline_image_free(fineline_image_t *img);

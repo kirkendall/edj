@@ -45,9 +45,9 @@ void fineline_free(fineline_t *fine)
 		free(fine->history[i]);
 	free(fine->history);
 
-	/* Free the row table */
-	if (fine->row)
-		free(fine->row);
+	/* Free the image */
+	if (fine->image)
+		fineline_image_free(fine->image);
 
 	/* Free the style array too.  The individual strings that it points to
 	 * are static so they don't need to be freed.

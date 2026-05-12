@@ -1,182 +1,128 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
+#define _XOPEN_SOURCE
+#define __USE_XOPEN
+#include <wchar.h>
 #include <fineline.h>
 
-/* Reasons why a chunk might end */
-typedef enum {
-	BECAUSE_END,	/* We reached the end of the input buffer */
-	BECAUSE_NEWLINE,/* We encountered a newline as part of the input */
-	BECAUSE_STYLE,	/* The character style/colors has changed */
-	BECAUSE_HINT,	/* We reached the cursor, and have a hint to show */
-	BECAUSE_WRAP	/* The line wrapped because it is wider than the screen */
-} because_t;
-
-
-/* Do a line wrap.  This involves writing a secondary prompt which is derived
- * from the main prompt.  linenum should be the line number, or 0 if the same
- * logical input line just wrapped at the edge of the screen.
- */
-static void wrap(fineline_t *fine, int linenum)
+// Draw a row.  Leave the cursor on the row.
+static void draw_row(fineline_t *fine, fineline_image_t *image, int row)
 {
-	int	width, spaces, punct;
-	size_t	len;
-	char	buf[40];
+	size_t len, pos;
+	char	*text = image->row[row];
+	const char **style = image->style[row];
 
-
-	/* Wrap */
-	(*fine->clear)();
-	(*fine->down)(1);
-	(*fine->home)();
-
-	/* If continuation of a line due to screen wrap, then we're done */
-	if (linenum == 0)
+	/* Defend against NULL */
+	if (!text)
 		return;
 
-	/* Examine the prompt */
-	len = strlen(fine->prompt);
-	width = fineline_char_column_number(fine->prompt, len);
-	for (spaces = 0; spaces < len && fine->prompt[len - spaces - 1] == ' '; spaces++) {
+	/* For each chunk of same-style text... */
+	for (pos = 0; text[pos]; pos += len) {
+		/* Count the length of this chunk */
+		for (len = 1; text[pos + len] && style[pos + len] == style[pos]; len++) {
+		}
+
+		/* Write it */
+		fine->text(style[pos], &text[pos], len);
 	}
-	if (spaces < len && ispunct(fine->prompt[len - spaces - 1]))
-		punct = fine->prompt[len - spaces - 1];
-	else
-		punct = ':';
-
-	/* Generate number+punct prompt */
-	if (linenum == 0)
-		snprintf(buf, sizeof buf, "%*c%-*c", (int)len, ' ', spaces + 1, punct);
-	else
-		snprintf(buf, sizeof buf, "%*d%-*c", (int)len, linenum, spaces + 1, punct);
-
-	/* Output it, limiting the width to match prompt and aligning punct */
-	(*fine->text)("prompt", buf + len + spaces + 1, width);
 }
 
-/* Display the current line.  This is likely to involve moving the cursor back
+
+/* Display the current input.  This is likely to involve moving the cursor back
  * to where the line began (unless this is a fresh line), outputting the prompt,
  * drawing the text (being mindful of line wrap, and syntax coloring) and then
  * moving the cursor to the correct position within the line.
  */
 void fineline_draw(fineline_t *fine)
 {
-	int row, linenum, col, width;
-	int cursorrow, cursorcol;
-	int offset, span;
-	const char *style;
-	int promptwidth = fineline_char_column_number(fine->prompt, strlen(fine->prompt));
-	because_t why;
+	int	row;
+	fineline_image_t *img;
 
+	/* Generate a new image */
+	img = fineline_image(fine);
 
-	/* If there's a draw() function, give it a try */
-	if (fine->draw && !(*fine->draw)(fine))
-		return;
+	/* Are we updating an old image? */
+	if (fine->image) {
+		/* Yes -- move the cursor back to the start of the first row */
+#if 0
+		fine->up(fine->image->cursorrow - fine->image->toprow);
+#endif
+		fine->home();
 
-	/* Output the prompt */
-	(*fine->home)();
-	(*fine->text)("prompt", fine->prompt, strlen(fine->prompt));
-	row = 0;
-	linenum = 1;
-	col = 1 + promptwidth;
-	cursorrow = cursorcol = -1;
-
-	/* If line coloring starts with NULL, assume that means "normal" */
-	style = "normal";
-	if (fine->style && fine->style[0] == NULL)
-		fine->style[0] = "normal";
-
-	/* Output each chunk of the line, being mindful of coloring and
-	 * line wrap.  Detect when we reach the cursor.  If there's a hint,
-	 * show it immediately after the cursor.
-	 */
-	for (offset = 0; fine->line[offset]; offset += span) {
-		/* Get the style of this chunk.  If a chunk gets split due to
-		 * a line wrap, then fine->style[offset] might be NULL.
+		/* If the top row is moved (due to scrolling) then insert or
+		 * delete rows.  Also adjust the old image to match.
 		 */
-		if (fine->style && fine->style[offset])
-			style = fine->style[offset];
+		if (img->toprow != fine->image->toprow) {
+			fine->scroll(fine->image->toprow - img->toprow);
+			/*!!! Adjust the old image */
+		}
 
-		/* Find the end of this chunk.  The chunk ends at the end
-		 * of the line, or a change of style/colors, or the cursor if
-		 * if there's a hint or completesame, or line wrap.  So it's
-		 * a bit complicated.
-		 */
-		for (span = 0; ; span += fineline_char_size(&fine->line[offset + span], 1)) {
-			/* cursor?  Only marks end if there's hint or completesame */
-			if (offset + span == fine->cursor) {
-				cursorrow = row;
-				cursorcol = col;
-				if (fine->hint || fine->completesame) {
-					why = BECAUSE_HINT;
-					break;
-				}
-			}
-
-			/* end of the line? */
-			if (fine->line[offset + span] == '\0') {
-				why = BECAUSE_END;
-				break;
-			}
-
-			/* newline */
-			if (fine->line[offset + span] == '\n') {
-				why = BECAUSE_NEWLINE;
-				break;
-			}
-
-			/* change of style/colors? */
-			if (fine->style && fine->style[offset + span] && fine->style[offset + span] != style) {
-				why = BECAUSE_STYLE;
-				break;
-			}
-
-			/* wrapped line? */
-			width = fineline_char_column_number(&fine->line[offset + span], 0);
-			if (col + width > fine->columns) {
-				why = BECAUSE_WRAP;
-				break;
+		/* For each row of the new image... */
+		for (row = 0; row < img->usedrows; row++) {
+			/* If the row has changed, redraw it */
+			draw_row(fine, img, row);
+			if (row + 1 < img->usedrows) {
+				fine->home();
+				fine->down(1);
 			}
 		}
 
-		/* Output the chunk */
-		(*fine->text)(style, &fine->line[offset], span);
-
-		/* Handle special situations */
-		switch (why) {
-		case BECAUSE_STYLE:
-		case BECAUSE_END:
-			/* No special processing needed */
-			break;
-
-		case BECAUSE_NEWLINE: 
-			/* Start the next line */
-			linenum++;
-			wrap(fine, linenum);
-			row++;
-			col = 0;
-			break;
-
-		case BECAUSE_HINT:
-			/* Output the completion or hint.  Note that this might
-			 * cause wrap.
-			 */
-			break;
-
-		case BECAUSE_WRAP:
-			/* The line wrapped. */
-			wrap(fine, 0);
-			row++;
-			col = 0;
-			break;
+		/* If there were rows in the old image that aren't needed now,
+		 * then erase them.
+		 */
+		for (; row < fine->image->usedrows; row++) {
+			fine->clear();
+			fine->down(1);
+		}
+	} else {
+		/* Draw all rows */
+		for (row = 0; row < img->usedrows; row++) {
+			/* If the row has changed, redraw it */
+			draw_row(fine, img, row);
+			if (row + 1 < img->usedrows) {
+				fine->home();
+				fine->down(1);
+			}
 		}
 	}
 
-	/* Move the terminal's cursor back to fineline's cursor */
-	if (cursorrow < row - 1)
-		(*fine->up)(row - cursorrow);
-	if (cursorcol > col)
-		(*fine->right)(cursorcol - col);
-	else if (cursorcol < col)
-		(*fine->left)(col - cursorcol);
+	/* Move the visible cursor back where it belongs */
+	if (img->cursorrow < fine->usedrows - 1)
+		fine->up(fine->usedrows - 1 - img->cursorrow);
+	if (img->cursorcol < img->thiscol)
+		fine->left(img->thiscol - img->cursorcol);
+	else if (img->cursorcol > img->thiscol)
+		fine->right(img->cursorcol - img->thiscol);
+
+	/* Free the old image, store the new image */
+	if (fine->image)
+		fineline_image_free(fine->image);
+	fine->image = img;
 }
+
+/* Move the cursor to the line after the input.  This function should be called
+ * immediately after a line has been entered.
+ */
+void fineline_draw_after(fineline_t *fine)
+{
+	/* We want to move the edit cursor to the end of the input, but not
+	 * past it.  If the line is empty then the cursor is already on the
+	 * '\0' marking the end of input, and we should leave it there, but
+	 * in all other cases we want to move the cursor to the last character
+	 * before the '\0'.  Since characters may be multi-byte, this is
+	 * non-trivial.
+	 */
+	if (*fine->line) {
+		fine->cursor = strlen(fine->line);
+		fine->cursor = fineline_char_delta(fine->line, fine->cursor, -1);
+	}
+
+	/* Draw it like that. */
+	fineline_draw(fine);
+
+	/* Move to the start of the next line */
+	fine->down(1);
+	fine->home();
+}
+

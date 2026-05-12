@@ -1,7 +1,7 @@
 LIB=	../../lib
 INCLUDE=../../include
-SRC=	char.c draw2.c edit.c fineline.c history.c tty.c
-OBJ=	char.o draw2.o edit.o fineline.o history.o tty.o
+SRC=	char.c draw.c edit.c fineline.c history.c image.c tty.c
+OBJ=	char.o draw.o edit.o fineline.o history.o image.o tty.o
 CC=	gcc -g -fpic
 CFLAGS=	-Wall -I$(INCLUDE)
 
@@ -20,7 +20,10 @@ tryfl: tryfl.c libs
 	$(CC) tryfl.c -L$(LIB) -lfineline -o tryfl
 
 try: tryfl
-	LD_LIBRARY_PATH=$(LIB) ./tryfl || stty sane
+	LD_LIBRARY_PATH=$(LIB) ./tryfl || (stty sane; [ -f core ] && LD_LIBRARY_PATH=$(LIB) gdb tryfl core)
+
+gdb: tryfl
+	LD_LIBRARY_PATH=$(LIB) gdb tryfl
 
 tags: $(SRC) fineline.h
 	elvtags $(SRC) fineline.h
