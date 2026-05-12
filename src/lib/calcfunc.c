@@ -2550,9 +2550,16 @@ static jx_t *jfn_abs(jx_t *args, void *agdata)
 	if (num->type == JX_OBJECT)
 		num = num->next; /* undeferred */
 
+	/* Arg may be a period string */
+	if (num && jx_is_period(num)) {
+		jx_t *result = jx_string("", 40); /* enough for any period */
+		jx_period_abs(result->text, num->text);
+		return result;
+	}
+
 	/* Fail if not a number */
-	if (num->type != JX_NUMBER)
-		return jx_error_null(NULL, "number:The %s() function expects a number", "abs");
+	if (!num || num->type != JX_NUMBER)
+		return jx_error_null(NULL, "number:The %s() function expects a number or period", "abs");
 
 	/* Apply the function */
 	d = jx_double(num);

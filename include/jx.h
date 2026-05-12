@@ -439,6 +439,7 @@ int jx_datetime(char *result, const char *str, const char *tz);
 int jx_datetime_add(char *result, const char *str, const char *period);
 int jx_datetime_subtract(char *result, const char *str, const char *period);
 int jx_datetime_diff(char *result, const char *str1, const char *str2);
+int jx_period_abs(char *result, const char *text);
 jx_t *jx_datetime_fn(jx_t *args, char *type);
 
 /* Bigger analysis functions */

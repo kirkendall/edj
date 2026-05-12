@@ -19,7 +19,7 @@ typedef struct {
 } jxdatetime_t;
 
 
-/* Return the number of days in the given month.  This is used by normalizedt()
+/* Return the number of days in the given month.  This is used by normalize()
  * and it also has the side-effect of normalizing the month and year, since we
  * need that to know the days.
  */
@@ -93,10 +93,98 @@ static void normalize(jxdatetime_t *dt)
 	}
 }
 
+/* Negate all fields of a period */
+static void negate_period(jxdatetime_t *dt)
+{
+	dt->year = -dt->year;
+	dt->month = -dt->month;
+	dt->day = -dt->day;
+	dt->hour = -dt->hour;
+	dt->minute = -dt->minute;
+	dt->second = -dt->second;
+}
+
+/* Test whether a given period is negative.  It's negative if the first
+ * non-zero number is negative.
+ */
+static int is_negative_period(jxdatetime_t *dt)
+{
+	if (dt->year != 0)
+		return dt->year < 0;
+	if (dt->month != 0)
+		return dt->month < 0;
+	if (dt->day != 0)
+		return dt->day < 0;
+	if (dt->hour != 0)
+		return dt->hour < 0;
+	if (dt->minute != 0)
+		return dt->minute < 0;
+	return dt->second < 0;
+}
+
+/* Normalize a period.  This should result in all numbers being non-negative
+ * or all non-positive.
+ */
+static void normalize_period(jxdatetime_t *dt)
+{
+	int	negate;
+	/* If negative, then negate it so the first number is positive */
+	negate = is_negative_period(dt);
+	if (negate)
+		negate_period(dt);
+
+	/* If seconds is negative, borrow from minutes to make it positive */
+	while (dt->second < 0) {
+		dt->minute--;
+		dt->second += 60;
+	}
+
+	/* If minutes is negative, borrow from hours to make it positive */
+	while (dt->minute < 0) {
+		dt->hour--;
+		dt->minute += 60;
+	}
+
+	/* If hours is negative, borrow from days to make it positive */
+	while (dt->hour < 0) {
+		dt->day--;
+		dt->hour += 24;
+	}
+
+	/* If days is negative, borrow from months to make it positive */
+	while (dt->second < 0) {
+		dt->month--;
+		dt->day += 30;
+	}
+
+	/* If months is negative, borrow from years to make it positive */
+	while (dt->month < 0) {
+		dt->year--;
+		dt->month += 12;
+	}
+
+	/* If all that borrowing made the whole highest value negative, then
+	 * go back and normalize again.
+	 */
+	if (is_negative_period(dt))
+		normalize_period(dt);
+
+	/* If it was negative before, then it should be negative now */
+	if (negate)
+		negate_period(dt);
+}
+
 /* Parse an ISO period string.  Return 0 if successful, 1 if malformed */
 static int parseperiod(const char *str, jxdatetime_t *dt)
 {
-	int	num, sign, intime, infrac, weeks;
+	int	num, negate, sign, intime, infrac, weeks;
+
+	/* Allow an initial '-' */
+	negate = 0;
+	if (*str == '-') {
+		negate = 1;
+		str++;
+	}
 
 	/* Expect an initial 'P' */
 	if (*str != 'P' && *str != 'p')
@@ -214,6 +302,10 @@ static int parseperiod(const char *str, jxdatetime_t *dt)
 
 	/* Merge weeks into days */
 	dt->day += 7 * weeks;
+
+	/* If there was an initial "-" then negate all numbers */
+	if (negate)
+		negate_period(dt);
 
 	/* Looks like success to me! */
 	return 0;
@@ -818,29 +910,72 @@ int jx_datetime_diff(char *result, const char *str1, const char *str2)
 	}
 
 	/* We don't do months and years since they vary.  We start with days */
+	if (neg)
+		*result++ = '-';
 	*result++ = 'P';
 	if (diff >= 86400) {
-		sprintf(result, "%s%ldD", neg ? "-" : "", (long)diff / 86400);
+		sprintf(result, "%ldD", (long)diff / 86400);
 		diff %= 86400;
 		result += strlen(result);
 	}
 	if (diff > 0)
 		*result++ = 'T';
 	if (diff >= 3600) {
-		sprintf(result, "%s%ldH", neg ? "-" : "", (long)diff / 3600);
+		sprintf(result, "%ldH", (long)diff / 3600);
 		diff %= 3600;
 		result += strlen(result);
 	}
 	if (diff >= 60) {
-		sprintf(result, "%s%ldM", neg ? "-" : "", (long)diff / 60);
+		sprintf(result, "%ldM", (long)diff / 60);
 		diff %= 60;
 		result += strlen(result);
 	}
 	if (diff > 0) {
-		sprintf(result, "%s%ldS", neg ? "-" : "", (long)diff);
+		sprintf(result, "%ldS", (long)diff);
 	}
 
+	return 0;
+}
 
+/* Store the absolute value of a period.  Return 0 on success or non-zero on
+ * error.
+ */
+int jx_period_abs(char *result, const char *text)
+{
+	jxdatetime_t jdt;
+
+	/* Fail if not a period */
+	if (parseperiod(text, &jdt))
+		return 1;
+
+	/* If it starts with "-" then assume it is already normalized */
+	if (*text == '-') {
+		strcpy(result, text + 1);
+		return 0;
+	}
+
+	/* Normalize it, and check whether it is negative.  If not then just
+	 * reuse the original text.
+	 */
+	normalize_period(&jdt);
+	if (!is_negative_period(&jdt)) {
+		strcpy(result, text);
+		return 0;
+	}
+
+	/* It is negative.  Negate it to make it positive, and convert it
+	 * back to a string.
+	 */
+	negate_period(&jdt);
+	strcpy(result, "P");
+	if (jdt.year) sprintf(result + strlen(result), "%dY", jdt.year);
+	if (jdt.month) sprintf(result + strlen(result), "%dM", jdt.month);
+	if (jdt.day) sprintf(result + strlen(result), "%dD", jdt.day);
+	if (jdt.hour || jdt.minute || jdt.second)
+		strcat(result, "T");
+	if (jdt.hour) sprintf(result + strlen(result), "%dH", jdt.hour);
+	if (jdt.minute) sprintf(result + strlen(result), "%dM", jdt.minute);
+	if (jdt.second) sprintf(result + strlen(result), "%dS", jdt.second);
 	return 0;
 }
 
@@ -904,6 +1039,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 	int		asdate = 0;
 	int		astime = 0;
 	int		aslocale = 0;
+	int		asnormal = 0;
 	char		*localefmt = NULL;
 	char		buf[100], *s;
 
@@ -995,6 +1131,8 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 			astimet = 1;
 		} else if (scan->type == JX_STRING && tolower(*scan->text) == 'l') {
 			aslocale = 1;
+		} else if (scan->type == JX_STRING && tolower(*scan->text) == 'n') {
+			asnormal = 1;
 		} else if (scan->type == JX_STRING && strchr(scan->text, '%')) {
 			aslocale = 1;
 			localefmt = scan->text;
@@ -1118,6 +1256,13 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 	} else if (!asdate && !astime) {
 		/* Return as an ISO Period string */
 		s = buf;
+		if (asnormal) {
+			normalize_period(&jdt);
+			if (is_negative_period(&jdt)) {
+				*s++ = '-';
+				negate_period(&jdt);
+			}
+		}
 		*s++ = 'P';
 		if (jdt.year) {
 			sprintf(s, "%dY", jdt.year);

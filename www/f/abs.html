@@ -12,8 +12,9 @@
     <dl>
       <dt>abs( <var>n</var><span class="type">:number</span> ) <span class="type">:number</span>
       <br/>Math.abs( <var>n</var><span class="type">:number</span> ) <span class="type">:number</span>
+      <br/>abs( <var>p</var><span class="type">:period</span> ) <span class="type">:period</span>
       <dd>
-      Returns the absolute value of a number.
+      Returns the absolute value of a number or ISO-8601 period string.
       For the sake of compatibility with JavaScript,
       you may also pass the <tt>Math</tt> object as the first parameter
       though this function will ignore it.
@@ -37,6 +38,11 @@
 	like JavaScript.
       </div>
 
+      <div class="example">
+        <kbd>abs("P-1D")</kbd>
+        <samp>"P1D"</samp>
+        You can take the absolute value of a period, too.
+
     </details>
 
     <details>
@@ -45,6 +51,11 @@
 
         <li>Most of the <tt>Math</tt> functions are missing.
             You can add them via the <a target="_PARENT" href="../index.html?p=math">-lmath</a> plugin.
+
+	<li>Negative periods are weird in that you can either negate the whole
+	    period by adding a "-" at the start of the string, or by using
+	    negative numbers within the string.
+	    Either way works, and will be rendered positive by <tt>abs()</tt>.
 
       </ul>
     </details>

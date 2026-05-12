@@ -82,6 +82,23 @@
     can add or subtract a period to/from a date or dateTime.
     You can also subtract one date from another to find the time span between them, expressed as a period.
     Date arithmetic can get messy though.
+    <p>
+    Negative numbers in periods are allowed.
+    For example, "PT1H-5M" is 55 minutes.
+    If all of the numbers are negative, then you can put a "-" in front of
+    the "P" and drop the "-" before each number, so "P-1D" and "-P1D" are both
+    periods of negative one day.
+    <p>
+    Unlike dates, times, and date/times, periods are <em>not</em> "normalized"
+    to constrain values of time files to their date/time range, or to make all
+    numbers have the same sign.
+    This is due to the inherent messiness of date computation.
+    Most acutely, you don't know which month a period will be added to so
+    you don't know how many days are in that month.
+    However, if you do want to normalize a period, you can use
+    <a target="_PARENT" href="../index.html?f=period">period("n")</a> to
+    do so.
+    Mostly this resolves mixtures of positive and negative numbers.
 
     <details open>
       <summary>Examples</summary>
@@ -128,6 +145,27 @@
         Also, of course, your local time might be different from mine.
       </div>
 
+      <div class="example">
+        <kbd>"PT1H-5M".period("n")</kbd>
+        <samp>"PT55M"</samp>
+        <kbd>"PT-2H5M".period("n")</kbd>
+        <samp>"-PT1H55M"</samp>
+        <kbd>"P3M-1D".period("n")</kbd>
+        <samp>"P2M29D"</samp>
+        The first example resolves the "-5M" by borrowing 60 minutes from the
+        "1H" number, wiping it out.
+        The result is a simple 55 minutes.
+        <p>
+	In the second example, the hour is negative but minute is positive.
+        This results in the whole expression being negative.
+        <p>
+        The third example is for dates instead of times, and it shows that when
+        "borrowing" from months to normalize days, jx assumes every month
+        as 30 days.
+        That certainly isn't perfect, but perfection isn't possible with
+        date arithmetic.
+      </div>
+
     </details>
 
     <details>
@@ -136,7 +174,7 @@
 
         <li>Date arithmetic is inherently messy.
             Daylight savings time means days aren't always 24 hours.
-            Months aren't always 31 days.
+            Months aren't always 30 days.
             Years aren't always 365 days.
             <div class="example">
               <kbd>"2024-02-29" + "P1Y"</kbd>
