@@ -681,12 +681,12 @@ static jx_t *jfn_uuid(jx_t *args, void *agdata)
 	jx_t	*result;
 	char	*build;
 
-	/* Read 16 bytes from /dev/random or /dev/urandom.  If that fails,
+	/* Read 16 bytes from /dev/urandom or /dev/random.  If that fails,
 	 * use lrand48() even though it isn't really random enough.
 	 */
-	fd = open("/dev/random", O_RDONLY);
+	fd = open("/dev/urandom", O_RDONLY);
 	if (fd < 0)
-		fd = open("/dev/urandom", O_RDONLY);
+		fd = open("/dev/random", O_RDONLY);
 	if (fd >= 0) {
 		read(fd, bytes, sizeof bytes);
 		close(fd);
