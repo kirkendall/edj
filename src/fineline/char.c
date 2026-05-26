@@ -47,7 +47,7 @@ int fineline_char_line_number(const char *buf, size_t cursor)
 }
 
 /* Return the offset to the start of a given line within buf.  The first line
- * is 0.  If the requested line exists, then it returns 0.
+ * is 0.  If the requested line doesn't exist, then it returns 0.
  */
 size_t fineline_char_line_offset(const char *buf, int line)
 {

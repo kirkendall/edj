@@ -48,6 +48,7 @@ static fineline_image_t *alloc_image(fineline_t *fine)
 	img->width = fine->columns;
 	img->row = calloc(img->height, sizeof *img->row);
 	img->style = calloc(img->height, sizeof *img->style);
+	img->rowwidth = calloc(img->height, sizeof *img->rowwidth);
 	img->toprow = 0;
 	img->thisrow = 0;
 	img->rowsize = 0;
@@ -74,6 +75,7 @@ void fineline_image_free(fineline_image_t *img)
 	/* Free the row and style tables themselves */
 	free(img->row);
 	free(img->style);
+	free(img->rowwidth);
 
 	/* Free the image */
 	free(img);
@@ -86,6 +88,9 @@ static void start_new_row(fineline_image_t *img)
 	/* Mark the end of the row's text with a NUL byte */
 	img->row[img->thisrow][img->rowpos] = '\0';
 
+	/* Remember the width of this row */
+	img->rowwidth[img->thisrow] = img->thiscol;
+
 	/* If there's still room in the row table, this is easy.  Otherwise we
 	 * need to scroll.
 	 */
@@ -96,9 +101,11 @@ static void start_new_row(fineline_image_t *img)
 		if (img->height > 1) {
 			memmove(&img->row[0], &img->row[1], (img->rowsize - 1) * sizeof *img->row);
 			memmove(&img->style[0], &img->style[1], (img->rowsize - 1) * sizeof *img->row);
+			memmove(&img->rowwidth[0], &img->rowwidth[1], (img->rowsize - 1) * sizeof *img->rowwidth);
 		}
 		img->row[img->height - 1] = NULL;
 		img->style[img->height - 1] = NULL;
+		img->rowwidth[img->height - 1] = 0;
 		img->toprow++;
 		img->thisrow--;
 		if (img->cursorrow >= 0)
@@ -207,7 +214,10 @@ static void add_line_prompt(fineline_image_t *img, int width, int space, int lin
 	add_string(img, prompt + strlen(prompt) - width, "prompt");
 }
 
-static void found_cursor(fineline_t *fine, fineline_image_t *img)
+/* This gets called when the cursor position is detected.  It records the
+ * row/column of the cursor, and also displays hints/completions.
+ */
+static void found_cursor(fineline_t *fine, fineline_image_t *img, int plain)
 {
 	/* If the row is full then the cursor would be off the
 	 * right edge of the screen.  We can't have that!
@@ -220,6 +230,10 @@ static void found_cursor(fineline_t *fine, fineline_image_t *img)
 	img->cursorrow = img->thisrow;
 	img->cursorcol = img->thiscol;
 
+	/* If "plain" mode, that's all */
+	if (plain)
+		return;
+
 	/* Show partial completion text, if any */
 	if (fine->completesame && *fine->completesame)
 		add_string(img, fine->completesame, "complete");
@@ -227,6 +241,15 @@ static void found_cursor(fineline_t *fine, fineline_image_t *img)
 	/* Show hint text, if any */
 	if (fine->hint && *fine->hint)
 		add_string(img, fine->hint, "hint");
+
+#if 0
+	/* For debugging, show cursor column */
+	{
+		char buf[100];
+		sprintf(buf, "[%d@%d]", img->cursorcol, img->cursorrow);
+		add_string(img, buf, "cursor");
+	}
+#endif
 }
 
 /* This generates an image, basically by splitting the input into rows.
@@ -237,7 +260,7 @@ static void found_cursor(fineline_t *fine, fineline_image_t *img)
  * ->style[rownum][bytenum] is a string identifying the color and other
  * attributes of the character.  
  */
-fineline_image_t *fineline_image(fineline_t *fine)
+fineline_image_t *fineline_image(fineline_t *fine, int plain)
 {
 	wchar_t	wc;
 	char	*scan;
@@ -285,7 +308,7 @@ DUMP
 
 		/* Is this the cursor position? */
 		if (scan == fine->line + fine->cursor)
-			found_cursor(fine, img);
+			found_cursor(fine, img, plain);
 DUMP
 
 		/* Add this character.  Some characters are special */
@@ -293,7 +316,6 @@ DUMP
 			/* Newlines force a new row, and also output a prompt */
 			start_new_row(img);
 			add_line_prompt(img, promptwidth, promptspace, ++lineno);
-			img->cursorcol = img->thiscol;
 		} else if (wc == '\t') {
 			/* Tabs are converted into a variable number of spaces */
 			add_spaces(img, fine->tabstop - img->virtualcol % fine->tabstop, NULL);
@@ -332,12 +354,14 @@ DUMP
 	 * the input.
 	 */
 	if (img->cursorrow == -1)
-		found_cursor(fine, img);
+		found_cursor(fine, img, plain);
 DUMP
 
 	/* Mark the end of the last row with a NUL byte */
-	if (img->row[img->thisrow])
+	if (img->row[img->thisrow]) {
 		img->row[img->thisrow][img->rowpos] = '\0';
+		img->rowwidth[img->thisrow] = img->thiscol;
+	}
 
 	/* The number of rows is 1 more than the current row */
 	img->usedrows = img->thisrow + 1;

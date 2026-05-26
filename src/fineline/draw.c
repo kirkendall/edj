@@ -24,8 +24,14 @@ static void draw_row(fineline_t *fine, fineline_image_t *image, int row)
 		}
 
 		/* Write it */
-		fine->text(style[pos], &text[pos], len);
+		fine->text(fine, style[pos], &text[pos], len);
 	}
+
+	/* If the new version of this row is shorter than the previous version,
+	 * then clear to the end of the row
+	 */
+	if (fine->image && image->rowwidth[row] < fine->image->rowwidth[row])
+		fine->clear(fine);
 }
 
 
@@ -34,27 +40,27 @@ static void draw_row(fineline_t *fine, fineline_image_t *image, int row)
  * drawing the text (being mindful of line wrap, and syntax coloring) and then
  * moving the cursor to the correct position within the line.
  */
-void fineline_draw(fineline_t *fine)
+void fineline_draw(fineline_t *fine, int plain)
 {
-	int	row;
+	int	row, col;
 	fineline_image_t *img;
 
 	/* Generate a new image */
-	img = fineline_image(fine);
+	img = fineline_image(fine, plain);
 
 	/* Are we updating an old image? */
 	if (fine->image) {
 		/* Yes -- move the cursor back to the start of the first row */
-#if 0
-		fine->up(fine->image->cursorrow - fine->image->toprow);
-#endif
-		fine->home();
+		if (fine->image->cursorrow > 0)
+		fine->up(fine, fine->image->cursorrow);
+		fine->home(fine);
+		col = 0;
 
 		/* If the top row is moved (due to scrolling) then insert or
 		 * delete rows.  Also adjust the old image to match.
 		 */
 		if (img->toprow != fine->image->toprow) {
-			fine->scroll(fine->image->toprow - img->toprow);
+			fine->scroll(fine, fine->image->toprow - img->toprow);
 			/*!!! Adjust the old image */
 		}
 
@@ -62,38 +68,44 @@ void fineline_draw(fineline_t *fine)
 		for (row = 0; row < img->usedrows; row++) {
 			/* If the row has changed, redraw it */
 			draw_row(fine, img, row);
+			col = img->rowwidth[row];
 			if (row + 1 < img->usedrows) {
-				fine->home();
-				fine->down(1);
+				fine->home(fine);
+				fine->up(fine, -1);
+				col = 0;
 			}
 		}
+		row--;
 
 		/* If there were rows in the old image that aren't needed now,
 		 * then erase them.
 		 */
-		for (; row < fine->image->usedrows; row++) {
-			fine->clear();
-			fine->down(1);
+		for (; row < fine->image->usedrows - 1; row++) {
+			fine->clear(fine);
+			fine->up(fine, -1);
+			col = 0;
 		}
+		if (row > img->usedrows)
+			fine->up(fine, row - img->usedrows);
 	} else {
 		/* Draw all rows */
 		for (row = 0; row < img->usedrows; row++) {
 			/* If the row has changed, redraw it */
 			draw_row(fine, img, row);
 			if (row + 1 < img->usedrows) {
-				fine->home();
-				fine->down(1);
+				fine->home(fine);
+				fine->up(fine, -1);
 			}
 		}
+		row--;
+		col = img->rowwidth[img->usedrows - 1];
 	}
 
 	/* Move the visible cursor back where it belongs */
-	if (img->cursorrow < fine->usedrows - 1)
-		fine->up(fine->usedrows - 1 - img->cursorrow);
-	if (img->cursorcol < img->thiscol)
-		fine->left(img->thiscol - img->cursorcol);
-	else if (img->cursorcol > img->thiscol)
-		fine->right(img->cursorcol - img->thiscol);
+	if (img->cursorrow < img->usedrows - 1)
+		fine->up(fine, img->usedrows - 1 - img->cursorrow);
+	if (img->cursorcol != col)
+		fine->left(fine, col - img->cursorcol);
 
 	/* Free the old image, store the new image */
 	if (fine->image)
@@ -118,11 +130,15 @@ void fineline_draw_after(fineline_t *fine)
 		fine->cursor = fineline_char_delta(fine->line, fine->cursor, -1);
 	}
 
-	/* Draw it like that. */
-	fineline_draw(fine);
+	/* Draw it like that. Draw it without hints/completions. */
+	fineline_draw(fine, 1);
 
 	/* Move to the start of the next line */
-	fine->down(1);
-	fine->home();
+	fine->up(fine, -1);
+	fine->home(fine);
+
+	/* Clobber the old image */
+	fineline_image_free(fine->image);
+	fine->image = NULL;
 }
 

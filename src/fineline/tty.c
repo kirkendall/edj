@@ -21,7 +21,7 @@
  */
 static struct {
 	fineline_edit_t	key;	/* fineline key code */
-	char esc[5];		/* escape sequence for the key */
+	char esc[8];		/* escape sequence for the key */
 	size_t	length;		/* length of esc, computed in fineline_active() */
 } keys[] = {
 	{FINELINE_BACK_SPACE,	"\177"},	/* delete or backspace */
@@ -34,6 +34,8 @@ static struct {
 	{FINELINE_HOME,		"\033OH"},	/* move to start of line */
 	{FINELINE_END,		"\033[F"},	/* move to end of line */
 	{FINELINE_END,		"\033OF"},	/* move to end of line */
+	{FINELINE_LEFT_WORD,	"\033[1;5D"},	/* move left 1 word */
+	{FINELINE_RIGHT_WORD,	"\033[1;5C"},	/* move left 1 word */
 	{FINELINE_LEFT,		"\033[D"},	/* move left */
 	{FINELINE_LEFT,		"\033OD"},	/* move left */
 	{FINELINE_RIGHT,	"\033[C"},	/* move right */
@@ -46,6 +48,16 @@ static struct {
 	{FINELINE_PAGE_DOWN,	"\033[6~"},	/* scroll page forward */
 	{FINELINE_ENTER,	"\r"},		/* process line or add newline */
 	{FINELINE_ENTER,	"\n"},		/* process line or add newline */
+	{FINELINE_HOME,		"\033[1;2H"},	/* select to start of line */
+	{FINELINE_END,		"\033[1;2F"},	/* select to end of line */
+	{FINELINE_LEFT_WORD,	"\033[1;6D"},	/* select left 1 word */
+	{FINELINE_RIGHT_WORD,	"\033[1;6C"},	/* select left 1 word */
+	{FINELINE_LEFT,		"\033[1;2D"},	/* select left */
+	{FINELINE_RIGHT,	"\033[1;2C"},	/* select right */
+	{FINELINE_UP,		"\033[1;2A"},	/* select up */
+	{FINELINE_DOWN,		"\033[1;2B"},	/* select down */
+
+	{FINELINE_BACK_WORD,	"\027"},	/* ^W delete preceding word */
 	{FINELINE_EXIT,		"\004"},	/* ^D exit, only if line is empty */
 	{FINELINE_SAVE,		"\013"},	/* ^S Save to history but don't process */
 	{FINELINE_QUIT,		"\011"}		/* ^Q exit without processing the line */
@@ -111,12 +123,12 @@ static void fineline_active(int timeout)
 
 	/* Otherwise, get the current settings and switch to raw/noecho */
 	tcgetattr(0, &stty);
-	stty.c_iflag &= ~(INLCR | IGNCR | IXON | ISIG);
+	stty.c_iflag &= ~(INLCR | IGNCR | IXON);
 #ifdef IUTF8
 	stty.c_iflag |= IUTF8;
 #endif
-	stty.c_oflag &= ~(OPOST|ONLCR);
-	stty.c_lflag &= ~(ICANON|ECHO);
+	stty.c_oflag &= ~(OPOST | ONLCR);
+	stty.c_lflag &= ~(ICANON | ECHO | ISIG);
 	stty.c_cc[VMIN] = 1;
 	stty.c_cc[VTIME] = timeout;
 	tcsetattr(0, TCSANOW, &stty);
@@ -180,7 +192,7 @@ static size_t count_char_matches(char *buf, size_t bufused)
  * fineline_edit_t key code.  The returned value is a "long" instead of
  * "wchar_t" because some OSes use UTF-16 for wchar_t instead of full Unicode.
  */
-static long fineline_get_key(void)
+static long get_key(int quoted)
 {
 	static char	buf[20];
 	static ssize_t	bufused, charused;
@@ -213,13 +225,17 @@ static long fineline_get_key(void)
 	timedout = 0;
 	for (;;) {
 		/* Do we have a cursor key? */
-		k = count_key_matches(buf, bufused, timedout);
-		if (k >= 0) {
-			/* Shift the buffer, return the key code */
-			if (keys[k].length < bufused)
-				memmove(buf, buf + keys[k].length, bufused - keys[k].length);
-			bufused -= keys[k].length;
-			return keys[k].key;
+		if (quoted)
+			k = -1; /* can't be a key */
+		else {
+			k = count_key_matches(buf, bufused, timedout);
+			if (k >= 0) {
+				/* Shift the buffer, return the key code */
+				if (keys[k].length < bufused)
+					memmove(buf, buf + keys[k].length, bufused - keys[k].length);
+				bufused -= keys[k].length;
+				return keys[k].key;
+			}
 		}
 
 		/* If no partial keys, do we have a complete character? */
@@ -259,60 +275,65 @@ static long fineline_get_key(void)
 	}
 }
 
-/* Called to move the cursor up */
-static void ttyup(int n)
+/* Called to move the cursor up (positive) or down (negative) */
+static void ttyup(fineline_t *fine, int n)
 {
-	fprintf(stderr, "\033[%dA", n);
+	if (n > 0)
+		fprintf(stderr, "\033[%dA", n);
+	if (n < 0) {
+		if (n < -1)
+			fprintf(stderr, "\033[%dB", -n - 1);
+		fputc('\n', stderr);
+	}
 }
 
-/* Called to move the cursor down.  If it moves past the bottom of the screen
- * then we want to force the screen to scroll.
+/* Called to move the cursor left (positive) or right (negative) */
+static void ttyleft(fineline_t *fine, int n)
+{
+	if (n > 0)
+		fprintf(stderr, "\033[%dD", n);
+	else
+		fprintf(stderr, "\033[%dC", n);
+}
+
+/* Called to scroll lines at the cursor row or lower downward (positive) or
+ * upward (negative).  I.e., positive inserts rows and negative deletes them.
  */
-static void ttydown(int n)
-{
-	if (n == 0)
-		return;
-	if (n > 1)
-		fprintf(stderr, "\033[%dB", n - 1);
-	fputc('\n', stderr);
-}
-
-static void ttyleft(int n)
-{
-	fprintf(stderr, "\033[%dD", n);
-}
-
-static void ttyright(int n)
-{
-	fprintf(stderr, "\033[%dC", n);
-}
-
-static void ttyhome(void)
-{
-	/*fputc('\r', stderr);*/
-	fputs("\033[1G", stderr);
-}
-
-static void ttyclear(void)
-{
-	fputs("\033[K", stderr);
-}
-
-static void ttytext(const char *style, const char *text, size_t size)
-{
-	if (style && !strcmp(style, "prompt"))
-		fwrite("\033[33;1m", 1, 7, stderr);
-	fwrite(text, 1, size, stderr);
-	if (style && !strcmp(style, "prompt"))
-		fwrite("\033[m", 1, 3, stderr);
-}
-
-static void ttyscroll(int n)
+static void ttyscroll(fineline_t *fine, int n)
 {
 	if (n > 0)
 		fprintf(stderr, "\033[%dL", n);
 	else if (n < 0)
 		fprintf(stderr, "\033[%dM", -n);
+}
+
+/* Called to move the cursor to column 0 */
+static void ttyhome(fineline_t *fine)
+{
+	fputc('\r', stderr);
+	/* fputs("\033[1G", stderr); */
+}
+
+/* Called to clear from the cursor position through the end of the line */
+static void ttyclear(fineline_t *fine)
+{
+	fputs("\033[K", stderr);
+}
+
+static void ttytext(fineline_t *fine, const char *style, const char *text, size_t size)
+{
+	char	*esc = NULL, buf[100];
+	if (style && !strcmp(style, "prompt"))
+		strcpy(esc = buf, "\033[33;1m");
+	if (style && (!strcmp(style, "hint") || !strcmp(style, "complete")))
+		strcpy(esc = buf, "\033[2m");
+	if (style && !strcmp(style, "cursor"))
+		strcpy(esc = buf, "\033[3m");
+	if (esc)
+		fwrite(esc, 1, strlen(esc), stderr);
+	fwrite(text, 1, size, stderr);
+	if (esc)
+		fwrite("\033[m", 1, 3, stderr);
 }
 
 
@@ -324,12 +345,10 @@ fineline_t *fineline_tty_alloc()
 
 	/* Initialize it */
 	fine->up = ttyup;
-	fine->down = ttydown;
 	fine->left = ttyleft;
-	fine->right = ttyright;
+	fine->scroll = ttyscroll;
 	fine->home = ttyhome;
 	fine->clear = ttyclear;
-	fine->scroll = ttyscroll;
 	fine->text = ttytext;
 
 	/* Return it */
@@ -366,14 +385,19 @@ char *fineline_tty(fineline_t *fine, const char *prompt)
 	/* Process keystrokes until we get a line */
 	fineline_active(0);
 	for (;;) {
-		fineline_draw(fine);
-		key = fineline_get_key();
+		fineline_draw(fine, 0);
+		key = get_key(fine->quote);
 		if (key > FINELINE_MIN && key < FINELINE_MAX) {
 			result = fineline_edit(fine, (fineline_edit_t)key);
 			if (result < 0)
 				fputc('\007', stderr);
 			else if (result > 0)
 				break;
+		} else if (fine->quote) {
+			fineline_edit_char(fine, (wchar_t)key);
+			fine->quote = 0;
+		} else if (key == 28) {/* <Ctrl-Backslash> */
+			fine->quote = 1;
 		} else {
 			 fineline_edit_char(fine, (wchar_t)key);
 		}

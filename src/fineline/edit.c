@@ -12,8 +12,8 @@
 int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 {
 	size_t	len;
-	int	col, lnum;
-	char	*moved;
+	int	col, lnum, start, tmp;
+	const char	*moved;
 
 	switch (edit) {
 	case FINELINE_INSERT:
@@ -45,18 +45,59 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 
 	case FINELINE_BACK_WORD:
 		/* Delete to start of word */
+		moved = &fine->line[fine->cursor];
+		fineline_edit(fine, FINELINE_LEFT_WORD);
+		if (moved != &fine->line[fine->cursor]) {
+			fineline_history_edit(fine);
+			memmove(fine->line + fine->cursor, moved, strlen(moved) + 1);
+		}
 		break;
 
 	case FINELINE_BACK_LINE:
 		/* Delete to start of line */
 		moved = &fine->line[fine->cursor];
 		fineline_edit(fine, FINELINE_HOME);
-		if (moved != &fine->line[fine->cursor])
+		if (moved != &fine->line[fine->cursor]) {
+			fineline_history_edit(fine);
 			memmove(fine->line + fine->cursor, moved, strlen(moved) + 1);
+		}
 		break;
 
 	case FINELINE_BACK_TAB:
 		/* Delete spaces to previous tabstop */
+
+		/* Find the desired column */
+		col = fineline_char_column_number(fine->line, fine->cursor);
+		if (col > 0 && col % fine->tabstop == 0)
+			col -= fine->tabstop;
+		else
+			col -= col % fine->tabstop;
+
+		/* Find the character at that column */
+		moved = fineline_char_at_column(fine->line, col, NULL);
+
+		/* We want to delete whitespace characters between the moved
+		 * position and the cursor, but if there are non-whitespace
+		 * characters then we want to keep them.
+		 */
+		for (start = fine->cursor - 1;
+		     &fine->line[start] > moved
+		        && (fine->line[start] == ' ' || fine->line[start] == '\t');
+		     start--) {
+		}
+		if (start != fine->cursor) {
+			/* If on a history line, copy it to current line */
+			fineline_history_edit(fine);
+
+			/* Move the characters after the cursor, and the '\0'
+			 * at the end of the input line.
+			 */
+			memmove(&fine->line[start], &fine->line[fine->cursor], strlen(&fine->line[fine->cursor]) + 1);
+
+			/* Adjust the cursor position */
+			fine->cursor = start;
+		}
+		break;
 
 	case FINELINE_TAB:	
 		/* Insert spaces to next tabstop */
@@ -89,12 +130,54 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 		}
 		break;
 
+	case FINELINE_LEFT_WORD:
+		/* First move past whitespace before the cursor */
+		for (start = fine->cursor; start > 0;) {
+			start = fineline_char_delta(fine->line, start, -1);
+			if (fine->line[start] != ' '
+			 && fine->line[start] != '\n'
+			 && fine->line[start] != '\t')
+				break;
+		}
+
+		/* Then go past non-whitespace ALMOST to the next whitespace */
+		for (; start > 0; start = tmp) {
+			tmp = fineline_char_delta(fine->line, start, -1);
+			if (fine->line[tmp] == ' '
+			 || fine->line[tmp] == '\n'
+			 || fine->line[tmp] == '\t')
+				break;
+		}
+		fine->cursor = start;
+		break;
+
+	case FINELINE_RIGHT_WORD:
+		/* First move past non-whitespace characters */
+		for (start = fine->cursor; fine->line[start]; ) {
+			if (fine->line[start] == ' '
+			 || fine->line[start] == '\n'
+			 || fine->line[start] == '\t')
+				break;
+			start = fineline_char_delta(fine->line, start, 1);
+		}
+
+		/* Then go past whitespace */
+		while (fine->line[start]) {
+			if (fine->line[start] != ' '
+			 && fine->line[start] != '\n'
+			 && fine->line[start] != '\t')
+				break;
+			start = fineline_char_delta(fine->line, start, 1);
+		}
+		fine->cursor = start;
+		break;
+
 	case FINELINE_LEFT:
 		/* Move cursor left */
 		fine->cursor = fineline_char_delta(fine->line, fine->cursor, -1);
 		break;
 
-	case FINELINE_RIGHT:	
+	case FINELINE_RIGHT:
 		/* Move cursor right */
 		fine->cursor = fineline_char_delta(fine->line, fine->cursor, 1);
 		break;
@@ -109,9 +192,11 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 			/* Yes, just move the cursor */
 			col = fineline_char_column_number(fine->line, fine->cursor);
 			fine->cursor = fineline_char_at_column(fine->line + len, col, NULL) - fine->line;
-		} else
+		} else {
 			/* Otherwise move back in history */
 			fineline_history_show(fine, 1);
+			fine->cursor = strlen(fine->line);
+		}
 		break;
 
 	case FINELINE_DOWN:	
@@ -124,9 +209,11 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 			/* Yes, just move the cursor */
 			col = fineline_char_column_number(fine->line, fine->cursor);
 			fine->cursor = fineline_char_at_column(fine->line + len, col, NULL) - fine->line;
-		} else
+		} else {
 			/* Otherwise move forward in history */
 			fineline_history_show(fine, -1);
+			fine->cursor = strlen(fine->line);
+		}
 		break;
 
 	case FINELINE_ENTER:
@@ -163,7 +250,20 @@ int fineline_edit(fineline_t *fine, fineline_edit_t edit)
 		/* return 2, indicating quit-no-processing */
 		return 2;
 
-	/* The case following indicate special conditions */
+	/* These cases are "select" versions of cursor keypad motions */
+	case FINELINE_S_HOME:
+	case FINELINE_S_END:
+	case FINELINE_S_LEFT_WORD:
+	case FINELINE_S_RIGHT_WORD:
+	case FINELINE_S_LEFT:
+	case FINELINE_S_RIGHT:
+	case FINELINE_S_UP:
+	case FINELINE_S_DOWN:
+		/* !!! Need to add selection logic, but here's the motion */
+		fineline_edit(fine, edit - FINELINE_S_HOME + FINELINE_HOME);
+		break;
+
+	/* These cases indicate special conditions */
 	case FINELINE_PAGE_DOWN:/* scroll forward */
 	case FINELINE_PAGE_UP:	/* scroll back */
 	case FINELINE_RESIZE:	/* the window was resized */

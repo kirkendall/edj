@@ -12,12 +12,28 @@ typedef enum {
 	FINELINE_BACK_LINE,	/* delete to start of line */
 	FINELINE_BACK_TAB,	/* delete to start of tab */
 	FINELINE_TAB,		/* move to next tabstop */
+
+	/* Cursor keypad keys */
 	FINELINE_HOME,		/* move cursor to start of line */
 	FINELINE_END,		/* move cursor to end of line */
+	FINELINE_LEFT_WORD,	/* move cursor to previous word */
+	FINELINE_RIGHT_WORD,	/* move cursor to next word */
 	FINELINE_LEFT,		/* move cursor left */
 	FINELINE_RIGHT,		/* move cursor right */
-	FINELINE_UP,		/* move back in history (up arrow key) */
-	FINELINE_DOWN,		/* move forward in history (down arrow key) */
+	FINELINE_UP,		/* move cursor up, or back in history */
+	FINELINE_DOWN,		/* move cursor down, or forward in history */
+
+	/* Shifted keypad keys, used to select text.  These must must exactly
+	 * match the list of keypad keys above, with "HOME" first.
+	 */
+	FINELINE_S_HOME,	/* select to start of line */
+	FINELINE_S_END,		/* select to end of line */
+	FINELINE_S_LEFT_WORD,	/* select to previous word */
+	FINELINE_S_RIGHT_WORD,	/* select to next word */
+	FINELINE_S_LEFT,	/* select left */
+	FINELINE_S_RIGHT,	/* select right */
+	FINELINE_S_UP,		/* select up */
+	FINELINE_S_DOWN,	/* select down */
 
 	/* The following indicate special conditions */
 	FINELINE_PAGE_DOWN,	/* scroll forward */
@@ -33,26 +49,11 @@ typedef enum {
 
 } fineline_edit_t;
 
-typedef enum {
-	FINELINE_BOLD = 1,
-	FINELINE_DIM = 2,
-	FINELINE_UNDERLINED = 4,
-	FINELINE_ITALIC = 8,
-	FINELINE_LINETHRU = 16,
-	FINELINE_STANDOUT = 32,
-	FINELINE_NO_ATTRIBUTES = 16384
-} fineline_attributes_t;
-
-typedef struct {
-	char	*color;		/* name of the role ("prompt", "string", etc.)*/
-	char	*fg;		/* name of the foreground color */
-	char	*bg;		/* name of the background color */
-	fineline_attributes_t at;/* bitmap of other attributes such as bold */
-} fineline_color_t;
 
 typedef struct {
 	char	**row;		/* dynamic char *row[] array */
 	const char ***style;	/* dynamic char **style[] array */
+	int	*rowwidth;	/* dynamic rowwidth[] array */
 	int	height;		/* dimension of the row[] and style[] arrays */
 	int	width;		/* number of columns per row */
 	int	usedrows;	/* number of used rows */
@@ -69,6 +70,7 @@ typedef struct {
 /* This contains all of the info needed to draw the current line. */
 typedef struct fineline_s {
 	void	*context;	/* Info to help with name completion */
+	void	*window;	/* Info to help draw text */
 
 	/* Options controlling the behavior or appearance */
 	int	dynamic;	/* Boolean: Return a strdup() of the line? */
@@ -77,6 +79,9 @@ typedef struct fineline_s {
 
 	/* Values describing the terminal size, in single-width characters */
 	int	columns, rows, usedrows;
+
+	/* Status of keystroke input */
+	int	quote;	/* treat next char as literal, even if <Esc> */
 
 	/* data describing the line as currently shown */
 	fineline_image_t *image;
@@ -97,17 +102,15 @@ typedef struct fineline_s {
 	 * define a "draw" function, that function can return a non-zero value
 	 * to cause the cursor motion and "text" functions to be called anyway.
 	 */
-	void	(*before)(struct fineline_s *);
-	void	(*after)(struct fineline_s *);
+	void	(*before)(struct fineline_s *fine);
+	void	(*after)(struct fineline_s *fine);
 	int	(*draw)(struct fineline_s *fine);
-	void	(*up)(int n);
-	void	(*down)(int n);
-	void	(*left)(int n);
-	void	(*right)(int n);
-	void	(*home)(void);
-	void	(*clear)(void);
-	void	(*text)(const char *style, const char *text, size_t size);
-	void	(*scroll)(int n);
+	void	(*up)(struct fineline_s *fine, int n);
+	void	(*left)(struct fineline_s *fine, int n);
+	void	(*scroll)(struct fineline_s *fine, int n);
+	void	(*home)(struct fineline_s *fine);
+	void	(*clear)(struct fineline_s *fine);
+	void	(*text)(struct fineline_s *fine, const char *style, const char *text, size_t size);
 
 	/* This is a callback, invoked when a complete line has been entered.
 	 * This "line" may contain newline characters, for multiline commands.
@@ -193,15 +196,142 @@ void fineline_hint_hook(char *(*fn)(fineline_t *fine));
 void fineline_complete_hook(char *(*fn)(fineline_t *fine));
 void fineline_complete_item(fineline_t *fine, const char *item, const char *group);
 
-/* color.c */
-int fineline_color(const char *color);
-void fineline_color_set(int color, fineline_attributes_t on, fineline_attributes_t off, const char *fg, const char *bg);
-void fineline_color_hook(int *(*fn)(fineline_t *fine));
-
 /* draw.c */
-void fineline_draw(fineline_t *fine);
+void fineline_draw(fineline_t *fine, int plain);
 void fineline_draw_after(fineline_t *fine);
 
 /* image.c */
-fineline_image_t *fineline_image(fineline_t *fine);
+fineline_image_t *fineline_image(fineline_t *fine, int plain);
 void fineline_image_free(fineline_image_t *img);
+
+/******************************************************************************/
+/* ncursesw support.  This is implemented in the header to avoid making the   */
+/* library be dependent on ncursesw in programs that don't use ncursesw.      */
+
+#ifdef NCURSES_WIDE
+# define fineline_curses(fine, prompt) fineline_wcurses((w), fine, prompt)
+# define fineline_curses_alloc() fineline_wcurses_alloc(stdscr)
+# ifdef FINELINE_CURSES
+
+
+/* Pointer to application-specific function for setting window drawing
+ * attributes for a given name such as "prompt".  If unset (NULL) then
+ * simple defaults will be used.
+ */
+void (*fineline_wattrbyname)(WINDOW *w, const char *name);
+
+
+static void fineline_wcurses_before(fineline_t *fine)
+{
+	int	y, x;
+	WINDOW *w = (WINDOW *)fine->window;
+
+	/* Detect window resizing */
+	getmaxyx(w, &y, &x)
+	if (y != fine->rows || x != fine->columns) {
+		fine->rows = y;
+		fine->columns = x;
+		fineline_edit(fine, FINELINE_RESIZE);
+	}
+}
+
+static void fineline_wcurses_after(fineline_t *fine)
+{
+	WINDOW *w = (WINDOW *)fine->window;
+
+	wrefresh(w);
+}
+
+static void fineline_wcurses_up(fineline_t *fine, int n)
+{
+	int	y, x;
+	WINDOW *w = (WINDOW *)fine->window;
+	getyx(w, &y, &x)
+	wmove(w, y - n, x);
+}
+
+static void fineline_wcurses_left(fineline_t *fine, int n)
+{
+	int	y, x;
+	WINDOW *w = (WINDOW *)fine->window;
+	getyx(w, &y, &x)
+	wmove(w, y, x - n);
+}
+
+static void fineline_wcurses_scroll(fineline_t *fine, int n)
+{
+	WINDOW *w = (WINDOW *)fine->window;
+	winsdelln(w, n);
+}
+
+static void fineline_wcurses_home(fineline_t *fine)
+{
+	int	y, x;
+	WINDOW *w = (WINDOW *)fine->window;
+	getyx(w, &y, &x)
+	wmove(w, y, 0);
+}
+
+static void fineline_wcurses_clear(fineline_t *fine)
+{
+	WINDOW *w = (WINDOW *)fine->window;
+	wclrtoeol(w);
+}
+
+static void fineline_wcurses_text(fineline_t *fine, const char *style, const char *text, size_t size)
+{
+	int	y, x, y2, x2, len;
+	char	*scan;
+	WINDOW *w = (WINDOW *)fine->window;
+
+	/* Convert byte count to UTF-8 character count */
+	for (len = 0, scan = text; scan < &text[size]; )
+		if ((*scan++ & 0xc0) != 0x80)
+			len++;
+
+	/* If fineline_wattrbyname is non-NULL, then call it to set the
+	 * text style; otherwise, use A_NORMAL for everything except a few
+	 * styles that are built into the fineline library.
+	 */
+	if (fineline_wattrbyname)
+		(*fineline_wattrbyname)(w, style);
+	else if (!strcmp(style, "prompt"))
+		wattrset(w, A_BOLD);
+	else if (!strcmp(style, "hint") || !strcmp(style, "complete"))
+		wattrset(w, A_DIM);
+	else
+		wattrset(w, A_NORMAL);
+
+	/* Add the characters */
+	waddnstr(w, text, len);
+}
+
+/* Receive keystrokes, and process them.  This is somewhat tricky since we
+ * could have multiple windows that that are inputting lines at the same time,
+ * and ncursesw isn't good about keeping them separate.
+ */
+char *fineline_wcurses(WINDOW *w, fineline_t *fine, const char *prompt)
+{
+}
+
+/* Allocate a fineline_t, and initialize it for ncursesw */
+fineline_t *fineline_wcurses_alloc(WINDOW *w)
+{
+	fineline_t *fine = fineline_alloc();
+	fineline->window = (void *)w;
+	fineline->before = fineline_wcurses_before;
+	fineline->up = fineline_wcurses_up;
+	fineline->left = fineline_wcurses_left;
+	fineline->scroll = fineline_wcurses_scroll;
+	fineline->home = fineline_wcurses_home;
+	fineline->clear = fineline_wcurses_clear;
+	fineline->text = fineline_wcurses_text;
+	return fine;
+}
+
+# else
+extern char *fineline_wcurses(WINDOW *w, fineline_t *fine, const char *prompt);
+extern fineline_t *fineline_wcurses_alloc(WINDOW *w);
+extern void (*wattrbyname)(WINDOW *w, const char *name);
+# endif
+#endif

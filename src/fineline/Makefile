@@ -20,6 +20,7 @@ tryfl: tryfl.c libs
 	$(CC) tryfl.c -L$(LIB) -lfineline -o tryfl
 
 try: tryfl
+	clear
 	LD_LIBRARY_PATH=$(LIB) ./tryfl || (stty sane; [ -f core ] && LD_LIBRARY_PATH=$(LIB) gdb tryfl core)
 
 gdb: tryfl
