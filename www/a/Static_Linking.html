@@ -84,11 +84,11 @@
     <p>
     jx produces a static "libsoncalcplugins.a" library
     containing all of the plugins.
-    This library is only used linking into "jxstatic", and the linker will
+    This library is only used for linking into "jxstatic", and the linker will
     only include the plugins that you specifically want.
+    (This is separate from the "libjx.a" library containing the core of
+    jx, by the way.  Don't get them confused.)
     <p>
-    This is separate from the "libjx.a" library containing the core of
-    jx, by the way.  Don't get them confused.
     The version of the <tt>json_plugin_load()</tt> function in the static
     "libjx.a" library contains a list of plugins to include in the binary.
     By adjusting the list, you can make any plugin available to "jxstatic".
@@ -99,6 +99,7 @@
     Another consideration is that some of the libraries that a plugin depends
     on might not be available in statically-linked form.
     For example, my development system doesn't have a "libcurl.a" file anywhere
+    (only the shared "libcurl.so" version)
     so I can't compile a version of "jxstatic" that includes the "curl" plugin.
 
     <h2>How to build "jxstatic" with plugins that you choose</h2>
@@ -108,7 +109,7 @@
       table.referencelist.steps td:nth-child(2) { font-family:monospace; font-size:125%; white-space:nowrap; }
     </style>
     <table class="referencelist steps">
-      <tr><td>1</td><td>cd src/lib</td><td>Go into the library source directory</td></tr>
+      <tr><td>1</td><td>cd src/lib</td><td>Go into the source directory for the "libjx.so"/"libjx.a" library.</td></tr>
       <tr><td>2</td><td>vi Makefile</td><td>Edit the Makefile.  I'm using vi here, but any text editor will do.</td</tr>
       <tr><td>3</td><td>/^STATIC=</td><td>Search for the "STATIC=..." line.</td></tr>
       <tr><td>4</td><td>f=lC-DSTATICCSV -DSTATICLOG&lt;esc&gt;</td><td>

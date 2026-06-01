@@ -23,7 +23,9 @@
       However, the normal
       <a target="_PARENT" href="../../index.html?cmd=set">set</a>
       command won't let you add members to an object.
-      The only way to add a new entity to that object is via <tt>xmlEntity</tt>.
+      It is intentionally strict in that way.
+      The only way to add a new entity to that object is via the
+      <tt>xmlEntity</tt> command.
       <p>
       Note that the text is given as an expression.
       This means that if you want it to be literal text, you must enclose
@@ -55,7 +57,8 @@
 
       <div class="example">
 	<kbd>xmlEntity ntilde="&ntilde;"</kbd>
-	Add an entry to make <tt>&amp;ntilde;</tt> be converted/displayed as <tt>&ntilde;</tt>.
+	<kbd>xmlEntity bomb=0x1f4a3</kbd>
+	Add entries to make <tt>&amp;ntilde;</tt> and <tt>&amp;bomb;</tt> be converted/displayed as <tt>&ntilde;</tt> and the bomb emoji, respectively.
       </div>
 
     </details>
@@ -65,7 +68,7 @@
       <ul>
 
 	<li>The XML parser also understands <tt>&amp;#<var>decimal</var>;</tt>
-	    and <tt>&amp;#x<var>hex</var></tt> entities.
+	    and <tt>&amp;#x<var>hex</var>;</tt> entities.
 	    These don't need to be in the table.
 
 	<li>The <a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a>
