@@ -454,6 +454,10 @@ static jx_t *jfn_toUpperCase(jx_t *args, void *agdata)
 {
 	jx_t  *tmp;
 
+	/* If null, return a copy of it */
+	if (jx_is_null(args->first))
+		return jx_copy(args->first);
+
 	/* If string, make a copy.  If not a string then use toString on it. */
 	if (args->first->type == JX_STRING)
 		tmp = jx_string(args->first->text, -1);
@@ -472,6 +476,10 @@ static jx_t *jfn_toLowerCase(jx_t *args, void *agdata)
 {
 	jx_t  *tmp;
 
+	/* If null, return a copy of it */
+	if (jx_is_null(args->first))
+		return jx_copy(args->first);
+
 	/* If string, make a copy.  If not a string then use toString on it. */
 	if (args->first->type == JX_STRING)
 		tmp = jx_string(args->first->text, -1);
@@ -489,6 +497,10 @@ static jx_t *jfn_toLowerCase(jx_t *args, void *agdata)
 static jx_t *jfn_toMixedCase(jx_t *args, void *agdata)
 {
 	jx_t	*tmp;
+
+	/* If null, return a copy of it */
+	if (jx_is_null(args->first))
+		return jx_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
 	if (args->first->type == JX_STRING)
@@ -511,6 +523,10 @@ static jx_t *jfn_toMixedCase(jx_t *args, void *agdata)
 static jx_t *jfn_simpleKey(jx_t *args, void *agdata)
 {
 	jx_t  *tmp;
+
+	/* If null, return a copy of it */
+	if (jx_is_null(args->first))
+		return jx_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
 	if (args->first->type == JX_STRING)
