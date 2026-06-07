@@ -319,6 +319,11 @@ static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 	}
 }
 
+/* Converts jx_t data to an XML string.  Returns the string length.  "buf"
+ * should point to a large enough buffer, or be NULL to skip the actual
+ * generation but still return the predicted length.  "data" must be an
+ * object.
+ */
 static size_t xml_unparse(char *buf, jx_t *data)
 {
 	xml_unparse_state_t state;
