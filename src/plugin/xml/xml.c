@@ -45,6 +45,11 @@ static jx_t *jfn_toXML(jx_t *args, void *agdata)
 	size_t len;
 	jx_t *result;
 
+	/* Only works on objects */
+	if (args->first->type != JX_OBJECT)
+		return jx_error_null(NULL, "toxmlobj:The toXML() function only works on objects");
+
+	/* Predict the length, allocate a string, and generate it */
 	len = xml_unparse(NULL, args->first);
 	result = jx_string("", len);
 	(void)xml_unparse(result->text, args->first);
