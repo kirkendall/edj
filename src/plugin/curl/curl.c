@@ -14,7 +14,7 @@
 
 static char *settings = "{"
 	"\"buffer\":0,"
-	"\"cookiejar\":\"\""
+	"\"cookieJar\":\"\","
 	"\"warn\":{"
 		"\"badparse\":true"
 	"}"
@@ -106,7 +106,7 @@ static void curlcleanup(void)
 }
 
 
-/* Convert a big header string into an array of header lines */
+/* Convert a big header string into a jx array of header lines */
 static jx_t *headerArray(char *header)
 {
 	jx_t *array = jx_array();
@@ -246,6 +246,7 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 {
 	jx_t	*err;
 	char	*str;
+	int	diduseragent = 0;
 
 	/* For each item in the list... */
 	for (; more; more = more->next) {
@@ -268,7 +269,7 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 		switch (jx_int(more)) {
 		case OPT_PROXY_:
 			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), OPT_PROXY_ needs to be followed by a URL string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.proxy_ needs to be followed by a URL string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PROXY, more->text);
 			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
@@ -276,20 +277,20 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 
 		case OPT_USERNAME_:
 			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), OPT_USERNAME_ needs to be followed by a username string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.username_ needs to be followed by a username string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_easy_setopt(curl, CURLOPT_USERNAME, more->text);
 			break;
 		case OPT_PASSWORD_:
 			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), OPT_PASSWORD_ needs to be followed by a password string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.password needs to be followed by a password string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PASSWORD, more->text);
 			break;
 		case OPT_BEARER_:
 			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), OPT_BEARER_ needs to be followed by a bearer token string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.bearer_ needs to be followed by a bearer token string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
@@ -307,7 +308,7 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			 || more->next->type != JX_STRING
 			 || strchr(more->next->text, ':')
 			 || !strchr(more->next->text, '/')) {
-				return jx_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.contenType_ needs to be followed by a MIME type", fn);
 			}
 			more = more->next;
 			flags->reqcontenttype = more->text;
@@ -315,7 +316,9 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 		case OPT_HEADER_:
 			more = more->next;
 			if (!more || more->type != JX_STRING || !strchr(more->text, ':'))
-				return jx_error_null(NULL, "In %s(), OPT_CONTENTTYPE needs to be followed by a bearer token string", fn);
+				return jx_error_null(NULL, "In %s(), CURL.header_ needs to be followed by a header line", fn);
+			if (!strncasecmp(more->text, "User-agent:", 11))
+				diduseragent = 1;
 			flags->slist = curl_slist_append(flags->slist, more->text);
 			break;
 		case OPT_REQHEADERS:
@@ -326,7 +329,7 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			break;
 		case OPT_COOKIES:
 			/* If cookiejar is "" then make one up */
-			str = jx_config_get("plugin.curl", "cookiejar")->text;
+			str = jx_config_get("plugin.curl", "cookieJar")->text;
 			if (!str || !*str)
 				str = tempcookiejar;
 			if (!str) {
@@ -360,6 +363,15 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			return jx_error_null(NULL, "Invalid option number %d passed to %s()", jx_int(more), fn);
 		}
 
+	}
+
+	/* If no User-agent: header line was specified, add the default */
+	if (!diduseragent) {
+		jx_t *jxver = jx_by_key(jx_system, "version");
+		curl_version_info_data *curlver = curl_version_info(CURLVERSION_NOW);
+		char tmp[100];
+		sprintf(tmp, "User-agent: jx-%s(curl-%s)", jxver->text, curlver->version);
+		flags->slist = curl_slist_append(flags->slist, tmp);
 	}
 	return NULL;
 }
@@ -526,6 +538,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlreceive);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&rcv);
 	if (flags.reqheaders) {
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 		curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, receive_debug);
 		curl_easy_setopt(curl, CURLOPT_DEBUGDATA, (void *)&reqhdr);
 	}
