@@ -115,6 +115,14 @@
 	      Finally, we use that function to display <tt>global.vars</tt>.
 	    </div>
 
+	<li>jx always tries a case-sensitive search first.
+	    If that fails to locate a member or variable/constant,
+	    then it will try again on a simplified name.
+	    The <a target="_PARENT" href="../index.html?f=simpleKey">simpleKey()</a>
+	    function applies the same simplification to a string;
+	    look there for a detailed description of the simplifications that
+	    it does.
+	    Case-insensitivity is only part of it.
 	<li>JavaScript uses backticks to mark template strings.
 	    jx doesn't support template strings at this time.
 	    If it does in the future, probably there'll be a rule like

@@ -16,7 +16,7 @@
       The <tt>throw</tt> command triggers an error.
       The error may be caught by a <a target="_PARENT" href="../index.html?cmd=try">try/catch</a> command,
       or it may be reported to the user.
-      It is passed one, two, or three comma-delimited arguments.
+      It is passed one or two comma-delimited arguments.
       <p>
       The mandatory first argument is the text of an error message.
       It must be a literal string.
@@ -32,7 +32,7 @@
       then it might be displayed as "".
       <p>
       If the error message (first argument) begins with a "<var>key</var>:"
-      then may be translated via the locale.
+      then it may be translated via the locale.
       The second argument (if the error message uses %s) is not translated.
       Consequently, I suggest using the %s to give a module name, function name,
       or other symbol that shouldn't be translated.
@@ -51,7 +51,7 @@
       <div class="example">
 	<kbd>throw "logArgs:Bad arguments in %s module", "log"</kbd>
 	<samp style="color:red">Bad arguments in log module</samp>
-	This time included the key "logArgs" to support translation,
+	This time the message includes the key "logArgs" to support translation,
 	and we used %s in the message with another argument containing
 	the module name.
 	This way, if "Bad arguments in %s module" gets translated

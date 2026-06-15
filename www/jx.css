@@ -136,6 +136,9 @@ div.example samp th {
 	border-bottom: thin solid black;
 	font-weight: normal;
 }
+div.example samp table {
+	border-collapse: collapse;
+}
 div.example samp td:not(:first-of-type), div.example samp th:not(:first-of-type) {
 	border-left: thin solid black;
 }
