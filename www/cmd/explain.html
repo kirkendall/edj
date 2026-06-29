@@ -58,8 +58,22 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>This scans every element of every object in the table.
-            For a large table, this can take some time.
+        <li>Scanning every element of every object (row) in the table can
+	    take some time, so there's a "deferexplain" setting to let you
+	    control this.
+	    The default value is 100 so only the first 100 rows of a
+	    table are scanned, but you can use the
+	    <a target="_PARENT" href="../index.html?cmd=set">set</a>
+	    command to select some other limit.
+	    As a special case, setting it to 0 causes all rows to be scanned.
+	    <div class="example">
+	      <kbd>set deferexplain=0</kbd>
+	      Setting <tt>deferexplain</tt> to 0 will cause any later use of
+	      the <tt>explain</tt> command or
+	      <a target="_PARENT" href="../index.html?f=explain">explain()</a>
+	      function to check all rows.
+	      instead of just the first 100.
+	    </div>
 
 	<li>This command is basically a convenient wrapper for the
 	    <a target="_PARENT" href="../index.html?f=explain">explain()</a>
@@ -79,6 +93,7 @@
         <tr><td><a target="_PARENT" href="../index.html?f=explain">explain()</a></td><td>Function to collect table column statistics.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=typeOf">typeOf()</a></td><td>Return a value's type, as a string.</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=widthOf">widthOf()</a></td><td>Return the width of a value.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=set">set</a></td><td>Adjust the settings.</td></tr>
       </table>
     </details>
 
