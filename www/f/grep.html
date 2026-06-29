@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>grep</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx grep - return array elements containing a given value">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, grep">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>grep - Return array elements containing a given value</h1>
+    <dl>
+      <dt>grep(<var>haystack</var><span class="type">?:array</span>, <var>needle</var><span class="type">:number|string|regex|null</span>, <var>key</var><span class="type">?:string</span>, <var>ignoreCase</var><span class="type">?:true</span> ) <span class="type">:table</span>
+      <dd>
+      <tt>grep()</tt>does a deep search through elements of an array,
+      and returns only the elements that contain a given value.
+      No matter how deep the matching value is buried, the whole element
+      will be returned.
+      Elements containing multiple matches will only be included once.
+      <p>
+      If you don't specify an array to search through,
+      then it'll use the default table (the same one that
+      <a target="_PARENT" href="../index.html?op=select">SELECT</a>
+      uses without a <tt>from</tt> clause).
+      <p>
+      The <var>needle</var> may be a number, string,
+      <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>
+      or <tt>null</tt>.
+      If it is a string, the search will be case-sensitive unless you also
+      pass a <tt>true</tt> argument to make it case-insensitive.
+      If it is a regular expression, then <tt>grep()</tt> will look for text
+      matching that regular expression within any string in the data.
+      When <var>needle</var> is a string or regular expression, then it will
+      only match strings; if it is a number then it will only match numbers
+      except that an integer number may match a digit string.
+      When <var>needle</var> is <tt>null</tt>, it will match any value;
+      this is most useful when used with a <var>key</var> argument.
+      <p>
+      If you pass an optional <var>key</var> argument, then the search will
+      be limited to finding object members with the given key.
+      The <var>key</var> is given as a string, so use quotes.
+      For example, if you wanted to find part#199 in an array of invoices,
+      where each invoice contains an array of parts, then you could pass
+      <tt>"partno"</tt> as the <var>key</var> to prevent <tt>199</tt> from
+      matching other members such as price.
+      <p>
+      The result is a subset of the <var>haystack</var> array.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>["one","two","three","four","five"].grep(/o/)</kbd>
+	<samp>["one","two","four"]</samp>
+	Here we're searching for strings containing the letter "o".
+	Three elements' values match, so that's what we get in the result.
+      </div>
+
+      <div class="example">
+        <kbd>[3,"three","3","03"].grep(3)</kbd>
+	<samp>[3,"3"]</samp>
+	When searching for an integer, it can also match a string of digits
+	that "looks like" the integer.
+      </div>
+
+      <div class="example">
+	<kbd>test.cust.grep("Portland")</kbd>
+	<samp>
+	  <table>
+	    <tr><th>name</th><th>contact</th><th>joined</th></tr>
+	    <tr><td>Peter</td><td>[table]</td><td>2024-01-02</td></tr>
+	    <tr><td>Ziggy</td><td>[table]</td><td>2023-04-17</td></tr>
+	  </table>
+	</samp>
+	<tt>test</tt> is part of the sample data.
+	We're searching for the string "Portland" in the "cust" table,
+	and find it in two rows.
+	The value is actually found somewhere inside the "contact" tables
+	within those two rows.
+      </div>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>This is a lot like the <a target="_PARENT" href="../index.html?f=find">find()</a> function.
+	    The main difference is that <tt>grep()</tt> returns whole elements
+	    from the <var>haystack</var>, while <tt>find()</tt> returns a list
+	    of matches.
+
+	<li>Passing a <tt>true</tt> parameter won't make regular expressions
+	    be case-insensitive.
+	    Instead, do that by appending the letter "i" after the
+	    regular expression's closing "/" character.
+
+        <li>Regular expressions normally look for matching text anywhere
+            within a string value; it doesn't need to exactly match the whole
+            string.
+            If you want to require the regular expression to match the whole
+            string like a string <var>needle</var> would,
+            use the <tt>^</tt> and <tt>$</tt> metacharacters.
+            <div class="example">
+              <kbd>test.cust.grep(/^portland$/i)</kbd>
+              <samp>
+		<table>
+		  <tr><th>name</th><th>contact</th><th>joined</th></tr>
+		  <tr><td>Peter</td><td>[table]</td><td>2024-01-02</td></tr>
+		  <tr><td>Ziggy</td><td>[table]</td><td>2023-04-17</td></tr>
+		</table>
+	      </samp>
+	      This searches for "portland" with no extra characters before or
+	      after it.  Because the regular expression is followed by an "i"
+	      flag, the search is case-insensitive.
+            </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular expressions</a></td><td>Text pattern matching notation</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=find">find()</a></td><td>Return a table of all matching values</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=find">@</a></td><td>The "find" operator</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

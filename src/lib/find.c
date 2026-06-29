@@ -19,8 +19,10 @@ typedef struct {
 	char	*needkey;	/* If not NULL, key must match this */
 	int	needint;	/* Integer to search for */
 	double	needdouble;	/* Double to search for */
-	int	int_or_double;	/* 'i' for needing, else needdouble */
+	char	needdigits[30];	/* Integer value as a digit string */
+	int	int_or_double;	/* 'i' for needint, else needdouble */
 	int	ignorecase;	/* non-zero to let uppercase match lowercase */
+	int	grep;		/* return matching rows instead of a list */
 	int	index;		/* Outermost array subscript of match */
 	char	*key;		/* Innermost object member key of match */
 	char	*expr;		/* Buffer for building an expression ex match */
@@ -76,6 +78,11 @@ static void help_find_cat(jxfind_t *find, char *str)
 /* Append a row to the find->result table */
 static void help_find_row(jxfind_t *find, jx_t *node)
 {
+	/* If doing grep, then don't add rows this way. */
+	if (find->grep)
+		return;
+
+	/* Add a row describing where the value was found */
 	jx_t *found = jx_object();
 	if (find->index >= 0)
 		jx_append(found, jx_key("index", jx_from_int(find->index)));
@@ -89,7 +96,7 @@ static void help_find_row(jxfind_t *find, jx_t *node)
 /* Do a deep search for a value.  This is a helper function for jfn_find(),
  * which implement's jx's find() function.
  */
-static void help_find(jx_t *haystack, jxfind_t *find)
+static int help_find(jx_t *haystack, jxfind_t *find)
 {
 	jx_t	*scan;
 	int	wasused, wasindex, i, match;
@@ -105,13 +112,14 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 		jx_free(test);
 		if (match) {
 			help_find_row(find, haystack);
-			return;
+			return 1;
 		}
 	}
+
 	/* Arrays and objects are treated a bit differently */
 	if (haystack->type == JX_ARRAY) {
 		/* For each element... */
-		for (i = 0, scan = jx_first(haystack); scan; i++, scan = jx_next(scan)) {
+		for (i = 0, scan = jx_first(haystack); scan && !jx_interrupt; i++, scan = jx_next(scan)) {
 			/* If the value is an object or array, recurse */
 			if (scan->type == JX_OBJECT || scan->type == JX_ARRAY) {
 				/* Append this element's index to expr */
@@ -125,7 +133,8 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 					find->context = jx_context(find->context, scan, JX_CONTEXT_NOFREE|JX_CONTEXT_THIS);
 
 				/* Recurse */
-				help_find(scan, find);
+				if (help_find(scan, find) && find->grep)
+					return 1;
 
 				/* Restore expr */
 				if (find->context)
@@ -160,7 +169,7 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 				regmatch_t matches[10];
 				if (regexec(find->regex, scan->text, 10, matches, 0) != 0)
 					continue;
-			} else if (scan->type == JX_STRING && find->needle->type == JX_STRING) {
+			} else if (scan->type == JX_STRING && find->needle && find->needle->type == JX_STRING) {
 				/* Compare as strings */
 				if (find->ignorecase) {
 					if (0 != jx_mbs_casecmp(find->needle->text, scan->text))
@@ -169,21 +178,25 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 					if (0 != strcmp(find->needle->text, scan->text))
 						continue;
 				}
-			} else if (scan->type == JX_NUMBER && find->needle->type == JX_NUMBER) {
+			} else if (scan->type == JX_NUMBER && find->needle && find->needle->type == JX_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
 				if (scan->text[0] == 0 && scan->text[1] == 'i' && find->int_or_double == 'i') {
 					/* Compare binary integers */
-					if (jx_int(scan->first) != find->needint)
+					if (jx_int(scan) != find->needint)
 						continue;
 				} else {
 					/* Compare as double */
-					if (jx_double(scan->first) != find->needdouble)
+					if (jx_double(scan) != find->needdouble)
 						continue;
 				}
 
-			} else {
+			} else if (scan->type == JX_STRING && find->needle && find->needle->type == JX_NUMBER && find->int_or_double == 'i') {
+				/* Compare a digit string to an integer */
+				if (strcmp(scan->text, find->needdigits))
+					continue;
+			} else if (find->needle) {
 				/* it can't be what we're looking for */
 				continue;
 			}
@@ -192,6 +205,10 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 			 * element's index to expr, and then add a match to the
 			 * result array
 			 */
+			if (find->grep) {
+				jx_break(scan);
+				return 1;
+			}
 			wasused = find->used;
 			snprintf(indexstr, sizeof indexstr, "[%d]", i);
 			help_find_cat(find, indexstr);
@@ -205,7 +222,7 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 		}
 	} else /* JX_OBJECT */ {
 		/* For each member... */
-		for (scan = haystack->first; scan; scan = scan->next) { /* object */
+		for (scan = haystack->first; scan && !jx_interrupt; scan = scan->next) { /* object */
 			/* If the value is an object or array, recurse */
 			if (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY) {
 				/* Append this member's key to expr */
@@ -219,8 +236,11 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 				if (!find->needle
 				 && !find->regex
 				 && !find->calc
-				 && (!find->needkey || !jx_mbs_casecmp(find->needkey, scan->text)))
+				 && (!find->needkey || !jx_mbs_casecmp(find->needkey, scan->text))) {
+					if (find->grep);
+						return 1;
 					help_find_row(find, scan->first);
+				}
 
 				/* Store the key so that if we're scanning an
 				 * array, we'll know which array this is.
@@ -231,7 +251,8 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 					find->context = jx_context(find->context, scan, JX_CONTEXT_NOFREE|JX_CONTEXT_THIS);
 
 				/* Recurse */
-				help_find(scan->first, find);
+				if (help_find(scan->first, find) && find->grep)
+					return 1;
 
 				/* Restore expr */
 				if (find->context)
@@ -284,6 +305,8 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 			 * member's key to expr, and then add a match to the
 			 * result array
 			 */
+			if (find->grep)
+				return 1;
 			wasused = find->used;
 			help_find_cat(find, scan->text);
 			waskey = find->key;
@@ -296,6 +319,8 @@ static void help_find(jx_t *haystack, jxfind_t *find)
 			continue;
 		}
 	}
+
+	return 0;
 }
 
 /* Search for a given value.  This is a deep search, meaning it'll look through
@@ -317,7 +342,7 @@ static void help_find(jx_t *haystack, jxfind_t *find)
  * If no matches are found, an empty array is returned.  Parameter errors cause
  * a "null" jx_t to be returned containing an error message.
  */
-static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, char *needkey, jxcalc_t *calc, jxcontext_t *context)
+static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, char *needkey, int grep, jxcalc_t *calc, jxcontext_t *context)
 {
 	jxfind_t find;
 
@@ -333,6 +358,7 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 	find.regex = regex;
 	find.needkey = needkey;
 	find.ignorecase = ignorecase;
+	find.grep = grep;
 	find.calc = calc;
 	find.context = context;
 	find.index = -1;
@@ -357,6 +383,7 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 		if (find.int_or_double == 'i') {
 			find.needint = jx_int(needle);
 			find.needdouble = (double)find.needint;
+			snprintf(find.needdigits, sizeof find.needdigits, "%d", find.needint);
 		} else {
 			find.needdouble = jx_double(needle);
 			/* don't need find->needint */
@@ -364,7 +391,26 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 	}
 
 	/* Let the helper function do most of the work */
-	help_find(haystack, &find);
+	if (grep) {
+		jx_t *scan;
+		for (scan = jx_first(haystack); scan && !jx_interrupt; scan = jx_next(scan)) {
+			/* Since help_find can only handle arrays and objects,
+			 * we need to stuff each element into a bogus array
+			 * of its own.
+			 */
+			jx_t array, *next;
+			array.type = JX_ARRAY;
+			array.first = scan;
+			next = scan->next;
+			scan->next = NULL;
+			if (help_find(&array, &find))
+				jx_append(find.result, jx_copy(scan));
+			scan->next = next;
+
+		}
+	} else {
+		(void)help_find(haystack, &find);
+	}
 
 	/* Clean up, and Return the result */
 	free(find.expr);
@@ -374,16 +420,35 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 /* Do a deep search for a value */
 jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
 {
-	return find_any(haystack, needle, ignorecase, NULL, needkey, NULL, NULL);
+	return find_any(haystack, needle, ignorecase, NULL, needkey, 0, NULL, NULL);
 }
 
 /* Do a deep search for a regular expression */
 jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey)
 {
-	return find_any(haystack, NULL, 0, regex, needkey, NULL, NULL);
+	return find_any(haystack, NULL, 0, regex, needkey, 0, NULL, NULL);
 }
 
+/* Do a deep search for a value that makes an expression true.  This is used
+ * to implement the "@" operator.
+ */
 jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context)
 {
-	return find_any(haystack, NULL, 0, NULL, NULL, calc, context);
+	return find_any(haystack, NULL, 0, NULL, NULL, 0, calc, context);
+}
+
+/* Do a deep search for a value in rows of a table*/
+jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
+{
+	if (haystack->type != JX_ARRAY)
+		return jx_error_null(NULL, "table:The first argument to %s() must be an array");
+	return find_any(haystack, needle, ignorecase, NULL, needkey, 1, NULL, NULL);
+}
+
+/* Do a deep search for a regular expression in rows of a table */
+jx_t *jx_grep_regex(jx_t *haystack, regex_t *regex, char *needkey)
+{
+	if (haystack->type != JX_ARRAY)
+		return jx_error_null(NULL, "table:The first argument to %s() must be an array");
+	return find_any(haystack, NULL, 0, regex, needkey, 1, NULL, NULL);
 }

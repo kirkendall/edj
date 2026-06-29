@@ -94,6 +94,7 @@ static jx_t *jfn_parse(jx_t *args, void *agdata);
 static jx_t *jfn_parseInt(jx_t *args, void *agdata);
 static jx_t *jfn_parseFloat(jx_t *args, void *agdata);
 static jx_t *jfn_find(jx_t *args, void *agdata);
+static jx_t *jfn_grep(jx_t *args, void *agdata);
 static jx_t *jfn_hash(jx_t *args, void *agdata);
 static jx_t *jfn_diff(jx_t *args, void *agdata);
 static jx_t *jfn_common(jx_t *args, void *agdata);
@@ -201,7 +202,8 @@ static jxfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", 
 static jxfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", "number",		jfn_parseInt};
 static jxfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
 static jxfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
-static jxfunc_t hash_jf        = {&find_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
+static jxfunc_t grep_jf	       = {&find_jf,        "grep", 	  "haystack?:table, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_grep};
+static jxfunc_t hash_jf        = {&grep_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
 static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new?:array|object, style?:number=config.diffstyle", "table", jfn_diff};
 static jxfunc_t common_jf      = {&diff_jf,        "common", 	  "columns: object, style?:number", "table", jfn_common};
 static jxfunc_t date_jf        = {&common_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
@@ -2276,17 +2278,17 @@ static jx_t *jfn_parseFloat(jx_t *args, void *agdata)
 }
 
 
-/* Do a deep search for a given value */
-static jx_t *jfn_find(jx_t *args, void *agdata)
+/* This implements the shared logic for find() and grep () */
+static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultTable)
 {
 	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
 	regex_t *regex = recon->regex ? recon->regex->u.regex.preg : NULL;
-	jx_t	*haystack, *needle, *result, *other;
+	jx_t	*haystack, *needle, *other;
 	char	*defaulttable, *needkey;
 	int	ignorecase;
 
 	/* If first parameter is an object or array, that's the haystack;
-	 * otherwise it's the default table.
+	 * otherwise use the default table.
 	 */
 	if (args->first->type == JX_OBJECT || args->first->type == JX_ARRAY) {
 		haystack = args->first;
@@ -2299,7 +2301,7 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 		needle = args->first;
 	}
 	if (!needle)
-		return jx_error_null(NULL, "find:%s() needs to know what to search for", "find");
+		return jx_error_null(NULL, "find:%s() needs to know what to search for", grep ? "grep" : "find");
 
 	/* Check for optional args after "needle" */
 	ignorecase = 0;
@@ -2314,13 +2316,38 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 		}
 	}
 
+	/* If the caller cares about whether we're using the default table,
+	 * then return that too via the refDefaultTable arg.
+	 */
+	if (refDefaultTable)
+		*refDefaultTable = defaulttable;
+	else if (defaulttable)
+		free(defaulttable);
+
 	/* Search! */
-	if (regex)
-		result = jx_find_regex(haystack, regex, needkey);
-	else if (jx_is_null(needle))
-		result = jx_find(haystack, NULL, 0, needkey);
-	else
-		result = jx_find(haystack, needle, ignorecase, needkey);
+	if (grep) {
+		if (regex)
+			return jx_grep_regex(haystack, regex, needkey);
+		else
+			return jx_grep(haystack, needle, ignorecase, needkey);
+	} else {
+		if (regex)
+			return jx_find_regex(haystack, regex, needkey);
+		else if (jx_is_null(needle))
+			return jx_find(haystack, NULL, 0, needkey);
+		else
+			return jx_find(haystack, needle, ignorecase, needkey);
+	}
+
+}
+
+/* Do a deep search for a given value */
+static jx_t *jfn_find(jx_t *args, void *agdata)
+{
+	jx_t	*result;
+	char	*defaulttable;
+
+	result = find_or_grep(args, agdata, 0, &defaulttable);
 
 	/* If we were searching through the default table, then prepend its
 	 * expression to the "expr" members of the results.  Note that since
@@ -2329,13 +2356,14 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 	 * between them.
 	 */
 	if (result->type == JX_ARRAY && defaulttable) {
+		jx_t	*scan;
 		char *buf = NULL;
 		char *expr;
 		size_t	bufsize = 0;
 		size_t	dtlen = strlen(defaulttable);
 		size_t	totlen;
-		for (other = jx_first(result); other; other = jx_next(other)) {
-			expr = jx_text_by_key(other, "expr");
+		for (scan = jx_first(result); scan; scan = jx_next(scan)) {
+			expr = jx_text_by_key(scan, "expr");
 			assert(expr && *expr == '[');
 			totlen = dtlen + strlen(expr);
 			if (!buf || totlen + 1 > bufsize) {
@@ -2346,12 +2374,28 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 			}
 			strcpy(buf, defaulttable);
 			strcat(buf, expr);
-			jx_append(other, jx_key("expr", jx_string(buf, -1)));
+			jx_append(scan, jx_key("expr", jx_string(buf, -1)));
 		}
 		if (buf)
 			free(buf);
 
 	}
+
+	/* If we have a string describing the default table, free it now */
+	if (defaulttable)
+		free(defaulttable);
+
+	/* Return the result */
+	return result;
+}
+
+
+/* Find rows containing a given value. */
+static jx_t *jfn_grep(jx_t *args, void *agdata)
+{
+	jx_t	*result;
+
+	result = find_or_grep(args, agdata, 1, NULL);
 
 	/* Return the result */
 	return result;

@@ -370,10 +370,13 @@ extern jx_t *jx_by_deep_key(jx_t *container, char *key);
 extern jx_t *jx_by_index(jx_t *array, int idx);
 extern jx_t *jx_by_key_value(jx_t *array, const char *key, jx_t *value);
 extern jx_t *jx_by_expr(jx_t *container, const char *expr, const char **after);
+extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
+extern jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context);
+extern jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
 #ifdef REG_ICASE /* skip this if <regex.h> not included */
 extern jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey);
+extern jx_t *jx_grep_regex(jx_t *haystack, regex_t *regex, char *needkey);
 #endif
-extern jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context);
 extern char *jx_default_text(char *newdefault);
 extern char *jx_text(jx_t *json);
 extern double jx_double(jx_t *json);
@@ -467,7 +470,6 @@ typedef enum {
 } jxcommonstyle_t;
 extern int jx_hash(jx_t *json, int seed);
 extern jx_t *jx_diff(jx_t *jxold, jx_t *jxnew, jxdiffstyle_t diff);
-extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
 extern jx_t *jx_common(const char **keys, jx_t **values, int style);
 
 

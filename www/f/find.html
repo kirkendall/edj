@@ -25,13 +25,14 @@
       <p>
       The <var>needle</var> may be a number, string,
       <a target="_PARENT" href="../index.html?lit=regex">regular expression</a>
-      or <tt>null</tt>
+      or <tt>null</tt>.
       If it is a string, the search will be case-sensitive unless you also
       pass a <tt>true</tt> argument to make it case-insensitive.
       If it is a regular expression, then <tt>find()</tt> will look for text
       matching that regular expression within any string in the data.
       When <var>needle</var> is a string or regular expression, then it will
-      only match strings; if it is a number then it will only match numbers.
+      only match strings; if it is a number then it will only match numbers,
+      except that an integer number may match a digit string.
       When <var>needle</var> is <tt>null</tt>, it will match any value;
       this is most useful when used with a <var>key</var> argument.
       <p>
@@ -144,6 +145,11 @@
       <summary>Notes</summary>
       <ul>
 
+	<li>This is a lot like the <a target="_PARENT" href="../index.html?f=grep">grep()</a> function.
+	    The main difference is that <tt>find()</tt> returns a list of
+	    matches, while <tt>grep()</tt> returns whole elements from the
+	    <var>haystack</var>.
+
 	<li>Passing a <tt>true</tt> parameter won't make regular expressions
 	    be case-insensitive.
 	    Instead, do that by appending the letter "i" after the
@@ -194,6 +200,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular expressions</a></td><td>Text pattern matching notation</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=grep">grep()</a></td><td>Return elements containing a match</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=find">@</a></td><td>The "find" operator</td></tr>
       </table>
     </details>
