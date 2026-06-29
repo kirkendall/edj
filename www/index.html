@@ -128,6 +128,9 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		case 'quick': // Quick intro
 		    $("#main").prop("src", "quick.html");
 		    break;
+		case 'main': // Other top-level topics (download, examples, etc)
+		    $("#main").prop("src", namevalue[2] + ".html");
+		    break;
 		}
 	    }
 
