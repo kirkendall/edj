@@ -350,8 +350,6 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 		}
 		return ret;
 	}
-{char *tmp = jx_serialize(ret.content,0); fprintf(stderr, "%s=%s\n", state->name, tmp); free(tmp); }
-{char *tmp = ret.attributes ? jx_serialize(ret.attributes,0) : strdup("null"); fprintf(stderr, "%s=%s\n", state->attrname, tmp); free(tmp); }
 
 	/* We expect to be at a closing tag.  If not, either that's an error. */
 	if (*state->cursor != '<' || state->cursor[1] != '/') {
@@ -468,6 +466,22 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		/* Move cursor past the value */
 		state->cursor += len;
 
+		/* Return the number */
+		return parsed;
+	}
+
+	/* If we have "<![CDATA[" then we have a string, up to the next "]]>" */
+	if (state->cursor + 11 < state->end && !strncmp(state->cursor, "<![CDATA[", 9)) {
+		/* Count characters */
+		for (state->cursor += 9, len = 0; state->cursor + len + 3 < state->end && strncmp(&state->cursor[len], "]]>", 3); len++) {
+		}
+
+		/* Copy it into a string */
+		parsed = jx_string(state->cursor, len);
+
+		/* Move cursor past the value and "]]>" */
+		state->cursor += len + 3;
+
 		/* Return the string/number */
 		return parsed;
 	}
@@ -485,7 +499,6 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 	/* We found a nested tag.  Parse it and its content. May be repeated. */
 	parsed = jx_object();
 	do {
-{char *tmp = jx_serialize(parsed,0); fprintf(stderr, "%s\n", tmp); free(tmp); }
 		/* Parse a tag */
 		tag = xml_parse_tag(state);
 
