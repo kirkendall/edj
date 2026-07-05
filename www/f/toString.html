@@ -48,6 +48,30 @@
         The same is true for the outermost set of quotes.
 
       </div>
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>This is different from JavaScript's various <tt>toString()</tt>
+            member functions.
+            For objects, JavaScript returns the string
+            <tt>"[object Object]"</tt> which is useless.
+            For arrays, JavaScript returns the contents of the array without
+            brackets, and with unquoted strings.
+            <p>
+            If you need jx to return a JavaScript-style string for arrays,
+            consider using
+            <a target="_PARENT" href="../index.html?f=join">join()</a>.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=join">join()</a></td><td>Combine multiple values into a single string</td></tr>
+      </table>
+    </details>
 
   </body>
 </html>

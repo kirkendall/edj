@@ -443,7 +443,6 @@ and
 .IB array ## filter
 operators to transform arrays.
 .IP \ \(bu 3n
-A
 .IB table #= table,
 .IB table #< table
 and
@@ -466,11 +465,13 @@ and
 functions to organize arrays of objects.
 .IP \ \(bu 3n
 .IB data .find( value )
+and
+.IB data .grep( value )
 to search for a value within a large data structure.
-Also,
-.IB table [ key:value ]
-notation to locate return an element from an array of objects, based on the
-contents of the object.
+.B .find()
+returns a table of matches, and
+.B .grep()
+returns the elements containing the matches.
 .IP \ \(bu 3n
 .IB data @ expr
 Searches through
@@ -478,6 +479,18 @@ Searches through
 for any values that make
 .I expr
 true.
+Also,
+.IB table [ key:value ]
+notation to locate and return an element from an array of objects, based on the
+contents of the object.
+.IP \ \(bu 3n
+A
+.BI diff( old , new )
+function for comparing two arrays or objects, and returning a list of their
+differences.
+There's also a
+.BI common( col1 , col2 ...)
+function to build a grid of values and the columns they appear in.
 .IP \ \(bu 3n
 A
 .B ..
@@ -487,14 +500,6 @@ Often you'll find yourself building and testing a long expression one clause
 at a time, appending new function calls or filters incrementally.
 Having a low-precedence member operator is handy for that, since it means
 you don't need to go back and add parentheses around the first part of the expression.
-.IP \ \(bu 3n
-A
-.BI diff( old , new )
-function for comparing two arrays or objects, and returning a list of their
-differences.
-There's also a
-.BI common( col1 , col2 ...)
-function to build a grid of values and the columns they appear in.
 .IP \ \(bu 3n
 Aggregate functions including
 .BI min( expr ),
@@ -656,6 +661,9 @@ If the right-hand operand of # or ## returns a value other than
 or
 .B false
 then it is used instead of the array's element.
+Also, if you give an expression in {...} without a name, then the source code
+of the expression (just a column name in this example) is used as the name,
+so {run,score} is equivalent to {"run":run,"score":score}.
 
 .TP
 test.scores.groupBy("run")#{run,avgScore:avg(score)}
@@ -706,6 +714,7 @@ This looks in
 .B text.cust[0].contact
 (an array of objects)
 for an element containing a member with the name "type" and value "address".
+
 .TP
 test.find(3)
 This searches through test for all instances of the value 3, and lists

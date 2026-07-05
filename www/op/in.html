@@ -33,12 +33,14 @@
       <div class="example">
 	<kbd>4 in [1,2,4,8]</kbd>
 	<samp>true</samp>
-        A simple numeric test.
+	<kbd>5 in [1,2,4,8]</kbd>
+	<samp>false</samp>
+        Some simple numeric tests.
       </div>
 
       <div class="example">
-	<kbd>5 in [1,2,4,8]</kbd>
-	<samp>false</samp>
+	<kbd>5 not in [1,2,4,8]</kbd>
+	<samp>true</samp>
         Another simple test.
         <tt>NOT IN</tt> is the opposite of <tt>IN</tt>.
       </div>
@@ -53,7 +55,7 @@
 	<kbd>{a:"foo",b:1} in [{a:"FOO",b:1},{a:"BAR"},b:2]</kbd>
 	<samp>false</samp>
 	Complex objects can be tested, but string values within them will be
-	compared case-senstively.
+	compared case-sensitively.
 	Here's "foo" and "FOO" don't match because of case.
       </div>
 

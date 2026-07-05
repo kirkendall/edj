@@ -87,11 +87,16 @@
 	  <tt>&lt;![CDATA[...]]&gt;</tt>.
 	  Although its use is discouraged for many reasons, it still gets used
 	  sometimes for things like embedding base-64 binary data in a document.
-	  This plugin will parse it as a member named "!".
+	  This plugin will return the contents of the CDATA as a string,
+	  with no hint that it was represented as CDATA instead of normal text.
       <li>XML allows comments.  Usually these are formatted as
           <tt>&lt;!-- comment --&gt;</tt> though really -- within any tag
           toggles comments on or off.
-          This plugin will skip comments, effectively deleting them.
+          This plugin will parse <tt>&lt;!-- comment --&gt;</tt> as a tag
+          named "!--" with the content "comment --".
+          Converting the parsed data back to an XML string via the
+          <a target="_PARENT" href="../index.html?f=xml/toXML">toXML()</a>
+          function will produce a normal-looking comment in the output.
       <li>XML strings aren't quoted so it's hard to know which whitespace is
           meaningful.
           This plugin strips leading and trailing whitespace from text, and
