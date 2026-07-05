@@ -85,8 +85,11 @@
 
 	<li>This is a lot like the <a target="_PARENT" href="../index.html?f=find">find()</a> function.
 	    The main difference is that <tt>grep()</tt> returns whole elements
-	    from the <var>haystack</var>, while <tt>find()</tt> returns a list
-	    of matches.
+	    from the <var>haystack</var> array,
+	    while <tt>find()</tt> returns a list of matches.
+	    The arguments for both functions are identical except that
+	    <tt>grep()</tt> requires the <var>haystack</var> to be an array,
+	    while <tt>find()</tt> can search through an object or array.
 
 	<li>Passing a <tt>true</tt> parameter won't make regular expressions
 	    be case-insensitive.
@@ -122,7 +125,6 @@
         <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular expressions</a></td><td>Text pattern matching notation</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=find">find()</a></td><td>Return a table of all matching values</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=find">@</a></td><td>The "find" operator</td></tr>
       </table>
     </details>
 
