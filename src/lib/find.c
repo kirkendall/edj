@@ -237,7 +237,7 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 				 && !find->regex
 				 && !find->calc
 				 && (!find->needkey || !jx_mbs_casecmp(find->needkey, scan->text))) {
-					if (find->grep);
+					if (find->grep)
 						return 1;
 					help_find_row(find, scan->first);
 				}
@@ -441,7 +441,7 @@ jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context)
 jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
 {
 	if (haystack->type != JX_ARRAY)
-		return jx_error_null(NULL, "table:The first argument to %s() must be an array");
+		return jx_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
 	return find_any(haystack, needle, ignorecase, NULL, needkey, 1, NULL, NULL);
 }
 
@@ -449,6 +449,6 @@ jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
 jx_t *jx_grep_regex(jx_t *haystack, regex_t *regex, char *needkey)
 {
 	if (haystack->type != JX_ARRAY)
-		return jx_error_null(NULL, "table:The first argument to %s() must be an array");
+		return jx_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
 	return find_any(haystack, NULL, 0, regex, needkey, 1, NULL, NULL);
 }

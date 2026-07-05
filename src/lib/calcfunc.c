@@ -2312,7 +2312,7 @@ static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultT
 		else if (other->type == JX_STRING && !needkey)
 			needkey = other->text;
 		else {
-			return jx_error_null(0, "findArg:%s() was passed an unexpected extra parameter", "find");
+			return jx_error_null(0, "findArg:%s() was passed an unexpected extra parameter", grep ? "grep" : "find");
 		}
 	}
 
@@ -2328,6 +2328,8 @@ static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultT
 	if (grep) {
 		if (regex)
 			return jx_grep_regex(haystack, regex, needkey);
+		else if (jx_is_null(needle))
+			return jx_grep(haystack, NULL, 0, needkey);
 		else
 			return jx_grep(haystack, needle, ignorecase, needkey);
 	} else {
@@ -2345,7 +2347,7 @@ static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultT
 static jx_t *jfn_find(jx_t *args, void *agdata)
 {
 	jx_t	*result;
-	char	*defaulttable;
+	char	*defaulttable = NULL;
 
 	result = find_or_grep(args, agdata, 0, &defaulttable);
 
