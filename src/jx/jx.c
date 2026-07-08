@@ -366,9 +366,6 @@ int main(int argc, char **argv)
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
-			/* Parse a command and add it to the initcmd list. */
-			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_string(optarg), context);
-			break;
 		case 'p':
 		case 's':
 			if (interactive == -1)
@@ -413,12 +410,11 @@ int main(int argc, char **argv)
 				/* Add it to the omitscripts list */
 				jx_append(omitscripts, jx_string(optarg + 1, val - optarg));
 			} else {
-				/* Add commands from the script to initcmd.
-				 * It is also likely to have defined some
-				 * functions, which don't add anything to
-				 * initcmd.
+				/* Using -f means it isn't interactive unless
+				 * -i is also given.
 				 */
-				initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(optarg), context);
+				if (interactive == -1)
+					interactive = 0;
 			}
 			break;
 
@@ -450,7 +446,7 @@ int main(int argc, char **argv)
 	if (interactive == -1 && firstscript)
 		interactive = 0;
 	else if (interactive == -1)
-		interactive = !initcmd;
+		interactive = 1;
 	optind = 1;
 
 	/* Set the runmode in jx_system to "interactive" or "batch" */
@@ -730,7 +726,16 @@ int main(int argc, char **argv)
 			}
 			break;
 		case 'c':
+			/* Parse a command and add it to the initcmd list. */
+			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_string(optarg), context);
+			break;
 		case 'f':
+			/* Add commands from the script to initcmd.  It is also
+			 * likely to have defined some functions, which don't
+			 * add anything to initcmd.
+			 */
+			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(optarg), context);
+			break;
 		case 'F':
 		case 'L':
 		case 'D':
@@ -858,7 +863,9 @@ int main(int argc, char **argv)
 	if (!interactive && !anyfiles && !isatty(0))
 		jx_context_file(context, "-", 1, NULL);
 
-	/* Run any -Fscript scripts now, if interactive */
+	/* Run any -Fscript scripts now, if interactive.  (For batch mode,
+	 * we'll run them later, separately for each data file.)
+	 */
 	if (interactive) {
 		run(autocmd, &context);
 	}
