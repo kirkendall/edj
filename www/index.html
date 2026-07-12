@@ -125,6 +125,10 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		    $("#main").prop("src", "a/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "a/sidebar.html?a="+encodeURIComponent(namevalue[2]));
 		    break;
+		case 'tutorial': // Tutorial
+		    $("#main").prop("src", "tutorial/" + namevalue[2] + ".html");
+		    $("#sidebar").prop("src", "tutorial/sidebar.html?tutorial="+encodeURIComponent(namevalue[2]));
+		    break;
 		case 'quick': // Quick intro
 		    $("#main").prop("src", "quick.html");
 		    break;

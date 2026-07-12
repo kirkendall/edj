@@ -9,12 +9,15 @@
   </head>
   <body>
     <h1>Regular expressions</h1>
-    Regular expressions are a standard way to describe complex text patterns.
+    Regular expressions are a common way to describe complex text patterns.
     jx uses them with the
     <a target="_PARENT" href="../index.html?op=like">LIKE</a> operator, and the
+    <a target="_PARENT" href="../index.html?f=match">match()</a>,
+    <a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a>,
     <a target="_PARENT" href="../index.html?f=replace">replace()</a>,
-    <a target="_PARENT" href="../index.html?f=split">split()</a> and
-    <a target="_PARENT" href="../index.html?f=find">find()</a> functions.
+    <a target="_PARENT" href="../index.html?f=split">split()</a>,
+    <a target="_PARENT" href="../index.html?f=find">find()</a> and
+    <a target="_PARENT" href="../index.html?f=grep">grep()</a> functions.
     <p>
     Regular expressions are enclosed in / (slash) characters, and may be
     followed by <tt>i</tt> and/or <tt>g</tt> flags.
@@ -40,7 +43,7 @@
           match text at the end of the target string.
       <li>The <tt>.</tt> character matches any single character.
       <li><tt>[ ]</tt> encloses sets of characters.  This will match a single
-          character from the test string, if it's in the set.
+          character from the text string, if it's in the set.
           The brackets can contain single characters, or pairs separated by
           a hyphen for a range of characters.
           For example <tt>[a-zA-Z0-9]</tt> matches any single ASCII letter or digit.
@@ -111,16 +114,24 @@
 	<li>One consequence of the above is that regular expressions can't
 	    be stored in a var or const.
 
+	<li>Another consequence is that user-defined functions can't take
+	    regular expressions as arguments.
+	    Only built-in functions can.
+
       </ul>
     </details>
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?op=like">LIKE</a> - Pattern match operator
-      <br/>
-      <a target="_PARENT" href="../index.html?f=replace">replace()</a> - String replace function
-      <br/>
-      <a target="_PARENT" href="../index.html?f=split">split()</a> - Split a string into an array of substrings
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?op=like">LIKE</a></td><td>String pattern matching operator</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=match">match()</a></td><td>Return a text match</td></tr>,
+        <tr><td><a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a></td><td>Return all text matches</td></tr>,
+        <tr><td><a target="_PARENT" href="../index.html?f=replace">replace()</a></td><td>Replace parts of a string with new text</td></tr>,
+        <tr><td><a target="_PARENT" href="../index.html?f=split">split()</a></td><td>Split a string into multiple pieces</td></tr>,
+        <tr><td><a target="_PARENT" href="../index.html?f=find">find()</a></td><td>Return a table showing where a given value appears</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=grep">grep()</a></td><td>Return table rows that contain a given value</td></tr>
+      </table>
     </details>
 
   </body>

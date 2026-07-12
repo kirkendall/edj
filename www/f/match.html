@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>match - Find all matches within a string</h1>
+    <h1>match - Find a match within a string</h1>
     <dl>
       <dt>match(<var>str</var>:string, <var>search</var>:string, <var>ignorecase</var>?:boolean=false):array|null
       <br/>match(<var>arg</var>, <var>search</var>:regex):array|null
@@ -32,7 +32,7 @@
 
       <div class="example">
 	<kbd>"Once upon a time".match("on", true)</kbd>
-	<samp>["On","on"]</samp>
+	<samp>["On"]</samp>
         This finds "On" at the start of "Once".
         We added <tt>true</tt> after the search string to make it search
         case-insensitively.
@@ -68,6 +68,7 @@
     <details>
       <summary>See Also</summary>
       <table>
+        <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular Expression</a></td><td>Notation for matching complex string patterns</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a></td><td>Find matches within a string</td></tr>
       </table>
     </details>
