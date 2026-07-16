@@ -461,6 +461,7 @@ void jx_config_load(const char *name)
 
 	/* Parse it */
 	conf = jx_parse_file(pathname);
+	free(pathname);
 	if (!conf)
 		return;
 	if (conf->type != JX_OBJECT) {
