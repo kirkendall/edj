@@ -602,6 +602,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 	/* Return the thing in the arraybuf */
 	if (refend)
 		*refend = str;
+	free(key);
 	return arraybuf.first;
 
 BadSymbol:
@@ -618,6 +619,7 @@ Error:
 	jx_free(arraybuf.first);
 	if (jc)
 		jx_free(jc);
+	free(key);
 
 	/* Stuff the error info into the appropriate places */
 	if (refend)
