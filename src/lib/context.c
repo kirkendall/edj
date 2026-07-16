@@ -26,7 +26,7 @@ typedef struct contexthook_s {
 static contexthook_t *extralayers = NULL;
 
 /* Add a function which may add 0 or more layers to the standard context.
- * This is mostly intended to allow plugs to define symbols that should
+ * This is mostly intended to allow plugins to define symbols that should
  * be globally accessible to jxcalc.  The jxcalc program itself may
  * use it for adding the autoload directory.
  */
