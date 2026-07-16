@@ -198,7 +198,8 @@
     <p>
     JavaScript allows you to optionally put a magic word before the template
     string to use a different parser.
-    I don't expect to support that.
+    I <em>might</em> support that, because it'd offer a way for SQL query
+    arguments to be automatically quoted.
 
     <h2>XML Templates</h2>
     The XML plugin already has an XML serializer that reverses the effect of
@@ -235,8 +236,14 @@
     assumption that it contains UTF-8 text.
     If the file is compressed, then we need to generate an uncompressed
     version of the file that we can map into memory.
-    If it isn't UTF-8 then we need to run it through the
+    If it isn't UTF-8 then we need to run it through a
     <a href="https://github.com/rrthomas/recode/">recode</a> utility.
+    <p>
+    We also need to remember what transformations we apply to the original
+    file to make it parsable, so that when we rewrite the data out to the
+    file, we can reverse the changes.
+    If it started as gzipped Shift-JIS, then it should be rewritten as
+    gzipped Shift-JIS.
 
   </body>
 </html>

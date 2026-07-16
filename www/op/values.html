@@ -94,7 +94,7 @@
 	    aggregate function.
 	    <div class="example">
 	      <kbd>var csvdata = [[1,2],[3,4,5],[6,7,8,9]];</kbd>
-	      <kbd>var widest = ([csvdata] # max(this.length))[0];</kbd>
+	      <kbd>var widest = [csvdata] #^ max(this.length);</kbd>
 	      <kbd>var headers = 1 ... widest # rowNumber("A");</kbd>
 	      <kbd>headers</kbd>
 	      <samp>["A","B","C","D"]</samp>
@@ -111,6 +111,9 @@
 	      come from a headless CSV file for all we know.
 	      Then we find the widest row of data (most columns) so we know
 	      how many column headings we need to generate.
+	      (We wrapped the csvdata in another array, to prevent
+	      <a target="_PARENT" href="../index.html?op=each">#^</a> from
+	      interpreting the subarrays as groups.)
 	      Then we use the <a target="_PARENT" href="../index.html?f=rowNumber">rowNumber()</a>
 	      aggregate function to generate those column headings, and
 	      finally use <tt>VALUES</tt> to combine the headings with the
@@ -122,8 +125,9 @@
 
     <details>
       <summary>See Also</summary>
-      <a target="_PARENT" href="../index.html?p=csv">plugin csv</a> - a plugin for handling CSV data<br/>
-      <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> - Function to build objects from keys and values
+      <a target="_PARENT" href="../index.html?p=csv">plugin csv</a> - a plugin for handling CSV data<br/><br/>
+      <a target="_PARENT" href="../index.html?f=objectAgg">objectAgg()</a> - Function to build objects from keys and values<br/>
+      <a target="_PARENT" href="../index.html?op=each">#^</a> - Return the first result row of a filter
     </details>
 
   </body>

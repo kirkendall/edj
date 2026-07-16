@@ -74,6 +74,28 @@
 	      <kbd>explain test.scores</kbd>
 	    </div>
 
+	<li>Although the 
+	    <a target="_PARENT" href="../index.html?cmd=explain">explain</a>
+	    command allows you to filter the returned items by partial key,
+	    the <tt>explain()</tt> function does not.
+	    You can achieve the same effect by pretty easily using the
+	    <a target="_PARENT" href="../index.html?op=each">#</a> and
+	    <a target="_PARENT" href="../index.html?op=like">LIKE</a> operators.
+	    <div class="example">
+	      <kbd>explain("emoji") # key like "%code%"</kbd>
+	      <samp>
+		<table>
+		  <tr><th>key</th><th>type</th><th>width</th><th>nullable</th></tr>
+		  <tr><td>codepoint</td><td>string</td><td>7</td><td>false</td></tr>
+		</table>
+	      </samp>
+	      We're using 
+	      <a target="_PARENT" href="../index.html?op=each">#</a> to
+	      filter the rows of the response.
+	      Only rows where the "key" column contains "code" will be
+	      included in the response.
+	    </div>
+
       </ul>
     </details>
 

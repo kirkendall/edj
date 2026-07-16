@@ -53,13 +53,10 @@
       </div>
 
       <div class="example">
-	<kbd>( test.scores # min(score, name) )[0]</kbd>
+	<kbd>test.scores #^ min(score, name)</kbd>
 	<samp>"Peter"</samp>
         Here <tt>min(score,name)</tt> finds the lowest score and returns the name
         associated with it.
-        Since we aren't using grouping, the <tt>#</tt> operator returns one item
-        for each element in <tt>test.scores</tt> but we only want to see the name
-        once, hence the <tt>[0]</tt>.
       </div>
 
     </details>

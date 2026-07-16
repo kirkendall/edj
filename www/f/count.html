@@ -43,7 +43,7 @@
 	which is converting each <tt>true/false</tt> to the count.
 	You could wrap the whole expression in parentheses and add <tt>[0]</tt>
 	to get just the first copy of the count.
-	<kbd>([false, false, true, true, false] # count(this))[0]</kbd>
+	<kbd>[false, false, true, true, false] #^ count(this)</kbd>
 	<samp>2</samp>
       </div>
 
@@ -93,7 +93,7 @@
 	      but the argument to <tt>count()</tt> would need it for each row.  
 	      To make this work, you'd need to generate the average first,
 	      in a separate expression.
-	      <kbd>var avg = (test.scores # avg(score))[0];</kbd>
+	      <kbd>var avg = test.scores #^ avg(score);</kbd>
 	      <kbd>[this.scores] # count(score &lt; avg)</kbd>
 	      <samp>[4]</samp>
 	    </div>

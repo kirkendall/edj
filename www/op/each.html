@@ -4,7 +4,7 @@
     <title>Array filter operators</title>
     <link rel="stylesheet" type="text/css" href="../jx.css">
     <meta name="description" content="jx - Array filter operators">
-    <meta name="keywords" content="array, aggregate, jx, operator reference, #, ##">
+    <meta name="keywords" content="array, aggregate, jx, operator reference, #, ##, #^">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -12,10 +12,13 @@
     <table class="opList">
       <tr><td class="left">array</td><td class="op">#</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per group</td></tr>
       <tr><td class="left">array</td><td class="op">##</td><td class="right">expr</td><td class="opdesc">Array filtering, returns 1 per row</td></tr>
+      <tr><td class="left">array</td><td class="op">#^</td><td class="right">expr</td><td class="opdesc">Array filtering, returns contents of first row</td></tr>
     </table>
-    These two operators loop over the elements of their left argument (an array),
+    These operators loop over the elements of their left argument (an array),
     process each one individually via the expression of the right argument, and
-    collect the results in a new array which is the final result of the operator.
+    collect the results in a new array.
+    For <tt>#</tt> and <tt>##</tt>, this result array is then returned.
+    For <tt>#?</tt>, only the array's first element is returned.
     <p>
     The only difference between <tt>#</tt> and <tt>##</tt> is that if you divide
     the array into groups (by embedding sub-arrays within the array e.g. via the
@@ -30,6 +33,12 @@
     If the element is an object, then the member's objects can be accessed just by
     giving their name; you don't need to say <tt>this.name</tt>
     (although that works too).
+    <p>
+    The <tt>#?</tt> operator returns only the first element of the result array.
+    This can be handy when you're using aggregate functions to collect
+    statistics across a table, but only want one copy of those statistics
+    to be returned.
+    (See the example below, if this isn't clear.)
     <p>
     The result of the right operand expression is interpreted as follows:
     <ul>
@@ -86,6 +95,8 @@
 	</samp>
 	<kbd>([2,3,5,7,11] # {max:max(this), min:min(this)})[0]</kbd>
 	<samp>{"max":11,"min":2}</samp>
+	<kbd>[2,3,5,7,11] #^ {max:max(this), min:min(this)}</kbd>
+	<samp>{"max":11,"min":2}</samp>
 	Find the maximum and minumum values, and construct an object with their values.
 	<a target="_PARENT" href="../index.html?f=max">max()</a> and
 	<a target="_PARENT" href="../index.html?f=min">min()</a> are aggregate
@@ -101,6 +112,8 @@
 	<p>
 	Wrapping the expression in parentheses and adding [0] gets us just one object
         back, which is probably what we wanted.
+        Even better, the <tt>#^</tt> operator does exactly this without any
+        added parentheses or subscripts, and it runs more efficiently too.
       </div>
 
       <div class="example">
