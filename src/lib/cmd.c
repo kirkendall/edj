@@ -2068,7 +2068,7 @@ static jxcmd_t *explain_parse(jxsrc_t *src, jxcmdout_t **referr)
 	 * the result of an expression.
 	 */
 	jx_cmd_parse_whitespace(src);
-	if (!*src->str || *src->str == ';' || *src->str == '}') {
+	if (!*src->str || *src->str == ';' || *src->str == '}' || *src->str == ',') {
 		/* Use the default */
 	} else if (*src->str == '?') {
 		/* Use the default, but suppress the actual "explain" table */
@@ -2085,6 +2085,18 @@ static jxcmd_t *explain_parse(jxsrc_t *src, jxcmdout_t **referr)
 			return NULL;
 		}
 		src->str = end;
+	}
+
+	/* If comma, then look for a word to search for in keys */
+	jx_cmd_parse_whitespace(src);
+	if (*src->str == ',') {
+		src->str++;
+		cmd->key = jx_cmd_parse_key(src, 1);
+		if (!cmd->key) {
+			*referr = jx_cmd_error(src->str, "Expected a partial key after the comma");
+			jx_cmd_free(cmd);
+			return NULL;
+		}
 	}
 
 	/* Detect cruft after the arguments */
@@ -2162,10 +2174,42 @@ static jxcmdout_t *explain_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 				jx_break(table);
 			}
 		}
+
+		/* Otherwise scan all rows */
 		if (!columns) {
 			for (table = jx_first(table); table; table = jx_next(table))
 				columns = jx_explain(columns, table, 0);
 		}
+
+		/* If there's a search key, remove entries that don't match */
+		if (columns && cmd->key) {
+			jx_t *scan, *lag, *next, *key;
+
+			/* Convert the requested key to a "LIKE" pattern */
+			char *like = malloc(strlen(cmd->key) + 3);
+			strcpy(like, "%");
+			strcat(like, cmd->key);
+			strcat(like, "%");
+
+			/* Scan the rows, if "key" doesn't match, remove it */
+			for (scan = columns->first, lag = NULL; scan; scan = next) { /* undeferred */
+				next = scan->next;
+				key = jx_by_key(scan, "key");
+				if (!jx_mbs_like(key->text, like)) {
+					if (lag)
+						lag->next = next;
+					else
+						columns->first = next;
+					scan->next = NULL;
+					jx_free(scan);
+				} else {
+					lag = scan;
+				}
+			}
+			free(like);
+		}
+
+		/* Output it */
 		jx_print(columns, NULL);
 	}
 

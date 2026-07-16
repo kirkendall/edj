@@ -11,7 +11,9 @@
     <h1>explain - Describe a table's format</h1>
     <dl>
       <dt>explain <var>table</var>
+      <dt>explain <var>table</var>, <var>partialKey</var>
       <br/>explain
+      <br/>explain, <var>partialKey</var>
       <br/>explain ?
       <dd>
       The <tt>explain</tt> command describes a table.
@@ -20,6 +22,10 @@
       is located.
       A third option is to pass just an question mark, in which case it'll tell
       you where the default table is located but not describe it.
+      <p>
+      You don't have to dump all of the keys.
+      If you append a comma and a partial key, then it will only show keys
+      which contain the partial key (case-insensitively).
       <p>
       Tables are arrays of objects.
       Each element (object) is a row of the table, and each member of the
@@ -50,6 +56,17 @@
 </samp>
         Describe the emojis table.
         This is part of the sample data.
+      </div>
+
+      <div class="example">
+	<kbd>explain emojis, code</kbd>
+	<samp>
+<table>
+<tr><th>key</th><th>type</th><th>width</th><th>nullable</th></tr>
+<tr><td>codepoint</td><td>string</td><td>7</td><td>false</td></tr>
+</table>
+</samp>
+	Here we're only listing keys that contain "code".
       </div>
 
     </details>
