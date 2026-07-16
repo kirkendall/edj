@@ -1174,7 +1174,7 @@ int jx_mbs_like(const char *text, const char *pattern)
         }
 
         /* If both ended, or pattern just has '%', then it matches */
-        if (!*text && (!*pattern || (pattern[0] == '%' && !pattern[1])))
+        if ((!*text && !*pattern) || (pattern[0] == '%' && !pattern[1]))
                 return 1;
 
         /* If text ended before pattern, or pattern before text, NO MATCH */
