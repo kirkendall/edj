@@ -49,6 +49,7 @@ static char *historyfile(void)
 		/* Append "/history" to it */
 		buf = (char *)malloc(strlen(dir) + 9);
 		strcpy(buf, dir);
+		free(dir);
 		strcat(buf, "/history");
 	}
 
