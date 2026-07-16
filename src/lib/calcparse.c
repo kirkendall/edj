@@ -110,6 +110,7 @@ static struct {
 	{"EQ",		"==",	180,	0,	JCOP_INFIX},
 	{"EQSTRICT",	"===",	180,	0,	JCOP_INFIX},
 	{"FIND",	"@",	116,	0,	JCOP_INFIX},
+	{"FIRST",	"#^",	115,	0,	JCOP_INFIX},
 	{"FNCALL",	"F",	170,	0,	JCOP_OTHER}, /* function call */
 	{"FROM",	"FRO",	2,	0,	JCOP_OTHER},
 	{"GE",		">=",	190,	0,	JCOP_INFIX},
@@ -247,6 +248,7 @@ void jx_calc_dump(jxcalc_t *calc)
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
 	  case JXOP_FIND:
+	  case JXOP_FIRST:
 	  case JXOP_NJOIN:
 	  case JXOP_LJOIN:
 	  case JXOP_RJOIN:
@@ -1003,6 +1005,7 @@ void jx_calc_free(jxcalc_t *jc)
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
 	  case JXOP_FIND:
+	  case JXOP_FIRST:
 	  case JXOP_NJOIN:
 	  case JXOP_LJOIN:
 	  case JXOP_RJOIN:
@@ -1257,6 +1260,7 @@ static int jcisag(jxcalc_t *jc)
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
 	  case JXOP_FIND:
+	  case JXOP_FIRST:
 	  case JXOP_VALUES:
 		return jcisag(jc->LEFT) || jcisag(jc->RIGHT);
 
@@ -2362,6 +2366,7 @@ static int parsecolon(jxcalc_t *jc)
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
 	  case JXOP_FIND:
+	  case JXOP_FIRST:
 		return parsecolon(jc->LEFT) || parsecolon(jc->RIGHT);
 
 	  case JXOP_FNCALL:
@@ -2482,6 +2487,7 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
+	  case JXOP_FIRST:
 		jc->LEFT = parseag(jc->LEFT, ag);
 		jc->RIGHT = parseag(jc->RIGHT, NULL); /* gets its own list */
 		break;

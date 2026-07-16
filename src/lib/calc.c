@@ -368,7 +368,8 @@ void jx_calc_ag_row(jxcalc_t *calc, jxcontext_t *context, void *agdata, jx_t *ro
 /* This implements the @ and @@ operators.  "arr" is normally an array of items
  * to loop over, but it can also be a single item to treat as a singleton array.
  * "expr" is an expression to apply to each member of the array (which may
- * include aggregate functions), and op is either JXOP_EACH or JXOP_GROUP.
+ * include aggregate functions), and op is either JXOP_EACH, JXOP_GROUP, or
+ * JXOP_FIRST.
  */
 jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 {
@@ -482,7 +483,7 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 					jx_append(result, tmp);
 				}
 			}
-			jx_break(gscan); /* since JXOP_GROUP stops early */
+			jx_break(gscan); /* since JXOP_GROUP/JXOP_FIRST stops early */
 
 			/* Prepare for the next group */
 			g++;
@@ -508,6 +509,12 @@ jx_t *jceach(jx_t *arr, jxcalc_t *calc, jxcontext_t *context, jxop_t op)
 				jx_append(result, tmp);
 			}
 		}
+
+		/* If JXOP_FIRST and we've found the first, then stop */
+		if (op == JXOP_FIRST && result->first) {
+			jx_break(scan);
+			break;
+		}
 	}
 
 ReturnResult:
@@ -517,6 +524,21 @@ ReturnResult:
 		for (g = 0; g < ngroups; g++)
 			jx_calc_ag(NULL, groupag[g]);
 		free(groupag);
+	}
+
+	/* For JXOP_FIRST, lift the first result out of the array.  If there
+	 * is no first result, then use null.
+	 */
+	if (op == JXOP_FIRST) {
+		/* Lift the first element from the result array */
+		tmp = result;
+		result = result->first;
+		tmp->first = NULL;
+		jx_free(tmp);
+
+		/* If no first element, then use null */
+		if (!result)
+			result = jx_null();
 	}
 
 	/* Done! */
@@ -858,6 +880,7 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 
 	  case JXOP_EACH:
 	  case JXOP_GROUP:
+	  case JXOP_FIRST:
 		/* Evaluate the left operand.  If null then return an empty
 		 * array.  If it is an array then set scan to its first
 		 * element; if not an array then set scan to it directly,
