@@ -17,4 +17,4 @@ testconfig: testconfig.c
 	$(CC) $(CFLAGS) $(LDFLAGS) testconfig.c $(LDLIBS) -o testconfig
 
 clean:
-	$(RM) testcalc
+	$(RM) testcalc testconfig
