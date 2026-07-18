@@ -23,7 +23,7 @@ static jx_t *common(jx_t *args, char *name)
 
 	/* Must be a single number */
 	if (arg->type != JX_NUMBER || arg->next)
-		return jx_error_null(0, "The %s() function expect single number as its argument", name);
+		return jx_error_null(0, "The %s() function expects single number as its argument", name);
 
 	/* Convert to binary */
 	d = jx_double(arg);
@@ -237,17 +237,17 @@ static jx_t *jfn_atan2(jx_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
-		return jx_error_null(0, "The %s() function expect two numbers number as its arguments", atan2);
+		return jx_error_null(0, "The %s() function expects two numbers number as its arguments", atan2);
 
 	/* Convert to binary */
-	x = jx_double(arg);
-	y = jx_double(arg->next);
+	y = jx_double(arg);
+	x = jx_double(arg->next);
 
 	/* Clear errno so we can detect errors */
 	errno = 0;
 
 	/* Do it */
-	x = atan2(x, y);
+	x = atan2(y, x);
 
 	/* If error, say so */
 	if (errno)
@@ -307,7 +307,7 @@ static jx_t *jfn_pow(jx_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
-		return jx_error_null(0, "The %s() function expect two numbers number as its arguments", "pow");
+		return jx_error_null(0, "The %s() function expects two numbers number as its arguments", "pow");
 
 	/* Convert to binary */
 	base = jx_double(arg);
@@ -357,7 +357,7 @@ char *pluginmath()
 	jx_calc_function_hook("tan",   "n:number", "number", jfn_tan);
 	jx_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
 
-	jx_calc_function_hook("atan2", "x:number, y:number", "number", jfn_atan2);
+	jx_calc_function_hook("atan2", "y:number, x:number", "number", jfn_atan2);
 	jx_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
 	jx_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
 

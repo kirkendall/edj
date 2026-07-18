@@ -11,7 +11,7 @@
     <h1>atan2 - Angle toward a given point</h1>
     <dl>
       <dt>plugin math;
-      <br/>atan2( <var>x</var><span class="type">:number</span>, <var>y</var><span class="type">:number</span> ) <span class="type">:number</span>
+      <br/>atan2( <var>y</var><span class="type">:number</span>, <var>x</var><span class="type">:number</span> ) <span class="type">:number</span>
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=math">math</a> plugin.
       You must load the plugin via either -lmath on the shell command line,
@@ -19,9 +19,10 @@
       <p>
       Returns the angle toward a given point.
       This is similar to
-      <a target="_PARENT" href="../../index.html?f=math/atan">atan(x/y)</a>
+      <a target="_PARENT" href="../../index.html?f=math/atan">atan(y/x)</a>
       except that <tt>atan2</tt> takes the signs of x and y into account
-      to select the correct quadrant.
+      to select the correct quadrant, and it can handle vertical lines
+      (where y is 0).
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -33,6 +34,27 @@
         must be in the 4th quadrant.
       </div>
 
+      <div class="example">
+        <kbd>function aim(x,y){return {distance:hypot(x,y), bearing:(Math.PI + atan2(-x,-y)) / Math.PI * 180}; }</kbd>
+        <kbd>aim(1,1)</kbd>
+        <samp>{"distance":1.41421356237,"bearing":45}</samp>
+        <kbd>aim(-3,4)</kbd>
+        <samp>{"distance":5,"bearing":323.130102354}</samp>
+        <kbd>aim(0,-17)</kbd>
+        <samp>{"distance":17,"bearing":180}</samp>
+        This defines an <tt>aim()</tt> function to return the distance and
+        bearing to a given point.
+        The bearing is returned in degrees, not radians.
+        It is measured clockwise from the Y axis instead of counterclockwise
+        from the X axis.
+        <tt>atan2()</tt> normally returns a radian value in the range [-&pi;, &pi;),
+        but we don't want negative bearings.
+        Swapping <tt>x</tt> and <tt>y</tt>, negating them, and adding
+        <tt>Math.PI</tt> fixes all of that.
+        A bit of arithmetic converts radians to degrees, and we're done.
+      </div>
+
+
     </details>
 
     <details>
@@ -40,6 +62,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../../index.html?p=math">plugin math</a></td><td>Overview of the math plugin</td><tr>
         <tr><td><a target="_PARENT" href="../../index.html?f=math/atan">atan()</a></td><td>Inverse tangent function.</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=math/hypot">hypot()</a></td><td>Hypotenuse &mdash; distance to a point</td><tr>
       </table>
     </details>
 
