@@ -121,6 +121,7 @@ void testfile(FILE *in, count_t *counts)
 				printf("want: %s\n", buf + 1);
 				printf("got:  %s\n", resultstr);
 				fputs(PLAIN, stdout);
+				fflush(stdout);
 				counts->failed++;
 			}
 			continue;
