@@ -68,6 +68,12 @@
       <summary>Notes</summary>
       <ul>
 
+        <li>Just to be clear: When the right operand is a string then it must
+            match the entire left string, but if the right operand is a
+            regular expression then it only needs to match a substring within
+            the left string.
+            That's a big difference!
+
         <li>jx uses POSIX regular expressions.  They have a somewhat
             different syntax than JavaScript regular expressions.  Probably
             different from SQL too.

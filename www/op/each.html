@@ -253,17 +253,33 @@
       <ul>
 
         <li>Usually you'll want <tt>#</tt>.
-            The <tt>##</tt> operator is only useful when you're comparing individual
-            values to aggregate values, and even then only if you're using groups.
+            The <tt>##</tt> operator is only useful when you're comparing
+            individual values to aggregate values,
+            and even then only if you're using groups.
 
-	<li>If the left array isn't divided into groups, the <tt>#</tt> will return
-	    one element for each left operand element.
+	<li>I've thought about adding a <tt>#$</tt> operator to return only
+	    the last element of the result array, as a counterpoint to
+	    <tt>#^</tt> returning the first.
+	    I like the symmetry of that, but I haven't found much
+	    practical use for it so I haven't bothered to implement it yet...
+	    but that's where the "#^" operator name comes from.
+	    In <a target="_PARENT" href="../index.html?lit=regex">regular expressions</a>,
+	    <tt>^</tt> anchors the expression at the start of the subject
+	    string, and <tt>$</tt> anchors it at the end.
+	    Also, in vi/vim, <tt>^</tt> jumps to the start of the line and
+	    <tt>$</tt> jumps to the end of the line and can also refer to the
+	    last line in the edit buffer,
+	    so those characters have long been adopted outside of regular
+	    expressions.
+
+	<li>If the left array isn't divided into groups,
+	    <tt>#</tt> will return one element for each left operand element.
 	    You might expect it to return just one summary item, but no.
 	    It must return one result element per ungrouped left element in order
 	    for things like the <tt>groupBy("run","overall")</tt> example above
 	    to work.
 
-	<li>The eagerness of <tt>#</tt> and <tt>##</tt> to treat subarrays as
+	<li>The eagerness of these operators to treat subarrays as
 	    groups can sometimes be a problem.
 	    To prevent them from treating subarrays as groups,
 	    just enclose the whole array in one extra layer of square brackets;
@@ -278,7 +294,7 @@
 <tr><td>1</td><td>2</td><td>3</td></tr>
 </table>
 	      </samp>
-	      The first example fails because the subarrays are misinterpretted
+	      The first example fails because the subarrays are misinterpreted
 	      as groups; it looks like a 6-element array that was divided into
 	      three groups of 2, and none of those elements is an array so
 	      <tt>this[0]</tt> and <tt>this[1]</tt> are effectively

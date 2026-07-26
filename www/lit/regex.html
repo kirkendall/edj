@@ -25,11 +25,38 @@
     allows the parser to figure it out.
     Regular expressions are really only used after a ( or , character,
     or after the LIKE operator.
-    The <tt>i</tt> flag makes the regular expression be case-insensitive;
-    without it, comparisons and searches would be case-sensitive.
-    The <tt>g</tt> flag can be used with the <tt>replace()</tt> function to
-    replace all matching instances within a string; without <tt>g</tt>,
-    <tt>replace()</tt> would only replace the first match.
+    <p>
+    You can append flags to the regular expression to alter its interpretation.
+    These appear after the closing / character.
+    The available flags are:
+    <table class="referencelist">
+      <tr>
+        <td>i</td>
+        <td>
+          Makes the regular expression be case-insensitive;
+          without it, comparisons and searches would be case-sensitive.
+	</td>
+      </tr>
+      <tr>
+        <td>e</td>
+        <td>
+          Uses the POSIX "extended" syntax for the regular expression,
+          instead of the normal "basic" syntax.
+          Mostly this affects when you need to use backslash characters.
+	</td>
+      </tr>
+      <tr>
+        <td>g</td>
+        <td>
+          Applies the expression globally instead of just finding the first
+          match.
+          This affects the <a target="_PARENT" href="../index.html?f=replace">replace()</a>
+          and <a target="_PARENT" href="../index.html?f=match">match()</a> functions,
+          effectively turning them into <a target="_PARENT" href="../index.html?f=replaceAll">replaceAll()</a>
+          and <a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a>.
+	</td>
+      </tr>
+    </table>
     <p>
     For a full description of the regular expression syntax,
     see the Linux manual (i.e., run "man 7 regex").
@@ -50,7 +77,7 @@
           There are also named sets, which are maybe more readable and more
           importantly handle non-ASCII characters too.  For example,
           <tt>[[:alpha:]]</tt> matches any letter, including non-ASCII letters.
-      <li>The <tt>*</tt> character is a "closure operator" which means it
+      <li>The <tt>*</tt> character is a "closure operator", which means it
           affects how often the expression before it
           (often just a single character) may be repeated.
           For <tt>*</tt> it can be repeated zero or more times.  One common
@@ -65,6 +92,11 @@
           Also, the <a target="_PARENT" href="../index.html?f=replace">replace()</a> function can access the
           text that matched each subexpression and use it when constructing
           replacement text.
+      <li>Normally jx uses POSIX "basic" regular expressions, but appending an
+          "e" flag makes it use "extended" regular expression syntax.
+          The main difference is that metacharacters that require a backslash
+          for "basic" regular expressions do not require them for "extended"
+          regular expressions.
     </ul>
 
     <details open>
@@ -117,6 +149,8 @@
 	<li>Another consequence is that user-defined functions can't take
 	    regular expressions as arguments.
 	    Only built-in functions can.
+	    I'm not happy about this, and may change my mind later about
+	    the "strictly JSON" rule.
 
       </ul>
     </details>
