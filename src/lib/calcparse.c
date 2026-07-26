@@ -857,7 +857,7 @@ static jxcalc_t *jcalloc(token_t *token)
 	 * be parsed.  Big stuff.
 	 */
 	if (token->op == JXOP_REGEX) {
-		int	ignorecase = 0;
+		int	reflags = 0;
 		char	*tmp, *build;
 		const char *scan;
 		int	err;
@@ -874,14 +874,17 @@ static jxcalc_t *jcalloc(token_t *token)
 		}
 		*build = '\0';
 
-		/* Scan flags for "i" and/or "g" */
+		/* Scan flags for "i", "e" and/or "g" */
 		while (++scan < &token->full[token->len]) {
-			ignorecase |= (*scan == 'i');
+			if (*scan == 'i')
+				reflags |= REG_ICASE;
+			if (*scan == 'e')
+				reflags |= REG_EXTENDED;
 			jc->u.regex.global |= (*scan == 'g');
 		}
 
 		/* Compile the regex */
-		err = regcomp((regex_t *)jc->u.regex.preg, tmp, ignorecase ? REG_ICASE : 0);
+		err = regcomp((regex_t *)jc->u.regex.preg, tmp, reflags);
 		free(tmp);
 		if (err) {
 			char	buf[200];
@@ -2168,7 +2171,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 		}
 
 		/* Array generators (must be checked after subscript pattern) */
-		if (PATTERN("^[]") || PATTERN("xi[)")) { /*!!!*/
+		if (PATTERN("^[]") /*|| PATTERN("xi[)")*/ ) { /*!!!*/
 			/* Empty array generator, convert from STARTARRAY and
 			 * ENDARRAY to just ARRAY
 			 */
@@ -2176,7 +2179,7 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 			top[-2] = jcalloc(&t);
 			stack->sp--;
 			continue;
-		} else if (PATTERN("[x]") || PATTERN("xi[x)")) { /*!!!*/
+		} else if (PATTERN("[x]") /*|| PATTERN("xi[x)")*/ ) { /*!!!*/
 			/* Non-empty array generator.  All elements are in
 			 * a comma expression in top[-2].  Convert comma to
 			 * array.

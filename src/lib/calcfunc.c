@@ -60,6 +60,7 @@ static jx_t *jfn_blob(jx_t *args, void *agdata);
 static jx_t *jfn_sizeOf(jx_t *args, void *agdata);
 static jx_t *jfn_widthOf(jx_t *args, void *agdata);
 static jx_t *jfn_heightOf(jx_t *args, void *agdata);
+static jx_t *jfn_levenshtein(jx_t *args, void *agdata);
 static jx_t *jfn_keys(jx_t *args, void *agdata);
 static jx_t *jfn_trim(jx_t *args, void *agdata);
 static jx_t *jfn_trimStart(jx_t *args, void *agdata);
@@ -166,7 +167,8 @@ static jxfunc_t blob_jf 	 = {&deferTypeOf_jf, "blob", 	    "data:string|array, c
 static jxfunc_t sizeOf_jf      = {&blob_jf,	     "sizeOf",      "val:any", "number",		jfn_sizeOf};
 static jxfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str:string", "number",		jfn_widthOf};
 static jxfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str:string", "number",		jfn_heightOf};
-static jxfunc_t keys_jf        = {&heightOf_jf,    "keys",        "obj:object", "string[]",		jfn_keys};
+static jxfunc_t levenshtein_jf = {&heightOf_jf,	   "levenshtein", "s1:string, s2:string, ignorecase?:boolean=false", "number",	jfn_levenshtein};
+static jxfunc_t keys_jf        = {&levenshtein_jf, "keys",        "obj:object", "string[]",		jfn_keys};
 static jxfunc_t trim_jf        = {&keys_jf,        "trim",        "str:string", "string",		jfn_trim};
 static jxfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str:string", "string",		jfn_trimStart};
 static jxfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str:string", "string",		jfn_trimEnd};
@@ -817,6 +819,21 @@ static jx_t *jfn_heightOf(jx_t *args, void *agdata)
 		abort();
 	}
 	return jx_null(); /* to keep the compiler happy */
+}
+
+/* Return the Levenshtein edit distance between two strings */
+static jx_t *jfn_levenshtein(jx_t *args, void *agdata)
+{
+	/* Check arguments */
+	if (args->first->type != JX_STRING
+	 || !args->first->next
+	 || args->first->next->type != JX_STRING
+	 || (args->first->next->next &&
+		(args->first->next->next->type != JX_BOOLEAN || args->first->next->next->next)))
+		return jx_error_null(NULL, "lev:The %s() function takes two strings and optionally a boolean", "levenshtein");
+
+	/* Do it */
+	return jx_from_int(jx_mbs_levenshtein(args->first->text, args->first->next->text, jx_is_true(args->first->next->next)));
 }
 
 /* keys(obj) returns an array of key names, as strings */

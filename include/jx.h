@@ -431,6 +431,7 @@ const char *jx_mbs_ascii(const char *str, char *buf);
 size_t jx_mbs_escape(char *dst, const char *src, size_t len, int quote, jxformat_t *format);
 size_t jx_mbs_unescape(char *dst, const char *src, size_t len);
 int jx_mbs_like(const char *text, const char *pattern);
+int jx_mbs_levenshtein(const char *s1, const char *s2, int ignorecase);
 
 /* Dates and times */
 int jx_str_date(const char *str);

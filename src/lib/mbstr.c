@@ -1195,3 +1195,88 @@ int jx_mbs_like(const char *text, const char *pattern)
         return 0;
 }
 
+/* Convert a multibyte (UTF-8) string to a dynamically-allocated wchar_t array.
+ * If ignorecase is non-zero then it will also be converted to uppercase.
+ */
+static wchar_t *wctmp(const char *mbstr, int ignorecase)
+{
+	wchar_t *wstr = calloc(strlen(mbstr) + 1, sizeof(wchar_t));
+	int	i, mblen;
+	wchar_t	wc;
+
+	for (i = 0; (mblen = mbtowc(&wc, mbstr, MB_CUR_MAX)) > 0; mbstr += mblen) {
+		if (ignorecase)
+			wc = towupper(wc);
+		wstr[i++] = wc;
+	}
+	wstr[i] = '\0';
+	return wstr;
+}
+
+/* Compute the Levenshtein edit distance between two UTF-8 strings */
+int jx_mbs_levenshtein(const char *mbstr1, const char *mbstr2, int ignorecase)
+{
+	wchar_t	*wstr1, *wstr2;
+	int	len1, len2, i, j, lev;
+	int **matrix;
+
+	/* If either string is empty, then return the length of the other */
+	if (!*mbstr1)
+		return jx_mbs_len(mbstr2);
+	if (!*mbstr2)
+		return jx_mbs_len(mbstr1);
+
+	/* Convert UTF-8 strings to wchar_t arrays, and maybe make uppercase. */
+	wstr1 = wctmp(mbstr1, ignorecase);
+	wstr2 = wctmp(mbstr2, ignorecase);
+
+	/* Count their lengths */
+	for (len1 = 0; wstr1[len1]; len1++) {
+	}
+	for (len2 = 0; wstr2[len2]; len2++) {
+	}
+
+	/* Allocate a matrix[len1+1][len2+1] to store partial scores */
+	matrix = calloc(len1 + 1, sizeof(int *));
+	for (i = 0; i < len1 + 1; i++)
+		matrix[i] = calloc(len2 + 1, sizeof(int));
+
+	/*********************************************************************/
+
+	/* Precompute the edges of the matrix */
+	for (i = 1; i <= len1; i++)
+		matrix[i][0] = i;
+	for (j = 1; j <= len2; j++)
+		matrix[0][j] = j;
+
+	/* Now we can compute the other cells in the matrix */
+	for (j = 1; j <= len2; j++) {
+		for (i = 1; i <= len1; i++) {
+			int sub = matrix[i - 1][j - 1];
+			int min = matrix[i - 1][j] + 1;		// Deletion
+			if (matrix[i][j - 1] + 1 < min)
+				min = matrix[i][j - 1] + 1;	// Insertion
+			if (wstr1[i - 1] != wstr2[j - 1])
+				sub++;
+			if (sub < min)
+				min = sub;			// Substitution
+			matrix[i][j] = min;
+		}
+	}
+
+	/*********************************************************************/
+
+	/* Fetch the result from the last cell of the matrix */
+	lev = matrix[len1][len2];
+
+	/* Clean up */
+	free(wstr1);
+	free(wstr2);
+	for (i = 0; i <= len1; i++)
+		free(matrix[i]);
+	free(matrix);
+
+	/* Return the Levenshtein distance */
+	return lev;
+}
+

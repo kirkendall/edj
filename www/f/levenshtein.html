@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>levenshtein</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx levenshtein - Measure the similarity of two strings">
+    <meta name="keywords" content="string, jx, function reference, levenshtein">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>levenshtein - Measure the similarity of two strings</h1>
+    <dl>
+      <dt>levenshtein(<var>s1</var>:string, <var>s2</var>:string, <var>ignorecase</var>?:boolean=false)
+      <dd>
+      This function measures how similar or different two strings are.
+      It returns the number of characters that must be inserted,
+      deleted, or changed to convert one string to the other.
+      If two strings are identical, this function returns 0.
+      If they have no characters in common at all, then it will return
+      the length of the longer string.
+      In between values indicate varying levels of similarity.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>levenshtein("kitten", "sitting")</kbd>
+	<samp>3</samp>
+        Change "k" to "s", change "e" to "i", and insert "g".
+        That's three edits.
+      </div>
+
+      <div class="example">
+	<kbd>levenshtein("burger", "salad")</kbd>
+	<samp>6</samp>
+        These words have no characters in common, so the length of the longer
+        string is returned.
+      </div>
+
+      <div class="example">
+	<kbd>levenshtein("Johanson", "JOHANSEN", true)</kbd>
+	<samp>1</samp>
+	This uses <tt>true</tt> to make it case-insensitive,
+	so the only difference is "o" becoming "E".
+      </div>
+
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The reason that two strings with no characters in common will
+            return the length of the longer string is a natural consequence
+            of the way it's computed.  In the "burger"/"salad" example,
+            we could change "b" to "s", "u" to "a", and so on and then delete
+            "r" for a total of 6 edits.
+
+	<li>If you want to scale the result, divide it by the length of the
+	    longer string.
+	    <div class="example">
+	      <kbd>function scaledlev(s1,s2) { return levenshtein(s1,s2) / max([s1.length,s2.length]); }</kbd>
+	      <kbd>scaledlev("kitten","sitting")</kbd>
+	      <samp>0.428571428571</samp>
+	      <kbd>scaledlev("Johanson","Johansen")</kbd>
+	      <samp>0.125</samp>
+	    </div>
+
+      </ul>
+    </details>
+
+  </body>
+</html>
