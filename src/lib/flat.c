@@ -126,7 +126,7 @@ jx_t *jx_unroll(jx_t *table, jx_t *nestlist)
 	/* For each row of the table... */
 	for (table = jx_first(table); table; table = jx_next(table)) {
 		/* Fetch the unrolled nested variable */
-		value = jx_by_expr(table, nestlist->text, NULL);/* undeferred */
+		value = jx_by_expr(table, nestlist->text, NULL, NULL, NULL);/* undeferred */
 
 		/* Recursively unroll the nested value.  Since the name of
 		 * this member was passed as part of nestlist, we expect value

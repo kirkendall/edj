@@ -229,6 +229,7 @@ typedef enum {
 	JXOP_STARTOBJECT,
 	JXOP_STARTPAREN,
 	JXOP_STRING,
+	JXOP_SUBEXPR,
 	JXOP_SUBSCRIPT,
 	JXOP_SUBTRACT,
 	JXOP_VALUES,
@@ -370,7 +371,7 @@ extern jx_t *jx_by_key(const jx_t *object, const char *key);
 extern jx_t *jx_by_deep_key(jx_t *container, char *key);
 extern jx_t *jx_by_index(jx_t *array, int idx);
 extern jx_t *jx_by_key_value(jx_t *array, const char *key, jx_t *value);
-extern jx_t *jx_by_expr(jx_t *container, const char *expr, const char **after);
+extern jx_t *jx_by_expr(jx_t *container, const char *expr, const char **after, jx_t **parent, char **key);
 extern jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);
 extern jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context);
 extern jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey);

@@ -610,7 +610,7 @@ jx_t *jx_config_get(const char *section, const char *key)
 
 	/* Locate the section.  If section is NULL, use the format settings */
 	if (section) {
-		jsect = jx_by_expr(jx_config, section, NULL); /* undeferred */
+		jsect = jx_by_expr(jx_config, section, NULL, NULL, NULL); /* undeferred */
 		if (!jsect)
 			return NULL;
 	} else {
@@ -642,7 +642,7 @@ void jx_config_set(const char *section, const char *key, jx_t *value)
 	 */
 	if (section) {
 		/* Use the named section */
-		jsect = jx_by_expr(jx_config, section, NULL); /* undeferred */
+		jsect = jx_by_expr(jx_config, section, NULL, NULL, NULL); /* undeferred */
 		if (!jsect) {
 			if (!strncmp(section, "plugin.", 7)) {
 				jsect = jx_by_key(jx_config, "plugin");

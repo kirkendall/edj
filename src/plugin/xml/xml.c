@@ -154,7 +154,7 @@ static jxcmdout_t *xmlEntity_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 		return jx_cmd_error(cmd->where, "xmlEntityType:The value of an entity should be either a string or a number");
 
 	/* Add/update the entity list */
-	entity = jx_by_expr(jx_config, "plugin.xml.entity", NULL);
+	entity = jx_by_expr(jx_config, "plugin.xml.entity", NULL, NULL, NULL);
 	jx_append(entity, jx_key(cmd->key, value));
 
 	/* Success! */

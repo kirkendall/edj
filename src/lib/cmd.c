@@ -867,7 +867,7 @@ static jxcmd_t *if_parse(jxsrc_t *src, jxcmdout_t **referr)
 	/* Get the condition */
 	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = jx_cmd_error(src->str, "Missing \"%s\" condition", "if");
+		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" condition", "if");
 		return parsed;
 	}
 
@@ -924,7 +924,7 @@ static jxcmd_t *while_parse(jxsrc_t *src, jxcmdout_t **referr)
 	/* Get the condition */
 	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = jx_cmd_error(src->str, "Missing \"%s\" condition", "while");
+		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" condition", "while");
 		return parsed;
 	}
 
@@ -1002,7 +1002,7 @@ static jxcmd_t *for_parse(jxsrc_t *src, jxcmdout_t **referr)
 	/* Get the loop attributes */
 	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = jx_cmd_error(src->str, "Missing \"%s\" attributes", "for");
+		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" loop attributes", "for");
 		goto CleanUpAfterError;
 	}
 
@@ -1809,7 +1809,7 @@ static jxcmd_t *switch_parse(jxsrc_t *src, jxcmdout_t **referr)
 	/* Get the condition */
 	str = jx_cmd_parse_paren(src);
 	if (!str) {
-		*referr = jx_cmd_error(src->str, "Missing \"%s\" expression", "switch");
+		*referr = jx_cmd_error(src->str, "Missing or malformed \"%s\" expression", "switch");
 		return parsed;
 	}
 

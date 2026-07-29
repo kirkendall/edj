@@ -261,9 +261,9 @@ void jx_print_table_hook(char *name, void (*fn)(jx_t *json, jxformat_t *format))
 	tablefmts = t;
 
 	/* Also add it to the list of preferred values for config "table". */
-	list = jx_by_expr(jx_config, "interactive.\"table-list\"", NULL);/* undeferred */
+	list = jx_by_expr(jx_config, "interactive.\"table-list\"", NULL, NULL, NULL);/* undeferred */
 	jx_append(list, jx_string(name, -1));
-	list = jx_by_expr(jx_config, "batch.\"table-list\"", NULL);/* undeferred */
+	list = jx_by_expr(jx_config, "batch.\"table-list\"", NULL, NULL, NULL);/* undeferred */
 	jx_append(list, jx_string(name, -1));
 }
 

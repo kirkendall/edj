@@ -14,6 +14,7 @@
       <tr><td class="left">string</td><td class="op">[</td><td class="right">number <span class="op">]</span></td><td class="opdesc">Single character by index number</td></tr>
       <tr><td class="left">table</td><td class="op">[</td><td class="right">key <span class="op">:</span> expr <span class="op">]</span></td><td class="opdesc">Subscript by object member value</td></tr>
       <tr><td class="left">object</td><td class="op">[</td><td class="right">string <span class="op">]</span></td><td class="opdesc">Member lookup using <var>string</var> as key</td></tr>
+      <tr><td class="left">object<br/>array</td><td class="op">[[</td><td class="right">string <span class="op">]]</span></td><td class="opdesc">Lookup via an expression string</td></tr>
     </table>
     Subscripting is mostly for extracting a single element from an array.
     Usually you'll select the element by supplying its index number.
@@ -39,6 +40,16 @@
     up the value of a member with a given key.
     This is exactly like <var>object</var><tt>.</tt><var>key</var> notation,
     except that the key can be a computed string.
+    <p>
+    Lastly, the double-bracket notation allows you to lookup a member via
+    an expression string such as <tt>test[["cust[0].name"]]</tt>.
+    The expression string is restricted to using only member keys with the "." operator,
+    and non-negative integer subscripts.
+    This can be handy because the
+    <a target="_PARENT" href="../index.html?op=find">@</a> operator and
+    <a target="_PARENT" href="../index.html?f=find">find</a> function
+    include an "expr" member for each match.
+
     <details open>
       <summary>Examples</summary>
 
@@ -85,6 +96,44 @@
 	us to compute the key, instead of having it hardcoded in the expression.
       </div>
 
+      <div class="example">
+	<kbd>test.find("Portand")</kbd>
+	<samp>
+	  <table>
+	    <tr><th>index</th><th>key</th><th>value</th><th>expr</th></tr>
+	    <tr><td>0</td><td>city</td><td>Portland</td><td>cust[0].contact[0].city</td></tr>
+	    <tr><td>3</td><td>city</td><td>Portland</td><td>cust[3].contact[0].city</td></tr>
+	    <tr><td></td></tr>
+	  </table>
+	</samp>
+	<kbd>var expr = test.find("Portand")[0].expr</kbd>
+	<kbd>test[[expr]]</kbd>
+	<samp>"Portland"</samp>
+	<kbd>test[[expr]] = "Gresham"</kbd>
+	<kbd>test.cust[0].contact[0].city</kbd>
+	<samp>"Gresham"</samp>
+        Here we're playing with the double-bracket notation for lookup up items
+        via expression strings.
+        First we invoke the <a target="_PARENT" href="../index.html?f=find">find()</a>
+        function to find instances of the string "Portland".
+        Note the strings shown in the "expr" column
+        We then save the first "expr" string into a variable so we can play
+        with it a bit more.
+        We use <tt>text[[expr]]</tt> to verify that it does refer to something
+        with the string value "Portland".
+        Then we use an assignment to change the to "Gresham".
+        Lastly, we spell out the full expression to verify that the value
+        was indeed changed, and that the double-bracket notation did indeed
+        refer to the same member as the full expression.
+      </div>
+
+      <div class="example">
+        <kbd>for (t.find(/^...-..-....$/) # expr) t[[this]] = "REDACTED";</kbd>
+        This looks for any strings that are formatted like a Social Security Number,
+        and replaces them with the string "REDACTED".
+        It doesn't output anything because it does all of the replacements "in place".
+      </div>
+
     </details>
 
     <details>
@@ -106,6 +155,8 @@
       <a target="_PARENT" href="../index.html?op=ellipsis">...</a> Ellipsis operator
       <br/>
       <a target="_PARENT" href="../index.html?f=substr">substr()</a> Function for extracting substrings
+      <br/>
+      <a target="_PARENT" href="../index.html?f=find">find()</a> Do a deep search for a matching value
     </details>
 
   </body>

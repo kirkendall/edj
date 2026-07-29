@@ -190,14 +190,21 @@ jx_t *jx_by_key_value(jx_t *container, const char *key, jx_t *value)
  * this way you can write wrappers to handle things such as comma-delimited
  * lists of expressions.
  *
+ * The "parent" and "key" arguments are usually NULL.  If non-NULL then *parent
+ * will be set to the jx_t of the array or object that contains the returned
+ * jx_t.  If *parent is an object, then *key will be set to a dynamically
+ * allocated copy of the value's key.  This is handy if you're hoping
+ * to replace the jx_t with some other value.  When you're using jx_by_expr()
+ * this way, a return value of NULL is not necessarily a bad thing.
+ *
  * Deferred arrays cause problems.  We want to return the jx_t within the
  * container, but deferred arrays allocate and free elements as they are
  * scanned.  So if a deferred array is involved then the returned item must
  * look like a deferred element that jx_break() can clean up.
  */
-jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
+jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **parent, char **key)
 {
-	char	key[100];
+	char	keybuf[100];
 	int	i, deep, quote;
 	jx_t	*step;
 	jx_t	*defelem;
@@ -211,6 +218,15 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 	 * returning it.  For now, assume there is no deferred array.
 	 */
 	defelem = 0;
+
+	/* Initialize *parent and *key to NULL. */
+	if (parent)
+		*parent = NULL;
+	if (key)
+		*key = NULL;
+
+	/* Initialize keybuf, so we can detect whether we've used it */
+	*keybuf = '\0';
 
 	/* Work through the expr, and down into the container */
 	do
@@ -260,13 +276,13 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 						jx_break(defelem);
 					return NULL;
 				}
-				for (i = 0; i < sizeof key - 1 && (isalnum(*expr) || *expr == '_'); i++)
-					key[i] = *expr++;
-				key[i] = '\0';
+				for (i = 0; i < sizeof keybuf - 1 && (isalnum(*expr) || *expr == '_'); i++)
+					keybuf[i] = *expr++;
+				keybuf[i] = '\0';
 				if (deep)
-					step = jx_by_deep_key(container, key);
+					step = jx_by_deep_key(container, keybuf);
 				else
-					step = jx_by_key(container, key);
+					step = jx_by_key(container, keybuf);
 			}
 		}
 		else if (*expr == '"' || *expr == '`')
@@ -280,14 +296,14 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 					return NULL;
 				}
 				quote = *expr++;
-				for (i = 0; i < sizeof key - 1 && *expr != quote; i++)
-					key[i] = *expr++;
-				key[i] = '\0';
+				for (i = 0; i < sizeof keybuf - 1 && *expr != quote; i++)
+					keybuf[i] = *expr++;
+				keybuf[i] = '\0';
 				expr++;
 				if (deep)
-					step = jx_by_deep_key(container, key);
+					step = jx_by_deep_key(container, keybuf);
 				else
-					step = jx_by_key(container, key);
+					step = jx_by_key(container, keybuf);
 			}
 		}
 		else
@@ -302,6 +318,8 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 		 */
 		if (!step && !next)
 			break;
+		if (parent)
+			*parent = defelem ? NULL : container;
 		container = step;
 	} while (*expr && strchr("[].~", *expr));
 
@@ -327,5 +345,8 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next)
 	/* return the result */
 	if (next)
 		*next = expr;
+	/* *parent was already set, if appropriate */
+	if (key && *keybuf)
+		*key = strdup(keybuf);
 	return container;
 }

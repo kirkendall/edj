@@ -154,6 +154,7 @@ static struct {
 	{"STARTOBJECT",	"{",	260,	1,	JCOP_OTHER},
 	{"STARTPAREN",	"(",	260,	1,	JCOP_OTHER},
 	{"STRING",	"STR",	-1,	0,	JCOP_OTHER},
+	{"SUBEXPR",	"E[",	170,	0,	JCOP_OTHER},
 	{"SUBSCRIPT",	"S[",	170,	0,	JCOP_OTHER},
 	{"SUBTRACT",	"-",	210,	0,	JCOP_INFIX}, /* or JXOP_NEGATE */
 	{"VALUES",	"VAL",	125,	0,	JCOP_INFIX},
@@ -252,6 +253,7 @@ void jx_calc_dump(jxcalc_t *calc)
 	  case JXOP_NJOIN:
 	  case JXOP_LJOIN:
 	  case JXOP_RJOIN:
+	  case JXOP_SUBEXPR:
 	  case JXOP_SUBSCRIPT:
 	  case JXOP_DEEPDOT:
 	  case JXOP_DOUBLEDOT:
@@ -431,7 +433,7 @@ static int jcregex(stack_t *stack)
 	return 0;
 }
 
-/* Test whether the parseing stack is in a context where "=" is an assignment
+/* Test whether the parsing stack is in a context where "=" is an assignment
  * operator, not a comparison operator.  Return JXOP_ICEQ if it is a
  * comparison, or one of JX_ASSIGN or JX_APPEND for assignment.
  *
@@ -444,7 +446,7 @@ static jxop_t jcisassign(stack_t *stack)
 	jxcalc_t	*jc;
 	jxop_t	op = JXOP_ASSIGN;
 
-	/* If assignment isn't allowed in this expression, the anwer is "no" */
+	/* If assignment isn't allowed in this expression, the answer is "no" */
 	if (!stack->canassign)
 		return JXOP_ICEQ;
 
@@ -471,7 +473,8 @@ static jxop_t jcisassign(stack_t *stack)
 	 */
 	if (sp == 1 ||
 	    (sp == 3 && stack->stack[1]->op == JXOP_DOT && stack->stack[2]->op == JXOP_NAME) ||
-	    (sp == 4 && stack->stack[1]->op == JXOP_STARTARRAY && stack->stack[3]->op == JXOP_ENDARRAY)) {
+	    (sp == 4 && stack->stack[1]->op == JXOP_STARTARRAY && stack->stack[3]->op == JXOP_ENDARRAY) || 
+	    (sp == 6 && stack->stack[1]->op == JXOP_STARTARRAY && stack->stack[2]->op == JXOP_SUBSCRIPT && stack->stack[4]->op == JXOP_ENDARRAY && stack->stack[5]->op == JXOP_ENDARRAY) ) {
 		for (jc = stack->stack[0];
 		     jc && ((jc->op == JXOP_DOT && jc->RIGHT->op == JXOP_NAME)
 			|| jc->op == JXOP_SUBSCRIPT);
@@ -754,6 +757,10 @@ const char *lex(const char *str, token_t *token, stack_t *stack)
 		if (token->op == JXOP_ICEQ)
 			token->op = jcisassign(stack);
 
+		/* STARTARRAY could be the second "[" in a "[[" subscript */
+		if (token->op == JXOP_STARTARRAY && pattern(stack, "x["))
+			token->op = JXOP_SUBSCRIPT;
+
 		if (jx_debug_flags.calc)
 			jx_user_printf(NULL, "debug", "lex(): operator JXOP_%s \"%.*s\"\n", jx_calc_op_name(token->op), token->len, token->full);
 		return str;
@@ -999,6 +1006,7 @@ void jx_calc_free(jxcalc_t *jc)
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
+	  case JXOP_SUBEXPR:
 	  case JXOP_SUBSCRIPT:
 	  case JXOP_COALESCE:
 	  case JXOP_QUESTION:
@@ -1216,6 +1224,7 @@ static int jcisag(jxcalc_t *jc)
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
+	  case JXOP_SUBEXPR:
 	  case JXOP_SUBSCRIPT:
 	  case JXOP_COALESCE:
 	  case JXOP_QUESTION:
@@ -2170,6 +2179,19 @@ static char *reduce(stack_t *stack, jxcalc_t *next, const char *srcend)
 			continue;
 		}
 
+		/* Subscripts on an expression string */
+		if (PATTERN("x[@x]]")) {
+			/* Completion of subscript by expression string. */
+			t.op = JXOP_SUBEXPR;
+			jc = jcalloc(&t);
+			jc->LEFT = top[-6];
+			jc->RIGHT = top[-3];
+			top[-6] = jc;
+			stack->sp -= 5;
+			continue;
+		}
+
+
 		/* Array generators (must be checked after subscript pattern) */
 		if (PATTERN("^[]") /*|| PATTERN("xi[)")*/ ) { /*!!!*/
 			/* Empty array generator, convert from STARTARRAY and
@@ -2335,6 +2357,7 @@ static int parsecolon(jxcalc_t *jc)
 	  case JXOP_DIVIDE:
 	  case JXOP_MODULO:
 	  case JXOP_ADD:
+	  case JXOP_SUBEXPR:
 	  case JXOP_SUBTRACT:
 	  case JXOP_BITNOT:
 	  case JXOP_BITAND:
@@ -2437,6 +2460,7 @@ static jxcalc_t *parseag(jxcalc_t *jc, jxag_t *ag)
 	  case JXOP_ELLIPSIS:
 	  case JXOP_ARRAY:
 	  case JXOP_OBJECT:
+	  case JXOP_SUBEXPR:
 	  case JXOP_SUBSCRIPT:
 	  case JXOP_COALESCE:
 	  case JXOP_QUESTION:

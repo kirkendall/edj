@@ -192,6 +192,19 @@
 	    have a "ponumber" member, then you could search for PO#1234 via
 	    "<tt>po[ponumber:1234]</tt>".
 
+	<li>Another form of subscripting, denoted by double brackets, allows
+	    you to look up an array element or object member via the "expr"
+	    strings returned by <tt>find()</tt>.
+	    <div class="example">
+	      <kbd>test[["cust[3].contact[0].city"]]</kbd>
+	      <samp>"Portland"</samp>
+	      The string "cust[3].contact[0].city" was returned by a
+	      <tt>find()</tt> command in an earlier example.
+	      Here we're using that string to access the value.
+	      Note that since <tt>find()</tt> was applied to <tt>test</tt>,
+	      the subscript is also applied to <tt>test</tt>.
+	    </div>
+
       </ul>
     </details>
 
@@ -199,7 +212,7 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../index.html?lit=regex">Regular expressions</a></td><td>Text pattern matching notation</td></tr>
-        <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=subscript">Subscripts</a></td><td>How to select an element of an array, or use [[<var>expr</var>]]</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?f=grep">grep()</a></td><td>Return elements containing a match</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?op=find">@</a></td><td>The "find" operator</td></tr>
       </table>

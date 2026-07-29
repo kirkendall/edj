@@ -409,7 +409,7 @@ static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
 			src->str++;
 
 		/* Parse it */
-		setting = jx_by_expr(jx_config, "plugin.log", NULL);
+		setting = jx_by_expr(jx_config, "plugin.log", NULL, NULL, NULL);
 		err = jx_config_parse(setting, setstr, NULL);
 		free(setstr);
 		if (err) {

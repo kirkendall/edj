@@ -494,7 +494,7 @@ jx_t *jx_context_file(jxcontext_t *context, const char *filename, int writable, 
 		return NULL;
 
 	/* Locate the "files" array within "global" */
-	files = jx_by_expr(globals->data, "global.files", NULL); /* undeferred */
+	files = jx_by_expr(globals->data, "global.files", NULL, NULL, NULL); /* undeferred */
 	if (!files)
 		return NULL;
 
@@ -851,8 +851,10 @@ static const char *jxlvalue(jxcalc_t *lvalue, jxcontext_t *context, jxcontext_t 
 			*refvalue = t;
 		return NULL;
 
-	case JXOP_SUBSCRIPT:
-		/* Recursively look up the left side of the subscript */
+	case JXOP_SUBEXPR:
+		/* Recursively look up the left side of the subscript (the
+		 * expression to search in)
+		 */
 		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != NULL && *err)
 			return err;
 		if (err) { /* "" */
@@ -861,6 +863,36 @@ static const char *jxlvalue(jxcalc_t *lvalue, jxcontext_t *context, jxcontext_t 
 		}
 		if (value == NULL)
 			return "UnknownVar:Unknown variable \"%s\"";
+
+		/* Evaluate the index expression.  It should return an
+		 * expression string -- the expression to search for.
+		 */
+		t = jx_calc(lvalue->u.param.right, context, NULL);
+		if (t->type != JX_STRING)
+			return "badExpr:The [[expression]] didn't return a string";
+
+		/* Locate the desired node */
+		v = jx_by_expr(value, t->text, NULL, &value, refkey);
+		jx_free(t);
+
+		/* Return what we found */
+		if (refcontainer)
+			*refcontainer = value;
+		if (refvalue)
+			*refvalue = v;
+		/* *refkey has already been set */
+		return NULL;
+
+	case JXOP_SUBSCRIPT:
+		/* Recursively look up the left side of the subscript */
+		if ((err = jxlvalue(lvalue->u.param.left, context, reflayer, refcontainer, &value, refkey)) != NULL && *err)
+			return err;
+		if (err) { /* "" */
+			free(*refkey);
+			return "unknownMember:Object has no member \"%s\"";
+		}
+		if (value == NULL)
+			return "unknownVar:Unknown variable \"%s\"";
 
 		/* The [key:value] style of subscripts is handled specially */
 		sub = lvalue->u.param.right;

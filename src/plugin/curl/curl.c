@@ -580,7 +580,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 		 */
 		response = jx_parse_string(rcv.buf);
 		if (jx_is_error(response)) {
-			if (jx_is_true(jx_by_expr(jx_config, "plugin.curl.warn.badparse", NULL)))
+			if (jx_is_true(jx_by_expr(jx_config, "plugin.curl.warn.badparse", NULL, NULL, NULL)))
 				fprintf(stderr, "%s: %s\n", url, response->text);
 			jx_free(response);
 			response = NULL;

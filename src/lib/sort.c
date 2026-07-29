@@ -109,7 +109,7 @@ static void jcsort(jx_t *array, jx_t *orderby, int grouping)
 		elem->next = NULL; /* undeferred */
 
 		/* Fetch its sort value. */
-		value = jx_by_expr(elem, orderby->text, NULL);
+		value = jx_by_expr(elem, orderby->text, NULL, NULL, NULL);
 		if (value && value->type == JX_NUMBER)
 			dvalue = jx_double(value);
 

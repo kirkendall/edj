@@ -110,7 +110,7 @@ static jx_t *cleanCache(char *cache, jx_t *newSettings)
 	/* Load the settings */
 	filename = cacheFile(cache, SETTINGS);
 	if (access(filename, R_OK) < 0)
-		settings = jx_copy_filter(jx_by_expr(jx_config, "plugin.cache", NULL), omitDir);
+		settings = jx_copy_filter(jx_by_expr(jx_config, "plugin.cache", NULL, NULL, NULL), omitDir);
 	else
 		settings = jx_parse_file(filename);
 
@@ -120,7 +120,7 @@ static jx_t *cleanCache(char *cache, jx_t *newSettings)
 		 * of cache settings (other than "dir").
 		 */
 		jx_t *scan, *tmp;
-		jx_t *pluginSettings = jx_by_expr(jx_config, "plugin.cache", NULL);
+		jx_t *pluginSettings = jx_by_expr(jx_config, "plugin.cache", NULL, NULL, NULL);
 		for (scan = newSettings->first; scan; scan = scan->next) {
 			/* Validate the name/type via pluginSettings */
 			tmp = jx_by_key(pluginSettings, scan->text);
@@ -248,7 +248,7 @@ static jx_t *jfn_cache(jx_t *args, void *agdata)
 	filename = cacheFile(cache, index);
 
 	/* Do we have new data? */
-	settings = jx_by_expr(jx_config, "plugin.cache", NULL);
+	settings = jx_by_expr(jx_config, "plugin.cache", NULL, NULL, NULL);
 	if (data) {
 		/* Write the data to the cache */
 		if (jx_is_null(data))

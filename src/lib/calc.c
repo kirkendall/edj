@@ -667,6 +667,24 @@ jx_t *jx_calc(jxcalc_t *calc, jxcontext_t *context, void *agdata)
 		}
 		return result;
 
+	  case JXOP_SUBEXPR:
+		USE_LEFT_OPERAND(calc);
+		USE_RIGHT_OPERAND(calc);
+
+		/* Left must be array or object, right must be a string */
+		if (left->type != JX_ARRAY && left->type != JX_OBJECT)
+			break;
+		if (right->type != JX_STRING)
+			break;
+
+		/* Find the value */
+		result = jx_by_expr(left, right->text, NULL, NULL, NULL);
+
+		/* Return a copy of it */
+		if (result)
+			result = jx_copy(result);
+		break;
+
 	  case JXOP_SUBSCRIPT:
 		USE_LEFT_OPERAND(calc);
 		if (calc->RIGHT->op == JXOP_COLON) {

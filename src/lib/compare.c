@@ -39,8 +39,8 @@ int jx_compare(jx_t *obj1, jx_t *obj2, jx_t *orderby)
 			continue;
 
 		/* Get the members for the next key */
-		field1 = jx_by_expr(obj1, key->text, NULL);
-		field2 = jx_by_expr(obj2, key->text, NULL);
+		field1 = jx_by_expr(obj1, key->text, NULL, NULL, NULL);
+		field2 = jx_by_expr(obj2, key->text, NULL, NULL, NULL);
 
 		/* null comes after non-null, always */
 		isnull1 = jx_is_null(field1);
