@@ -84,6 +84,12 @@
       <summary>Notes</summary>
       <ul>
 
+        <li>Unlike the <a target="_PARENT" href="../index.html?f=find">find()</a>
+	    function, the <tt>@</tt> operator only looks in arrays and objects.
+	    It does <em>not</em> check strings, numbers, booleans, or <tt>null</tt>.
+	    If you find yourself tempted to use the <tt>this</tt> keyword in the
+	    right hand expression, you're probably doing it wrong.
+
         <li>The "value" column will usually just show "{object}", "{array}"
             or "{table}".
             In some cases it may be helpful to use
@@ -107,6 +113,8 @@
     <details>
       <summary>See Also</summary>
       <a target="_PARENT" href="../index.html?f=find">find()</a> - function for finding values.
+      <br/>
+      <a target="_PARENT" href="../index.html?f=unroll">unroll()</a> - collapse nested structures.
     </details>
 
   </body>
