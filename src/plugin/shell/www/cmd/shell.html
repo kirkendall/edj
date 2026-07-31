@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>shell</title>
+    <link rel="stylesheet" type="text/css" href="../../jx.css">
+    <meta name="description" content="jx shell - Run an external program">
+    <meta name="keywords" content="command, command reference, shell">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>shell - Run an external program</h1>
+    <dl>
+      <dt>shell <var>commandline</var>
+      <dd>
+      The <tt>shell</tt> command passes its arguments to the system shell,
+      and displays the output.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>shell uname -a</kbd>
+	<samp>Linux sampo 5.14.21-150400.24.100-default #1 SMP PREEMPT_DYNAMIC Mon Dec 4 19:12:13 UTC 2023 (3f5cd84) x86_64 x86_64 x86_64 GNU/Linux</samp>
+        This runs "uname -a" via the system shell, and displays its output.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The command's entire parameter text is treated as a single string
+            to be executed via the shell.  The command ends at the next ";"
+            or "}" character, or at the end of the input.  Since the
+            <tt>shell</tt> command is likely to be used interactively,
+            this means run can run anything that doesn't require a ";" or "}"
+            very conveniently.
+
+	<li>The external program's stdout is redirected to a pipe,
+	    which <tt>jx</tt> reads and displays it.
+	    The good news is that this means the <tt>shell</tt> command works
+	    even when run in a window, e.g. with the <tt>-lscreen</tt> plugin.
+	    The bad news is that interactive programs such as text editors
+	    might have issues.
+
+	<li>If you want to compute the command string
+	    instead of using literal text, consider using the
+	    <a target="_PARENT" href="../index.html?f=shell/readShell">readShell()</a>
+	    function.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=shell">plugin shell</a></td><td>Overview of the <tt>shell</tt> plugin</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=shell/readShell">readShell()</a></td><td>Run an external program and return its output as a string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

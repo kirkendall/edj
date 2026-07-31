@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>readShell</title>
+    <link rel="stylesheet" type="text/css" href="../../jx.css">
+    <meta name="description" content="jx readShell - Run an external program and return its output">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, readShell">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>readShell - Run an external program and return its output</h1>
+    <dl>
+      <dt>readShell(<var>command</var>:string):string
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=shell">shell</a> plugin.
+      You must load the plugin via either -lshell on the shell command line,
+      or a <tt>plugin shell;</tt> line in a script.
+      <p>
+      This function runs an external program via the system shell, and
+      returns the result.
+      The entire command line should be passed as a single string.
+      It may use redirection, pipes, environment variables, quoting...
+      all that fun stuff.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>readShell("uname -s")</kbd>
+	<samp>"Linux"</samp>
+        Run the "uname" program with a "-s" flag (to fetch the kernel name)
+        and collect its output into a string.
+        Trailing newlines are trimmed, so they don't pollute single-line
+        results such as this.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>If the program tries to read from stdin, or write to stderr,
+	    the results are undefined.
+
+        <li>Trailing newlines are trimmed.
+            Usually that's a good thing.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=shell">plugin shell</a></td><td>Overview of the shell plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=shell/shell">shell</a></td><td>Command to run an external program</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>cd</title>
+    <link rel="stylesheet" type="text/css" href="../../jx.css">
+    <meta name="description" content="jx cd - Change the working directory">
+    <meta name="keywords" content="jx, command, command reference, cd">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>cd - Change the working directory</h1>
+    <dl>
+      <dt>cd <var>directory</var>
+      <dd>
+      This changes the working directory.
+      If the new directory is not accessible or doesn't exist, this will fail.
+      Changes relative to the current working directory work as expected;
+      for example "cd .." moves up one directory.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>cd sampledata</kbd>
+        This changes the working directory from "/home/steve/proj/jx" to
+        "/home/steve/proj/jx/sampledata".
+        Note that the command doesn't output anything unless there's an error.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=shell">plugin shell</a></td><td>Overview of the <tt>shell</tt> plugin.</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=shell/pwd">pwd</td><td>Print the current working directory</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

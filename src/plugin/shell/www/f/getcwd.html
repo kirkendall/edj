@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>getcwd</title>
+    <link rel="stylesheet" type="text/css" href="../../jx.css">
+    <meta name="description" content="jx getcwd - Return the current working directory">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, getcwd">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>getcwd - Return the current working directory</h1>
+    <dl>
+      <dt>getcwd():string
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=shell">shell</a> plugin.
+      You must load the plugin via either -lshell on the shell command line,
+      or a <tt>plugin shell;</tt> line in a script.
+      <p>
+      This returns the current working directory, as a string.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>getcwd()</kbd>
+	<samp>"/home/steve/proj/jx"</samp>
+	This simply returns the current working directory, as a string.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>If all you want to do is display the current working directory, then
+            the <a target="_PARENT" href="../index.html?cmd=shell/pwd">pwd</a>
+            command is slightly more convenient.
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=shell">plugin shell</a></td><td>Overview of the shell plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=shell/pwd">pwd</a></td><td>Command to print the current working directory</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=shell/cd">cd</a></td><td>Command to change the working directory</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

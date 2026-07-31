@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Runs external programs via the system shell</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx shell plugin summary">
+    <meta name="keywords" content="jx, shell plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Shell plugin - Runs external programs via the system shell</h1>
+    The <tt>shell</tt> plugin adds the ability to run external programs.
+    This is a huge security risk, so load this plugin with caution!
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    The <tt>shell</tt> plugin doesn't add any options.
+
+    <h2 id="functions">Functions</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Function</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=shell/readShell">readShell()</a></td>
+          <td>Runs a program via the system shell, and returns the output.
+              Trailing newlines are trimmed.
+	  </td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?f=shell/getcwd">getcwd()</a></td>
+          <td>Returns the current working directory, as a string.
+	  </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    <table class="referencelist">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Description</th>
+	</tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?cmd=shell/shell">shell</a></td>
+          <td>Runs an external command via the system shell.
+	  </td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?cmd=shell/cd">cd</a></td>
+          <td>Change the working directory.
+	  </td>
+        </tr>
+        <tr>
+          <td><a target="_PARENT" href="../index.html?cmd=shell/pwd">pwd</a></td>
+          <td>Print the current working directory.
+	  </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="other">Other Features</h2>
+    The <tt>shell</tt> plugin doesn't add any other features.
+  </body>
+</html>
