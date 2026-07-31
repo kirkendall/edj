@@ -72,32 +72,34 @@ static jxcmd_t    *print_parse(jxsrc_t *src, jxcmdout_t **referr);
 static jxcmdout_t *print_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 static jxcmd_t    *set_parse(jxsrc_t *src, jxcmdout_t **referr);
 static jxcmdout_t *set_run(jxcmd_t *cmd, jxcontext_t **refcontext);
-/* delete lvalue */
+static jxcmd_t    *delete_parse(jxsrc_t *src, jxcmdout_t **referr);
+static jxcmdout_t *delete_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 static jxcmdout_t *calc_run(jxcmd_t *cmd, jxcontext_t **refcontext);
 
 /* Linked list of command names */
-static jxcmdname_t jcn_if =       {NULL,		"if",		if_parse,	if_run};
-static jxcmdname_t jcn_while =    {&jcn_if,		"while",	while_parse,	while_run};
+static jxcmdname_t jcn_if =       {NULL,	"if",		if_parse,	if_run};
+static jxcmdname_t jcn_while =    {&jcn_if,	"while",	while_parse,	while_run};
 static jxcmdname_t jcn_for =      {&jcn_while,	"for",		for_parse,	for_run};
-static jxcmdname_t jcn_break =    {&jcn_for,		"break",	break_parse,	break_run};
+static jxcmdname_t jcn_break =    {&jcn_for,	"break",	break_parse,	break_run};
 static jxcmdname_t jcn_continue = {&jcn_break,	"continue",	continue_parse,	continue_run};
-static jxcmdname_t jcn_switch =   {&jcn_continue,	"switch",	switch_parse,	switch_run};
+static jxcmdname_t jcn_switch =   {&jcn_continue,"switch",	switch_parse,	switch_run};
 static jxcmdname_t jcn_case =     {&jcn_switch,	"case",		case_parse,	case_run};
-static jxcmdname_t jcn_default =  {&jcn_case,		"default",	default_parse,	default_run};
-static jxcmdname_t jcn_try =      {&jcn_default,	"try",		try_parse,	try_run};
-static jxcmdname_t jcn_throw =    {&jcn_try,		"throw",	throw_parse,	throw_run};
+static jxcmdname_t jcn_default =  {&jcn_case,	"default",	default_parse,	default_run};
+static jxcmdname_t jcn_try =      {&jcn_default,"try",		try_parse,	try_run};
+static jxcmdname_t jcn_throw =    {&jcn_try,	"throw",	throw_parse,	throw_run};
 static jxcmdname_t jcn_var =      {&jcn_throw,	"var",		var_parse,	var_run};
-static jxcmdname_t jcn_const =    {&jcn_var,		"const",	const_parse,	const_run};
+static jxcmdname_t jcn_const =    {&jcn_var,	"const",	const_parse,	const_run};
 static jxcmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
-static jxcmdname_t jcn_return =   {&jcn_function,	"return",	return_parse,	return_run};
+static jxcmdname_t jcn_return =   {&jcn_function,"return",	return_parse,	return_run};
 static jxcmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
-static jxcmdname_t jcn_explain =  {&jcn_void,		"explain",	explain_parse,	explain_run};
-static jxcmdname_t jcn_file =     {&jcn_explain,	"file",		file_parse,	file_run};
-static jxcmdname_t jcn_import =   {&jcn_file,		"import",	import_parse,	import_run};
+static jxcmdname_t jcn_explain =  {&jcn_void,	"explain",	explain_parse,	explain_run};
+static jxcmdname_t jcn_file =     {&jcn_explain,"file",		file_parse,	file_run};
+static jxcmdname_t jcn_import =   {&jcn_file,	"import",	import_parse,	import_run};
 static jxcmdname_t jcn_plugin =   {&jcn_import,	"plugin",	plugin_parse,	plugin_run};
 static jxcmdname_t jcn_print =    {&jcn_plugin,	"print",	print_parse,	print_run};
-static jxcmdname_t jcn_set =	    {&jcn_print,	"set",		set_parse,	set_run};
-static jxcmdname_t *names = &jcn_set;
+static jxcmdname_t jcn_set =	  {&jcn_print,	"set",		set_parse,	set_run};
+static jxcmdname_t jcn_delete =	  {&jcn_set,	"delete",	delete_parse,	delete_run};
+static jxcmdname_t *names = &jcn_delete;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
@@ -2732,6 +2734,83 @@ static jxcmdout_t *set_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 	/* Clean up */
 	if (result)
 		jx_free(result);
+	return NULL;
+}
+
+
+
+/* Delete a variable, or part of a variable */
+static jxcmd_t *delete_parse(jxsrc_t *src, jxcmdout_t **referr)
+{
+	jxcmd_t *cmd;
+	jxsrc_t start;
+	jxcalc_t *calc;
+	char	*str;
+	const char *end, *err;
+	size_t	len;
+
+	start = *src;
+	jx_cmd_parse_whitespace(src);
+
+	/* Parse the lvalue to delete */
+	calc = jx_calc_parse(src->str, &src->str, &err, FALSE);
+	if (!calc || err) {
+		jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", err);
+		return err;
+	}
+#if 0
+	jx_cmd_parse_whitespace(src);
+	if (!strncasecmp(src->str, "where", 5) && !isalnum(src->str[5])) {
+		/* Parse the "where" condition */
+		jxcalc_t *where = calloc(1, sizeof(jxcalc_t));
+		where->op = JXOP_WHERE;
+		src->str += 5;
+		where->u.param.left = calc;
+		where->u.param.right = jx_calc_parse(src->str, &src->str, &err, FALSE);
+		if (!where->u.param.right || err) {
+			jx_free(where);
+			jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", err);
+			return err;
+		}
+
+		/* Merge the lvalue and "where" into a single jxcalc_t */
+		calc = where;
+	}
+	else
+#endif
+	if ((*src->str && !strchr(";},", *src->str))) {
+		free(calc);
+		jxcmdout_t *err = jx_cmd_error(cmd->where, "deleteexpr:Bad expression for \"%s\"", "delete");
+		return err;
+	}
+
+	/* Build the command */
+	cmd = jx_cmd(&start, &jcn_delete);
+	cmd->calc = calc;
+	return cmd;
+}
+
+static jxcmdout_t *delete_run(jxcmd_t *cmd, jxcontext_t **refcontext)
+{
+	jx_t *result, *section, *conferr;
+	char	*str;
+
+#if 0
+	/* Which flavor of "delete" are we doing? */
+	if (cmd->calc->op == JXOP_WHERE) {
+		/* SQL-like "delete table where test" */
+	} else
+#endif
+	{
+		/* Delete the expression */
+		result = jx_context_delete(cmd->calc, *refcontext);
+		if (result) {
+			jxcmdout_t *err = jx_cmd_error(cmd->where, "delete:%s", result->text);
+			jx_free(result);
+			return err;
+		}
+	}
+
 	return NULL;
 }
 

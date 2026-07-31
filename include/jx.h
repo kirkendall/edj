@@ -652,6 +652,7 @@ jxcontext_t *jx_context_func(jxcontext_t *context, jxfunc_t *fn, jx_t *args);
 jx_t *jx_context_by_key(jxcontext_t *context, char *key, jxcontext_t **reflayer);
 jx_t *jx_context_assign(jxcalc_t *lvalue, jx_t *rvalue, jxcontext_t *context);
 jx_t *jx_context_append(jxcalc_t *lvalue, jx_t *rvalue, jxcontext_t *context);
+jx_t *jx_context_delete(jxcalc_t *lvalue, jxcontext_t *context);
 int jx_context_declare(jxcontext_t **refcontext, char *key, jx_t *value, jxcontextflags_t flags);
 jx_t *jx_context_default_table(jxcontext_t *context, char **refexpr);
 

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>delete</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx delete - Delete a variable, or part of a variable">
+    <meta name="keywords" content="command, command reference, delete">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>delete - Delete a variable, or part of a variable</h1>
+    <dl>
+      <dt>delete lvalue
+      <dd>
+      This deletes a variable or part of a variable.
+      The "lvalue" argument is any expression which could appear on the left
+      side of an <a target="_PARENT" href="../index.html?cmd=assign">=</a>
+      assignment operator.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>var a=1...5, o={length:42,width:17,height:28,sanctity:12};</kbd>
+	<kbd>delete a[3]</kbd>
+	<kbd>a</kbd>
+	<samp>[1,2,3,5]</samp>
+	<kbd>delete o.sanctity</kbd>
+	<kbd>o</kbd>
+	<samp>{"length":42,"width":17,"height":28}</samp>
+	<kbd>delete o</kbd>
+	<kbd>o</kbd>
+	<samp>null</samp>
+        First we define a couple of variables to play with.
+        Then we delete <tt>a[3]</tt> which is the fourth element since array
+        indexing starts at 0.
+        Printing a shows that the "4" was deleted.
+        <p>
+        Similarly, we delete <tt>o.sanctity</tt> and output the remaining parts
+        of <tt>o</tt>.
+        Lastly, we delete <tt>o</tt> entirely, so attempting to access it
+        simply returns <tt>null</tt> instead.
+      </div>
+
+      <div class="example">
+        <kbd>for (expr = (accounts@password).expr) delete accounts[[expr]].password</kbd>
+        This shows how you could search through a large data structure
+        ("accounts") for objects containing a "password" member, and then
+        delete that member from each one.
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>At some point, I'd like to implement an SQL-like
+            "delete from <var>table</var> where <var>expression</var>"
+            but that hasn't happened yet.
+            However, the two syntaxes don't clash; having a JS-like "delete"
+	    won't prevent me from adding an SQL-like "delete" later.
+
+	<li>I've also toyed with the idea of making "delete array[]" delete
+	    the last element of an array, as a counterpart to "array[] = expr"
+	    to append to an array.  But that isn't implemented yet either.
+	    You can use "delete array[-1]" though.
+
+	<li>In JavaScript, <tt>delete</tt> can delete parts of variables but
+	    not the entire variable.
+	    jx lets you delete the entire variable.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

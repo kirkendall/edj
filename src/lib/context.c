@@ -819,7 +819,7 @@ static const char *jxlvalue(jxcalc_t *lvalue, jxcontext_t *context, jxcontext_t 
 
 		/* If lhs of dot isn't an object, that's a problem */
 		if (value->type != JX_OBJECT)
-			return "NotObject:Attempt to access member in a non-object";
+			return "notObject:Attempt to access member in a non-object";
 
 		/* For DOT, the right parameter should just be a name */
 		if (lvalue->u.param.right->op == JXOP_NAME)
@@ -1093,15 +1093,15 @@ jx_t *jx_context_append(jxcalc_t *lvalue, jx_t *rvalue, jxcontext_t *context)
 	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
 		return jx_error_null(0, err, key);
 	if (value == NULL)
-		return jx_error_null(0, "UnknownVar:Unknown variable \"%s\"", key);
+		return jx_error_null(0, "unknownVar:Unknown variable \"%s\"", key);
 
 	/* If it's const then fail */
 	if (layer->flags & JX_CONTEXT_CONST)
-		return jx_error_null(0, "Const:Attempt to change const \"%s\"", key);
+		return jx_error_null(0, "const:Attempt to change const \"%s\"", key);
 
 	/* We can only append to arrays */
 	if (value->type != JX_ARRAY)
-		return jx_error_null(0, "Append:Can't append to %s \"%s\"", jx_typeof(value, 0), key);
+		return jx_error_null(0, "append:Can't append to %s \"%s\"", jx_typeof(value, 0), key);
 
 	/* If its a deferred array, convert to undeferred */
 	jx_undefer(value);
@@ -1112,6 +1112,70 @@ jx_t *jx_context_append(jxcalc_t *lvalue, jx_t *rvalue, jxcontext_t *context)
 	/* If this layer has a callback for modifications, call it */
 	if (layer->modified)
 		(*layer->modified)(layer, lvalue);
+
+	return NULL;
+}
+
+/* Delete a variable or part of a variable (an array element or object member).
+ * Returns NULL on success, or a jx_t "null" with an error message if it fails.
+ * NOTE: The semantics of "delete" in JavaScript say deleting something that
+ * doesn't exist is NOT an error, so errors returned by this function are
+ * often ignored.
+ */
+jx_t *jx_context_delete(jxcalc_t *lvalue, jxcontext_t *context)
+{
+	jxcontext_t *layer;	/* Context layer containing the lvalue */
+	jx_t	    *container;	/* The parent of the item to delete */
+	jx_t	    *value;	/* The item to delete */
+	jx_t	    *scan,*lag;	/* Used for scanning elements/members */
+	char	    *key;	/* The name of the item to delete */
+	const char  *err;
+
+	/* Get the details on what to delete */
+	if ((err = jxlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
+		return jx_error_null(0, err, key);
+	if (value == NULL) {
+		//return jx_error_null(0, "UnknownVar:Unknown variable \"%s\"", key);
+		return NULL; // JavaScript silently ignores this type of error
+	}
+	if ((layer->flags & JX_CONTEXT_CONST) != 0)
+		return jx_error_null(0, "const:Attempt to change const \"%s\"", key);
+
+	/* Different technique for deleting from an object vs an array */
+	if (container->type == JX_OBJECT) {
+		/* Scan the array for the value */
+		for (lag = NULL, scan = container->first;
+		     scan && scan->first != value;
+		     lag = scan, scan = scan->next) {
+			assert(scan->type == JX_KEY);
+		}
+
+	} else /* container->type == JX_ARRAY */ {
+		/* Scan the array for the value */
+		for (lag = NULL, scan = container->first;
+		     scan && scan != value;
+		     lag = scan, scan = scan->next) {
+		}
+
+	}
+
+	/* We should ALWAYS find it. */
+	assert(scan);
+
+	/* Remove it from the array/object and free it.  For object members,
+	 * this will free both the key and the value.
+	 */
+	if (lag)
+		lag->next = scan->next;
+	else
+		container->first = scan->next;
+	jx_free(scan);
+
+	/* For arrays, this should reduce the "length" that's stuffed into
+	 * the container->text field.
+	 */
+	if (container->type == JX_ARRAY && JX_ARRAY_LENGTH(container) > 0)
+		JX_ARRAY_LENGTH(container) = JX_ARRAY_LENGTH(container) - 1;
 
 	return NULL;
 }
