@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>money</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx money - Convert a number to a money string or vice versa">
+    <meta name="keywords" content="string, number, jx, function reference, money">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>money - Convert a number to a money string or vice versa</h1>
+    <dl>
+      <dt>money(<var>money</var>:number, <var>format</var>?:string="%i") : string
+      <br/>money(<var>moneystr</var>:string) : number
+      <dd>
+      When passed a number, the <tt>money()</tt> function converts it to a
+      currency string in the locale's format.
+      You may optionally pass a format string,
+      using the same conversion specifiers as C's <tt>strfmon()</tt> function.
+      (See "man 3 strfmon".)
+      If you don't pass a format string, then "%n" is used, which the basic
+      national format.
+      <p>
+      When passed a string, it strips out all characters except digits, the
+      decimal point, and a negative sign, and converts that back into a number.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>123456.money()</kbd>
+	<samp>"$123,456.00"</samp>
+	This converted 123456 (dollars in my locale) to a currency string.
+      </div>
+
+      <div class="example">
+	<kbd>(-1.98).money()</kbd>
+	<samp>"-$1.98"</samp>
+	This converted -1.98 dollars to a currency string.
+	The locale rules say the minus sign goes before the dollar sign.
+	Also, the number had to be in parentheses because the "." operator
+	has a higher precedence than the "-" operator.
+      </div>
+
+      <div class="example">
+	<kbd>(-1.98).money("[%(12i]")</kbd>
+	<samp>"[  (USD 1.98)]"</samp>
+        This time we're passing a format string to use instead of the default "%i".
+        We have square brackets around the format; since there aren't part of
+        a <tt>%n</tt> or <tt>%i</tt> conversion specifier, they'll be treated
+        as literal characters.
+        <p>
+        The "%(12i" is a conversion specifier.
+        The "(" means negative numbers should be enclosed in parentheses
+        instead of using a negative sign.
+        The "12" means the value should be padded to be 12 characters wide,
+        which is why the result string shows two spaces after "[".
+        The "i" means it should use the international currency designator
+        instead of the national one ("USD " instead of "$").
+      </div>
+
+      <div class="example">
+        <kbd>"[  (USD 1.98)]".money()</kbd>
+        <samp>-1.98</samp>
+        This strips out all of the formatting to return just the number.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Although C's <tt>strfmon()</tt> function can convert multiple money
+            values in a single call by having multiple <tt>%n</tt> or <tt>%i</tt>
+            conversion specifiers in the format string, jx's <tt>money()</tt>
+            only allows a single <tt>%n</tt> or <tt>%i</tt>.
+
+	<li>Money values are represented by a floating point number,
+	    where 1.0 represents one euro/dollar/etc.
+	    However, the value 0.01 can't be exactly represented in a binary
+	    floating point number, so long chains of money calculations can
+	    lose precision.
+	    You might consider some other representation in your calculations
+	    (e.g., an integer representing cents instead of dollars) and only
+	    convert to double when you want to output it via <tt>money()</tt>.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td>link here</td><td>Quick description here</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

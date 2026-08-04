@@ -5,6 +5,8 @@
 #include <regex.h>
 #include <assert.h>
 #include <time.h>
+#include <locale.h>
+#include <monetary.h>
 #define _XOPEN_SOURCE
 #define __USE_XOPEN
 #include <wchar.h>
@@ -104,6 +106,7 @@ static jx_t *jfn_time(jx_t *args, void *agdata);
 static jx_t *jfn_dateTime(jx_t *args, void *agdata);
 static jx_t *jfn_timeZone(jx_t *args, void *agdata);
 static jx_t *jfn_period(jx_t *args, void *agdata);
+static jx_t *jfn_money(jx_t *args, void *agdata);
 static jx_t *jfn_abs(jx_t *args, void *agdata);
 static jx_t *jfn_random(jx_t *args, void *agdata);
 static jx_t *jfn_sign(jx_t *args, void *agdata);
@@ -213,14 +216,15 @@ static jxfunc_t time_jf        = {&date_jf,        "time",        "when:string|o
 static jxfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
 static jxfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, action?:string|number|true, ...", "null",	jfn_timeZone};
 static jxfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_period};
-static jxfunc_t abs_jf         = {&period_jf,      "abs",         "val:number", "number", jfn_abs};
+static jxfunc_t money_jf       = {&period_jf,      "money",       "in:number|string, format?:string=\"%n\"", "string|number",	jfn_money};
+static jxfunc_t abs_jf         = {&money_jf,       "abs",         "val:number", "number", jfn_abs};
 static jxfunc_t random_jf      = {&abs_jf,         "random",      "intbound?:number", "number", jfn_random};
 static jxfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
 static jxfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
 static jxfunc_t sleep_jf       = {&wrap_jf,        "sleep",       "seconds:number|period", "number", jfn_sleep};
-static jxfunc_t writeJX_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
+static jxfunc_t writeJSON_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
 
-static jxfunc_t count_jf       = {&writeJX_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static jxfunc_t count_jf       = {&writeJSON_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
 static jxfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
 static jxfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JXFUNC_JXFREE | JXFUNC_FREE};
 static jxfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:any", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JXFUNC_JXFREE | JXFUNC_FREE};
@@ -2613,6 +2617,98 @@ static jx_t *jfn_timeZone(jx_t *args, void *agdata)
 static jx_t *jfn_period(jx_t *args, void *agdata)
 {
 	return jx_datetime_fn(args, "period");
+}
+
+/******************************************************************************/
+/* Locale-specific money formatting */
+
+static jx_t *jfn_money(jx_t *args, void *agdata)
+{
+	char	*format, *scan;
+	double	money;
+	char	buf[100];
+	int	nconv, neg, digits;
+	struct lconv *lconv;
+	size_t	decimal_len, neg_len;
+
+	/* Check arguments */
+	if (args->first->type == JX_NUMBER) {
+		/* Converting a number to a string */
+		money = jx_double(args->first);
+		if (!args->first->next)
+			format = "%n";
+		else if (args->first->next->type == JX_STRING && !args->first->next->next)
+			format = args->first->next->text;
+		else
+			return jx_error_null(NULL, "moneyArgs:The only extra argument is an optional format string");
+
+		/* Make sure the format has only a single % conversion specifier */
+		for (scan = format, nconv = 0; *scan; scan++) {
+			if (*scan == '%') {
+				if (scan[1] == '%')
+					scan++;
+				else
+					nconv++;
+			}
+		}
+		if (nconv != 1) {
+			return jx_error_null(NULL, "moneyFmt:The format string must have exactly one %%n or %%i conversion specifier");
+		}
+
+		/* Do the conversion */
+		if (strfmon(buf, sizeof buf, format, money) < 0) {
+			return jx_error_null(NULL, "moneyLen:Conversion failed due to length");
+		}
+
+		/* Return it */
+		return jx_string(buf, -1);
+
+	} else if (args->first->type == JX_STRING && !args->first->next) {
+		/* Converting a string to a number */
+
+		/* Copy digits, sign, and decimal point to buf */
+		lconv = localeconv();
+		decimal_len = strlen(lconv->mon_decimal_point);
+		neg_len = strlen(lconv->negative_sign);
+		nconv = 0;
+		buf[nconv++] = '-';
+		neg = digits = 0;
+		for (scan = args->first->text; *scan; scan++) {
+			/* Guard against overflow */
+			if (nconv >= sizeof buf - 1)
+				return jx_error_null(NULL, "moneyUnfmt:String too long to convert");
+
+			/* Copy digits and decimal point.  Also watch for negative sign */
+			if (!strncmp(scan, lconv->mon_decimal_point, decimal_len)) {
+				buf[nconv++] = '.';
+				scan += decimal_len - 1;
+			} else if (!strncmp(scan, lconv->negative_sign, neg_len)) {
+				neg = 1;
+				scan += neg_len - 1;
+			} else if (*scan == '(') {
+				neg = 1;
+			} else if (*scan >= '0' && *scan <= '9') {
+				buf[nconv++] = *scan;
+				digits++;
+			}
+		}
+		buf[nconv] = '\0';
+		if (digits == 0)
+			jx_error_null(NULL, "moneyEmpty:The string doesn't contain any digits");
+
+		/* Convert to binary */
+		if (neg)
+			money = atof(buf);
+		else
+			money = atof(buf + 1);
+
+		/* Return it */
+		return jx_from_double(money);
+
+	}
+
+	/* Args don't make sense */
+	return jx_error_null(NULL, "money:Bad arguments to %s()", "money");
 }
 
 /******************************************************************************/
