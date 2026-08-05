@@ -10,7 +10,7 @@
   <body>
     <h1>money - Convert a number to a money string or vice versa</h1>
     <dl>
-      <dt>money(<var>money</var>:number, <var>format</var>?:string="%i") : string
+      <dt>money(<var>money</var>:number, <var>format</var>?:string="%n") : string
       <br/>money(<var>moneystr</var>:string) : number
       <dd>
       When passed a number, the <tt>money()</tt> function converts it to a
@@ -76,14 +76,20 @@
             conversion specifiers in the format string, jx's <tt>money()</tt>
             only allows a single <tt>%n</tt> or <tt>%i</tt>.
 
+	<li>Just to be clear: The <tt>money()</tt> function does not convert
+	    one type of currency to another (euros to dollars, for example).
+	    It only formats numbers as though they were money.
+
 	<li>Money values are represented by a floating point number,
 	    where 1.0 represents one euro/dollar/etc.
 	    However, the value 0.01 can't be exactly represented in a binary
 	    floating point number, so long chains of money calculations can
 	    lose precision.
-	    You might consider some other representation in your calculations
-	    (e.g., an integer representing cents instead of dollars) and only
-	    convert to double when you want to output it via <tt>money()</tt>.
+	    You might consider using some other representation in your
+	    calculations
+	    (e.g., an integer representing cents instead of dollars)
+	    and only convert to double when you want to output it via
+	    <tt>money()</tt>.
 
       </ul>
     </details>
@@ -91,7 +97,7 @@
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td>link here</td><td>Quick description here</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=toFixed">toFixed()</a></td><td>Convert a number to string with a given number of digits after the decimal.</td></tr>
       </table>
     </details>
 
