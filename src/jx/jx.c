@@ -314,8 +314,13 @@ int main(int argc, char **argv)
 	int	opt;
 	int	exitcode = 0;
 
-	/* set the locale */
-	val = setlocale(LC_ALL, "");
+	/* Set the locale.  JSON data and JX scripts always uses numbers
+	 * formatted for the "C" locale, but we can use the real locale
+	 * for everything else.
+	 */
+	(void)setlocale(LC_ALL, "");
+	(void)setlocale(LC_NUMERIC, "C");
+
 
 	/* Detect "--version" */
 	if (argc >= 2 && !strcmp(argv[1], "--version")) {
