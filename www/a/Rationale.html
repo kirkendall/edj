@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rationale</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx rationale">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, article, rationale">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>Rationale</h1>
+    <h4 class="timestamp">2026-08-08</h4>
+    <center>
+    <blockquote class="abstract">
+      This is a concise summary of decisions made, and more importantly why.
+    </blockquote>
+    </center>
+
+    <h3>Why resemble JavaScript and SQL?</h3>
+    <ul>
+      <li>To reduce the burden on new/occasional users.
+      <li>JavaScript's syntax is fairly "normal".
+      <li>SQL is good with tables.  jx has "native" table operators, but they
+          aren't JavaScript so users aren't likely to guess them.  They can
+          guess SQL syntax though.
+    </ul>
+
+    <h3>Why not full JavaScript?</h3>
+    <ul>
+      <li>Size.  JS interpreters are huge, and they need to load all data into
+	  memory (no deferred arrays).  JS also has many classes that have
+	  nothing to do with data.
+      <li>JS isn't really that good at querying tables.  jx's query language
+          is better for that.
+
+    </ul>
+
+    <h3>Why not object classes?</h3>
+    <ul>
+      <li>JSON data doesn't have classes.
+      <li>OOP is a design methodology, but jx is mostly for ad hoc queries.
+      <li>jx uses call-by-value, making it hard for objects to modify
+          themselves.
+    </ul>
+
+    <h3>Why make expressions without a command name be interpreted as output commands?</h3>
+    <ul>
+      <li>Convenience.
+      <li>It's more like a web browser's debugging console.
+    </ul>
+
+    <h3>Why add new operators?</h3>
+    <ul>
+      <li>Much JSON data is organized as tables.  Table operators help a lot.
+      <li>Some operators such as "i...j" help compensate for missing features.
+	  jx's use of "..." is NOT incompatible with JavaScript's "spread"
+	  and "fill" operators, so jx could get ... as a spread/fill later.
+      <li>Other operators such as the low-precedence "expr..fn()" are useful as
+	  you incrementally refine a query.
+    </ul>
+
+    <h3>Why do so many of the added operators use the "#" character?</h3>
+    <ul>
+      <li>The "#" character is used in table operators, because visually
+          "#" looks kind of like a table.
+    </ul>
+
+    <h3>Why use = and &lt;&gt; for case-insensitive comparison.</h3>
+    <ul>
+      <li>We needed one, and SQL uses those operators and is case-insensitive.
+      <li>= is also used for assignment, to remain similar to JavaScript.
+          This causes some compromise, though.
+    </ul>
+
+    <h3>Why support ISO-8601 date/time/period arithmetic?</h3>
+    <ul>
+      <li>Many JSON documents use ISO-8601.
+      <li>JavaScript's Date class is clunky, and jx doesn't use classes anyway.
+      <li>It's beautiful!
+    </ul>
+
+    <h3>Why plugins?</h3>
+    <ul>
+      <li>Security - don't load shell or network support if you don't need it.
+      <li>Size - jx has many interactive features, which are useless in
+          batch scripts.
+      <li>Modularity - You can write your own plugin leaving the rest of
+          jx unchanged.
+    </ul>
+
+    <h3>Why don't batch scripts support persistent settings, like interactive jx?</h3>
+    <ul>
+      <li>This is intended to give batch scripts a consistent run-time
+          environment.  If a script needs a particular plugin or setting,
+          then it should use the "plugin" or "set" command to ensure that
+          it's there.
+    </ul>
+
+    <h3>Why use fineline instead of GNU readline?</h3>
+    <ul>
+      <li>Fineline can run inside an ncursesw application (the -lscreen plugin)
+      <li>Fineline supports multi-line input, which allows examples to be
+          formatted properly.
+      <li>Fineline's multi-line feature allows it to be used as an embedded
+	  text editor.  This lets you revise function definitions without
+	  leaving jx.
+      <li>Fineline has syntax coloring and hinting, which makes it easier
+          to enter syntactically correct queries.
+      <li>Fineline supports asynchronous "chat" display and code extraction,
+	  allowing for a decent AI interface.
+      <li>Fineline uses common text editor conventions such as ^V for "paste".
+	  Users are more likely to be able to guess the correct key commands.
+    </ul>
+
+    <h3>Why is fineline a separate project?</h3>
+    <ul>
+      <li>fineline isn't inherently tied to jx.
+          It can be useful in other projects.
+      <li>jx and fineline have different licenses.
+          jx uses the normal GPL license, while fineline uses the weaker LGPL,
+          making it easier to use in other projects (even closed-source ones).
+          Using LGPL seemed appropriate since it's pretty much complete as-is,
+          while jx will forever be tweaked and extended.
+    </ul>
+
+    <h3>Why support AI?</h3>
+    <ul>
+      <li>Many users will use jx only occasionally.
+          They might not remember all of the details or available features.
+          AI can help.
+    </ul>
+
+    <h3>Why does the C library implement arrays as a linked list?</h3>
+    <ul>
+      <li>It's easier to generate during parsing JSON data.
+      <li>Most arrays get scanned from beginning to end anyway, so there's
+          rarely a performance penalty.
+      <li>It makes deferred arrays easier to implement.
+    </ul>
+
+  </body>
+</html>
