@@ -24,5 +24,21 @@
 
     </details>
 
+    <details>
+      <summary>Notes</summary>
+      <ul>
+        <li>Honestly, this doesn't have much practical use.
+            Maybe it'll help you get a feel for how much RAM you need to
+            load a document, but remember deferred arrays use very little RAM.
+            <div class="example">
+              <kbd>sizeOf(1...1000000)</kbd>
+              <samp>96</samp>
+              A million-element array fits in just 96 bytes, because the
+              <a target="_PARENT" href="../index.html?op=ellipsis">...</a>
+              operator returns a deferred array.
+            </div>
+      </ul>
+    </details>
+
   </body>
 </html>
