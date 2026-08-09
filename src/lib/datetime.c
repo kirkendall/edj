@@ -489,6 +489,11 @@ static int parsetime(const char *str, jxdatetime_t *dt)
  */
 static int convertMonthName(char mon[3])
 {
+	/* Month names.  This function is used for converting dates from
+	 * DDMONYY format to ISO-8601's YYYY-MM-DD format.  The DDMONYY
+	 * format always uses English month abbreviations, so those are
+	 * hardcoded here.
+	 */
 	const char *names = "JanFebMarAprMayJunJulAugSepOctNovDec";
 	int	month;
 	for (month = 0; month < 12; month++)
