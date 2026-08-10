@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>gap</title>
+    <link rel="stylesheet" type="text/css" href="../jx.css">
+    <meta name="description" content="jx gap - Find gaps in an array of numbers or dates/times">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, gap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>gap - Find gaps in an array of numbers or dates/times</h1>
+    <dl>
+      <dt>gap(<var>arr</var>:number[]|date[]|time[]|datetime[], <var>mingap</var>?:number|period): table
+      <dd>
+      This returns a table of the gaps that it finds in an array's values.
+      The array should contain only numbers, or only ISO-8601 date strings,
+      or time strings, or datetime strings.
+      The values must be sorted in ascending order.
+      <p>
+      You can also specify a minimum gap to report.
+      Only gaps greater than or equal to the minimum gap will be reported.
+      If you don't specify a minimum gap, then a default will be chosen
+      depending the array's data type.
+      For numbers, the default is 2, so consecutive numbers won't show in
+      the result table but if any integers are missing then they will show.
+      For dates, the default gap roughly two days.
+      For times and datetimes, the default gap is 90 seconds.
+      <p>
+      If you do specify a gap, then it should be either a number or an
+      ISO-8601 period string such as "PT1H" for one hour.
+      You can't use a period with an array of numbers, but you can use a number
+      with an array of dates, times, or datetimes;
+      the number will interpreted as days for ISO-8601 date strings,
+      or minutes for times and datetimes.
+      <p>
+      The result is a table with 3 columns/keys:
+      <table class="referencelist"
+        <tr><td>index</td><td>
+	  The subscript of item at the end of the gap.
+	  If you wanted to fill the gap, this is where you'd need to insert something.
+	</td></tr>
+	<tr><td>previous</td><td>The value of the item before the gap.</td></tr>
+	<tr><td>next</td><td>The value of the item after the gap.</td></tr>
+      </table>
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+        <kbd>[1,2,3,6,8,9,11].gap()</kbd>
+        <samp>
+	  <table>
+	  <tr><th>index</th><th>previous</th><th>next</th></tr>
+	  <tr><td>3</td><td>3</td><td>6</td></tr>
+	  <tr><td>4</td><td>6</td><td>8</td></tr>
+	  <tr><td>6</td><td>9</td><td>11</td></tr>
+	  <tr><td></td></tr>
+	  </table>
+        </samp>
+        <kbd>[1,2,3,6,8,9,11].gap(1)</kbd>
+        <samp>
+	  <table>
+	  <tr><th>index</th><th>previous</th><th>next</th></tr>
+	  <tr><td>1</td><td>1</td><td>2</td></tr>
+	  <tr><td>2</td><td>2</td><td>3</td></tr>
+	  <tr><td>3</td><td>3</td><td>6</td></tr>
+	  <tr><td>4</td><td>6</td><td>8</td></tr>
+	  <tr><td>5</td><td>8</td><td>9</td></tr>
+	  <tr><td>6</td><td>9</td><td>11</td></tr>
+	  <tr><td></td></tr>
+	  </table>
+        </samp>
+        In the first example, since no minimum gap was specified,
+        we use the default for an array of numbers, which is 2.
+        Note that gaps much larger than 2 still only generate one row in the response.
+        <p>
+        In the second example, we use the same array but pass an explicit
+        minimum gap of 1.
+        Since all integers are at least 1 apart, all of the spaces between
+        them get reported.
+      </div>
+
+      <div class="example">
+	<kbd>["12:00:00","12:00:15","12:00:45"].gap("PT20S")</kbd>
+	<samp>
+	  <table>
+	  <tr><th>index</th><th>previous</th><th>next</th></tr>
+	  <tr><td>2</td><td>12:00:15</td><td>12:00:45</td></tr>
+	  </table>
+	</samp>
+        Here we're scanning an array of ISO-8601 time strings for a gap
+        of 20 seconds or more.  The first two times are only 15 seconds
+        apart so that isn't reported as a gap.  The last two times are
+        separated by 30 seconds, so that is reported.
+        The index of the "next" item is 2.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>This can't report gaps before the first item or after the last item.
+
+        <li>You can't search for gaps in a table, directly.
+            However, it's easy to extract a column from the table and do the
+            gap scanning on that.
+            <div class="example">
+	      <kbd>gap(ClosedPurchaseOrders.orderBy("po") # po)</kbd>
+	      First we sort by "po" because the <tt>gap()</tt> function
+	      requires its array to be sorted, and then we use the
+	      <a target="_PARENT" href="../index.html?op=each">#</a>
+	      operator to extract just the "po" column.
+	      The <tt>gap()<tt> function then reports any missing "po" numbers.
+	      <p>
+	      If the "po" member's value looked like number but was represented
+	      as a string, then you could use "#po.parseInt()" instead of just
+	      "#po", to get an array of numbers that <tt>gap()</tt> can use.
+	    </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a></td><td>Sort table rows</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?op=each">#</a></td><td>Array filtering operator</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>
