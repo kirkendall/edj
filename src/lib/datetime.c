@@ -738,6 +738,32 @@ int jx_str_period(const char *str)
 	return parseperiod(str, &period) == 0;
 }
 
+/* Convert a datetime to a time_t value.  THIS IS APPROXIMATE, and is intended
+ * mostly for use in the gap() function (jfn_gap() in calcfunc.c).  Returns -1
+ * on error.
+ */
+int jx_datetime_seconds(const char *str)
+{
+	jxdatetime_t dt;
+	if (parsedatetime(str, &dt))
+		return -1;
+	return (int)dtbinary(&dt);
+}
+
+/* Convert a time string to a time_t value.  THIS IS APPROXIMATE, and is
+ * intended mostly for use in the gap() function(jfn_gap() in calcfunc.c).
+ * Returns -1 on error, or the number of seconds since midnight on success
+ */
+int jx_time_seconds(const char *str)
+{
+	int	hour, minute, second;
+
+	second = 0;
+	if (sscanf(str, "%2d:%2d:%2d", &hour, &minute, &second) < 2)
+		return -1;
+	return hour * 3600 + minute * 60 + second;
+}
+
 
 /* This is a helper function, combining common parts of jx_date(),
  * jx_time(), and jx_datetime().  The "dtz" parameter controls behavior.
@@ -1209,7 +1235,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 			return jx_error_null(0, "Unrecognized time unit \"%s\"", unit);
 		if (!asdate && !astime) {
 			/* For period, fold any larger units into the requested
-			 * one.  This requires approximations for lenghts of
+			 * one.  This requires approximations for lengths of
 			 * months and years.
 			 */
 			if (unitptr != &jdt.year)

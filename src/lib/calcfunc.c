@@ -111,6 +111,7 @@ static jx_t *jfn_abs(jx_t *args, void *agdata);
 static jx_t *jfn_random(jx_t *args, void *agdata);
 static jx_t *jfn_sign(jx_t *args, void *agdata);
 static jx_t *jfn_wrap(jx_t *args, void *agdata);
+static jx_t *jfn_gap(jx_t *args, void *agdata);
 static jx_t *jfn_sleep(jx_t *args, void *agdata);
 static jx_t *jfn_writeJSON(jx_t *args, void *agdata);
 
@@ -221,7 +222,8 @@ static jxfunc_t abs_jf         = {&money_jf,       "abs",         "val:number", 
 static jxfunc_t random_jf      = {&abs_jf,         "random",      "intbound?:number", "number", jfn_random};
 static jxfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
 static jxfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
-static jxfunc_t sleep_jf       = {&wrap_jf,        "sleep",       "seconds:number|period", "number", jfn_sleep};
+static jxfunc_t gap_jf        = {&wrap_jf,        "gap",        "arr:number[]|date[]|time[]|datetime[], mingap?:number|period", "table", jfn_gap};
+static jxfunc_t sleep_jf       = {&gap_jf,        "sleep",       "seconds:number|period", "number", jfn_sleep};
 static jxfunc_t writeJSON_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
 
 static jxfunc_t count_jf       = {&writeJSON_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
@@ -2825,6 +2827,162 @@ static jx_t *jfn_wrap(jx_t *args, void *agdata)
 		(void)jx_mbs_wrap_word(result->text, str, width);
 	return result;
 }
+
+/* Helper function for jfn_gap() -- this adds an entry to the result */
+static void addgap(jx_t *result, int i, jx_t *prevcopy, jx_t *scan)
+{
+	jx_t	*row = jx_object();
+	jx_append(row, jx_key("index", jx_from_int(i)));
+	jx_append(row, jx_key("previous", prevcopy));
+	jx_append(row, jx_key("next", jx_copy(scan)));
+	jx_append(result, row);
+}
+
+static jx_t *jfn_gap(jx_t *args, void *agdata)
+{
+	jx_t *arr, *scan, *result, *prevcopy;
+	time_t	mingap, scanthis, scanprev;
+	int	i;
+	enum { GAP_NUMBER, GAP_DATE, GAP_TIME, GAP_DATETIME } gaptype;
+
+	/* Get the array to scan */
+	arr = args->first;
+	if (arr->type != JX_ARRAY)
+		return jx_error_null(NULL, "gaparray:The %s() function must be passed an array", "gap");
+
+	/* Defend against empty array */
+	if (!arr->first)
+		return jx_array(); /* empty in, empty out */
+
+	/* Check the data type of the array elements */
+	if (arr->first->type == JX_NUMBER)
+		gaptype = GAP_NUMBER;
+	else if (jx_is_date(arr->first))
+		gaptype = GAP_DATE;
+	else if (jx_is_time(arr->first))
+		gaptype = GAP_TIME;
+	else if (jx_is_datetime(arr->first))
+		gaptype = GAP_DATETIME;
+	else
+		return jx_error_null(NULL, "gaptype:The %s() function only works on arrays of numbers, dates, times, or datetimes", "gap");
+	for (scan = jx_first(arr); scan; scan = jx_next(scan)) {
+		if ((gaptype == GAP_NUMBER && scan->type != JX_NUMBER)
+		 || (gaptype == GAP_DATE && !jx_is_date(scan))
+		 || (gaptype == GAP_TIME && !jx_is_time(scan))
+		 || (gaptype == GAP_DATETIME && !jx_is_datetime(scan))) {
+			jx_break(scan);
+			return jx_error_null(NULL, "gapmix:Mixed types in the array for %s()", "gap");
+		}
+	}
+
+	/* Get the minimum gap.  If not specified, then use default */
+	if (args->first->next) {
+		if (args->first->next->type == JX_NUMBER) {
+			/* Scale the number as appropriate for the array's
+			 * data type.  Dates are a bit tricky because we want
+			 * to be immune to daylight savings changes.
+			 */
+			mingap = jx_int(args->first->next);
+			switch (gaptype) {
+			case GAP_NUMBER:   /* no change */ break;
+			case GAP_DATE:	   mingap = mingap * 86400 - 3601; break;
+			case GAP_TIME:
+			case GAP_DATETIME: mingap *= 60; break;
+			}
+		} else if (jx_is_period(args->first->next)) {
+			/* Sanity check */
+			if (gaptype == GAP_NUMBER)
+				return jx_error_null(NULL, "gapnumber:You can't specify a minimum gap as a period when scanning numbers");
+
+			/* Convert the period string to a number of seconds,
+			 * by simulating a period(str, "s") call.  Yes, I know
+			 * this is inefficient but we only do it once.
+			 */
+			jx_t *oldnext, simargs, simnext;
+			simargs.type = JX_ARRAY;
+			simargs.first = args->first->next;
+			oldnext = args->first->next->next;
+			simargs.first->next = &simnext;
+			simnext.type = JX_STRING;
+			simnext.next = NULL;
+			strcpy(simnext.text, "s");
+			result = jx_datetime_fn(&simargs, "period");
+			args->first->next->next = oldnext;
+			if (jx_is_error(result))
+				return result;
+			assert(result->type == JX_NUMBER);
+			mingap = jx_int(result);
+			jx_free(result);
+		} else
+			return jx_error_null(NULL, "gapmin:Minimum gap for %s() must be a number or period");
+
+	} else {
+		switch (gaptype) {
+		case GAP_NUMBER:     mingap = 2;	     break;
+		case GAP_DATE:	     mingap = 172800 - 3601; break;
+		case GAP_TIME:
+		case GAP_DATETIME:   mingap = 90;	     break;
+		}
+	}
+
+	/* Scan for gaps.  One tricky thing here is, since the array could
+	 * be a deferred array, we need to keep a copy of the previous item.
+	 * Merely remembering a pointer returned by jx_next() isn't good
+	 * enough.
+	 */
+	result = jx_array();
+	scan = jx_first(arr);
+	prevcopy = jx_copy(scan);
+	i = 0;
+	switch (gaptype) {
+	case GAP_NUMBER:
+		scanprev = jx_int(scan);
+		while ((scan = jx_next(scan)) != NULL) {
+			i++;
+			scanthis = jx_int(scan);
+			if (scanthis - scanprev >= mingap)
+				addgap(result, i, prevcopy, scan);
+			else
+				jx_free(prevcopy);
+			prevcopy = jx_copy(scan);
+			scanprev = scanthis;
+		}
+		break;
+
+	case GAP_DATE:
+	case GAP_DATETIME:
+		scanprev = jx_datetime_seconds(scan->text);
+		while ((scan = jx_next(scan)) != NULL) {
+			i++;
+			scanthis = jx_datetime_seconds(scan->text);
+			if (scanthis - scanprev >= mingap)
+				addgap(result, i, prevcopy, scan);
+			else
+				jx_free(prevcopy);
+			prevcopy = jx_copy(scan);
+			scanprev = scanthis;
+		}
+		break;
+
+	case GAP_TIME:
+		scanprev = jx_time_seconds(scan->text);
+		while ((scan = jx_next(scan)) != NULL) {
+			i++;
+			scanthis = jx_time_seconds(scan->text);
+			if (scanthis - scanprev >= mingap)
+				addgap(result, i, prevcopy, scan);
+			else
+				jx_free(prevcopy);
+			prevcopy = jx_copy(scan);
+			scanprev = scanthis;
+		}
+		break;
+	}
+	jx_free(prevcopy);
+	return result;
+
+}
+
 
 static jx_t *jfn_sleep(jx_t *args, void *agdata)
 {

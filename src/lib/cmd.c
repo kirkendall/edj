@@ -2745,18 +2745,17 @@ static jxcmd_t *delete_parse(jxsrc_t *src, jxcmdout_t **referr)
 	jxcmd_t *cmd;
 	jxsrc_t start;
 	jxcalc_t *calc;
-	char	*str;
-	const char *end, *err;
-	size_t	len;
+	const char *err;
 
 	start = *src;
 	jx_cmd_parse_whitespace(src);
 
 	/* Parse the lvalue to delete */
+	err = NULL;
 	calc = jx_calc_parse(src->str, &src->str, &err, FALSE);
 	if (!calc || err) {
-		jxcmdout_t *err = jx_cmd_error(cmd->where, "%s", err);
-		return err;
+		*referr = jx_cmd_error(src->str, "%s", err);
+		return NULL;
 	}
 #if 0
 	jx_cmd_parse_whitespace(src);
@@ -2780,8 +2779,8 @@ static jxcmd_t *delete_parse(jxsrc_t *src, jxcmdout_t **referr)
 #endif
 	if ((*src->str && !strchr(";},", *src->str))) {
 		free(calc);
-		jxcmdout_t *err = jx_cmd_error(cmd->where, "deleteexpr:Bad expression for \"%s\"", "delete");
-		return err;
+		*referr = jx_cmd_error(src->str, "deleteexpr:Bad expression for \"%s\"", "delete");
+		return NULL;
 	}
 
 	/* Build the command */
@@ -2792,8 +2791,7 @@ static jxcmd_t *delete_parse(jxsrc_t *src, jxcmdout_t **referr)
 
 static jxcmdout_t *delete_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 {
-	jx_t *result, *section, *conferr;
-	char	*str;
+	jx_t *result;
 
 #if 0
 	/* Which flavor of "delete" are we doing? */
