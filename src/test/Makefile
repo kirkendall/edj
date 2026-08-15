@@ -1,8 +1,8 @@
 LIB=../../lib
 INC=../../include
-CFLAGS=-DJX_DEBUG_MEMORY -I$(INC)
+CFLAGS=-DEDJ_DEBUG_MEMORY -I$(INC)
 LDFLAGS=-L$(LIB)
-LDLIBS=	-ljx
+LDLIBS=	-ledj
 CC=gcc -g
 
 all: testcalc.out testconfig

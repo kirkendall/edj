@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>hash</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx hash - Generate a hash value summarizing data">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, function reference, hash">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj.hash - Generate a hash value summarizing data">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, edj, function reference, hash">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -70,19 +70,23 @@
             follow that up by comparing the values directly via the
             <a target="_PARENT" href="../index.html?op=equal">===</a> operator.
 
-	<li><strong>jx</strong> sometimes stores numbers as text, and sometimes
+	<li><strong>edj</strong> sometimes stores numbers as text, and sometimes
 	    as binary.  The hash function tries to convert text to binary,
 	    but limits of precision can lead to different hash values for
 	    inputs that look identical.
 
 	<li>Similarly, binary numbers may be stored as integers or
 	    floating point.  The hash function does <em>not</em>
-	    attempt to convert integers to floating point when converting,
+	    attempt to convert integers to floating point when hashing,
 	    so an integer 2 and floating point 2.0 will generate different
 	    hash values.
 
 	<li>This function is not appropriate for cryptographic uses.
 	    It is meant to be fast, not secure.
+
+	<li>Future versions of edj may use a different hashing algorithm.
+	    Because of this, you shouldn't store the hash value in a file
+	    and expect to use it again later.
 
       </ul>
     </details>

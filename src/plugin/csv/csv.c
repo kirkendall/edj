@@ -3,7 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
-#include <jx.h>
+#include <edj.h>
 
 static char *csvsettings = "{"
 	"\"backslash\":true,"	/* Use \x sequences when generating CSV */
@@ -22,7 +22,7 @@ static int crlf;
 static int headless;
 
 /* Output a single number, string, or symbol in CSV notation */
-static void csvsingle(jx_t *elem, jxformat_t *format)
+static void csvsingle(edj_t *elem, edjformat_t *format)
 {
 	char	*s;
 
@@ -32,22 +32,22 @@ static void csvsingle(jx_t *elem, jxformat_t *format)
 
 	/* Output values in a type-dependent way */
 	switch (elem->type) {
-	case JX_NUMBER:
+	case EDJ_NUMBER:
 		/* could be binary int or double, or it could be text */
 		if (elem->text[0] == '\0' && elem->text[1] == 'i')
-			fprintf(format->fp, "%d", JX_INT(elem));
+			fprintf(format->fp, "%d", EDJ_INT(elem));
 		else if (elem->text[0] == '\0' && elem->text[1] == 'd')
-			fprintf(format->fp, "%.*g", format->digits, JX_DOUBLE(elem));
+			fprintf(format->fp, "%.*g", format->digits, EDJ_DOUBLE(elem));
 		else
 			fputs(elem->text, format->fp);
 		break;
-	case JX_BOOLEAN:
+	case EDJ_BOOLEAN:
 		fputs(elem->text, format->fp);
 		break;
-	case JX_NULL:
+	case EDJ_NULL:
 		fputs(format->null, format->fp);
 		break;
-	case JX_STRING:
+	case EDJ_STRING:
 		putc('"', format->fp);
 		for (s = elem->text; *s; s++) {
 			if (*s == '\n') {
@@ -64,7 +64,7 @@ static void csvsingle(jx_t *elem, jxformat_t *format)
 				putc('"', format->fp);
 			} else if ((*s & 0x80) != 0 && format->ascii) {
 				char buf[13], *c;
-				s = (char *)jx_mbs_ascii(s, buf);
+				s = (char *)edj_mbs_ascii(s, buf);
 				s--; /* because for-loop does s++ */
 				for (c = buf; *c; c++) {
 					if (*c == '\\')
@@ -83,30 +83,30 @@ static void csvsingle(jx_t *elem, jxformat_t *format)
 }
 
 /* Output a CSV table */
-static void csvprint(jx_t *json, jxformat_t *format)
+static void csvprint(edj_t *json, edjformat_t *format)
 {
-	jx_t	*headers;
-	jx_t	*row, *col;
+	edj_t	*headers;
+	edj_t	*row, *col;
 	char	*t;
 	int	first;
 
 	/* Check options */
-	backslash = jx_is_true(jx_config_get("plugin.csv", "backslash"));
-	crlf = jx_is_true(jx_config_get("plugin.csv", "crlf"));
-	headless = jx_is_true(jx_config_get("plugin.csv", "headless"));
+	backslash = edj_is_true(edj_config_get("plugin.csv", "backslash"));
+	crlf = edj_is_true(edj_config_get("plugin.csv", "crlf"));
+	headless = edj_is_true(edj_config_get("plugin.csv", "headless"));
 
 	/* Collect column names */
-	headers = jx_explain(NULL, json->first, 0);
+	headers = edj_explain(NULL, json->first, 0);
 	if (!format->quick) {
 		for (row = json->first->next; row; row = row->next)
-			headers = jx_explain(headers, row, 0);
+			headers = edj_explain(headers, row, 0);
 	}
 
 	/* Output column names, unless headless */
 	if (!headless) {
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */
-			t = jx_text_by_key(col, "type");
+			t = edj_text_by_key(col, "type");
 			if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
 				continue;
 
@@ -116,17 +116,17 @@ static void csvprint(jx_t *json, jxformat_t *format)
 			first = 0;
 
 			/* Output the key */
-			csvsingle(jx_by_key(col, "key"), format);
+			csvsingle(edj_by_key(col, "key"), format);
 		}
 		putc('\n', format->fp);
 	}
 
 	/* For each row... */
-	for (row = json->first; row && !jx_interrupt; row = row->next) {
+	for (row = json->first; row && !edj_interrupt; row = row->next) {
 		/* Output each column.  Do it in header order, for consistency*/
 		for (col = headers->first, first = 1; col; col = col->next) {
 			/* Skip arrays and objects */
-			t = jx_text_by_key(col, "type");
+			t = edj_text_by_key(col, "type");
 			if (!strcmp("table", t) || !strcmp("array", t) || !strncmp("object", t, 6))
 				continue;
 
@@ -136,13 +136,13 @@ static void csvprint(jx_t *json, jxformat_t *format)
 			first = 0;
 
 			/* Output the data */
-			csvsingle(jx_by_key(row, jx_text_by_key(col, "key")), format);
+			csvsingle(edj_by_key(row, edj_text_by_key(col, "key")), format);
 		}
 		putc('\n', format->fp);
 	}
 
 	/* Free the column data */
-	jx_free(headers);
+	edj_free(headers);
 }
 
 /*****************************************************************************/
@@ -155,12 +155,12 @@ static int pad;
  * store the pointer to the comma or newline after the cell there.  If the
  * cell text appears to be malformed, return NULL.
  */
-static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
+static edj_t *csvcell(const char *buf, size_t len, const char **refcursor)
 {
 	const char *cursor = *refcursor;
 	size_t clen, i, j;
 	int	digits;
-	jx_t	*cell;
+	edj_t	*cell;
 
 	/* Skip whitespace */
 	while (cursor < &buf[len] && *cursor == ' ')
@@ -177,9 +177,9 @@ static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
 	/* If nothing, return null or "" */
 	if (*cursor == ',' || *cursor == '\n') {
 		if (emptynull)
-			return jx_null();
+			return edj_null();
 		else
-			return jx_string("", 0);
+			return edj_string("", 0);
 	}
 
 	/* Is it quoted? */
@@ -205,7 +205,7 @@ static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
 		 * double-quotes may also included in clen, but the excess is
 		 * not enough to worry about.
 		 */
-		cell = jx_string("", clen - 1);
+		cell = edj_string("", clen - 1);
 
 		/* Copy the text into the string */
 		for (i = 1, j = 0; i < clen; ) {
@@ -221,7 +221,7 @@ static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
 				case 't': cell->text[j++] = '\t'; break;
 				default:
 					if (isalpha(cursor[i + 1])) {
-						jx_free(cell);
+						edj_free(cell);
 						return NULL;
 					}
 					cell->text[j++] = cursor[i + 1];
@@ -262,10 +262,10 @@ static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
 		}
 		if (digits && j == i) {
 			/* Yes, it's a number */
-			cell = jx_number(cursor, i);
+			cell = edj_number(cursor, i);
 		} else {
 			/* It's a string */
-			cell = jx_string(cursor, i);
+			cell = edj_string(cursor, i);
 		}
 
 		/* Move past the cell and any trailing whitespace */
@@ -293,9 +293,9 @@ static jx_t *csvcell(const char *buf, size_t len, const char **refcursor)
  * column heading row as an array, and then pass that array as columns for the
  * remainder of the rows.
  */
-static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *columns)
+static edj_t *csvrow(const char *buf, size_t len, const char **refcursor, edj_t *columns)
 {
-	jx_t	*row, *col, *cell;
+	edj_t	*row, *col, *cell;
 
 	/* If end of data, then return NULL.  This can mean hitting the end of
 	 * buf, or encountering an empty line.
@@ -309,10 +309,10 @@ static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *c
 
 	/* Allocate the row */
 	if (columns) {
-		row = jx_object();
+		row = edj_object();
 		col = columns->first;
 	} else {
-		row = jx_array();
+		row = edj_array();
 		col = NULL;
 	}
 
@@ -323,24 +323,24 @@ static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *c
 
 		/* If malformed, then and return an error */
 		if (!cell) {
-			jx_free(row);
+			edj_free(row);
 			if (col)
-				return jx_error_null(0, "Malformed %s data for \"%s\" column", "csv", col->text);
-			return jx_error_null(0, "Malformed %s data in header", "csv");
+				return edj_error_null(0, "Malformed %s data for \"%s\" column", "csv", col->text);
+			return edj_error_null(0, "Malformed %s data in header", "csv");
 		}
 
 		/* If more data cells than column headings, return an error */
 		if (columns && !col) {
-			jx_free(row);
-			return jx_error_null(0, "Too many %s data columns", "csv");
+			edj_free(row);
+			return edj_error_null(0, "Too many %s data columns", "csv");
 		}
 
 		/* Append it to the row */
 		if (columns) {
-			jx_append(row, jx_key(col->text, cell));
+			edj_append(row, edj_key(col->text, cell));
 			col = col->next;
 		} else
-			jx_append(row, cell);
+			edj_append(row, cell);
 
 		/* csvcell() leaves the cursor on the ending comma.  Move past
 		 * that for the next cell.
@@ -352,10 +352,10 @@ static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *c
 	/* If this row is short, and we're supposed to pad short rows, do it */
 	while (pad && col) {
 		if (emptynull)
-			cell = jx_null();
+			cell = edj_null();
 		else
-			cell = jx_string("", 0);
-		jx_append(row, jx_key(col->text, cell));
+			cell = edj_string("", 0);
+		edj_append(row, edj_key(col->text, cell));
 		col = col->next;
 	}
 
@@ -370,7 +370,7 @@ static jx_t *csvrow(const char *buf, size_t len, const char **refcursor, jx_t *c
 /* Return 1 if "str" appears to be CSV, else return 0 */
 static int csvtest(const char *str, size_t len)
 {
-	jx_t *columns, *data;
+	edj_t *columns, *data;
 	const char *cursor;
 
 	/* Read the column headings */
@@ -378,8 +378,8 @@ static int csvtest(const char *str, size_t len)
 	columns = csvrow(str, len, &cursor, NULL);
 
 	/* If malformed or no info, then it isn't CSV */
-	if (!columns || columns->type == JX_NULL || jx_length(columns) < 2) {
-		jx_free(columns);
+	if (!columns || columns->type == EDJ_NULL || edj_length(columns) < 2) {
+		edj_free(columns);
 		return 0;
 	}
 
@@ -387,45 +387,45 @@ static int csvtest(const char *str, size_t len)
 	data = csvrow(str, len, &cursor, NULL);
 
 	/* If malformed, no info, or too many data cells, then it isn't CSV */
-	if (!data || data->type == JX_NULL || jx_length(columns) < jx_length(data)) {
-		jx_free(columns);
-		jx_free(data);
+	if (!data || data->type == EDJ_NULL || edj_length(columns) < edj_length(data)) {
+		edj_free(columns);
+		edj_free(data);
 		return 0;
 	}
 
 	/* It looks like CSV to me.  Clean up and return 1 */
-	jx_free(columns);
-	jx_free(data);
+	edj_free(columns);
+	edj_free(data);
 	return 1;
 }
 
 /* Parse "buf" and return its contents as a JSON table.  Store a pointer to
  * the end of the parsed text at "refend" unless "refend" is NULL.  If an error
  * is detected, store a pointer to the location of the error at "referr" (if
- * "referr" is not NULL) and return a jx_t containing an error null.
+ * "referr" is not NULL) and return an edj_t containing an error null.
  */
-static jx_t *csvparse(const char *buf, size_t len, const char **refend, const char **referr)
+static edj_t *csvparse(const char *buf, size_t len, const char **refend, const char **referr)
 {
-	jx_t *columns = NULL, *row, *table;
+	edj_t *columns = NULL, *row, *table;
 	const char *cursor;
 
 	/* Check options */
-	headless = jx_is_true(jx_config_get("plugin.csv", "headless"));
-	emptynull = jx_is_true(jx_config_get("plugin.csv", "emptynull"));
-	pad = jx_is_true(jx_config_get("plugin.csv", "pad"));
+	headless = edj_is_true(edj_config_get("plugin.csv", "headless"));
+	emptynull = edj_is_true(edj_config_get("plugin.csv", "emptynull"));
+	pad = edj_is_true(edj_config_get("plugin.csv", "pad"));
 
 	/* If headless, then just parse each row as an array, and append the
 	 * row's array as an element to the document's array.  The result
-	 * isn't a "table" as jx defines it, but it's the best we can do.
+	 * isn't a "table" as edj defines it, but it's the best we can do.
 	 */
 	if (headless) {
-		table = jx_array();
+		table = edj_array();
 		cursor = buf;
 		while (cursor < &buf[len] && *cursor != '\n') {
 			row = csvrow(buf, len, &cursor, columns);
 			if (!row)
 				break;
-			jx_append(table, row);
+			edj_append(table, row);
 		}
 		return table;
 	}
@@ -433,7 +433,7 @@ static jx_t *csvparse(const char *buf, size_t len, const char **refend, const ch
 	/* Parse the heading row */
 	cursor = buf;
 	columns = csvrow(buf, len, &cursor, NULL);
-	if (!columns || columns->type == JX_NULL || jx_length(columns) < 2) {
+	if (!columns || columns->type == EDJ_NULL || edj_length(columns) < 2) {
 		/* Store the cursor position */
 		if (*refend)
 			*refend = cursor;
@@ -441,29 +441,29 @@ static jx_t *csvparse(const char *buf, size_t len, const char **refend, const ch
 			*referr = cursor;
 
 		/* If we got an error, return the error */
-		if (columns && columns->type == JX_NULL && !*columns->text)
+		if (columns && columns->type == EDJ_NULL && !*columns->text)
 			return columns; /* an error */
 
 		/* Otherwise, generate an error and return it */
-		jx_free(columns);
-		return jx_error_null(0, "Unable to parse \"%s\" data", "csv");
+		edj_free(columns);
+		return edj_error_null(0, "Unable to parse \"%s\" data", "csv");
 	}
 
 	/* Parse each data row, and collect as an array of objects */
-	table = jx_array();
+	table = edj_array();
 	while (cursor < &buf[len] && *cursor != '\n') {
 		row = csvrow(buf, len, &cursor, columns);
 		if (!row)
 			break;
-		if (row->type == JX_NULL && *row->text) {
-			jx_free(table);
+		if (row->type == EDJ_NULL && *row->text) {
+			edj_free(table);
 			return row;
 		}
-		jx_append(table, row);
+		edj_append(table, row);
 	}
 
 	/* Clean up and return the data */
-	jx_free(columns);
+	edj_free(columns);
 	if (refend)
 		*refend = cursor;
 	return table;
@@ -476,16 +476,16 @@ static jx_t *csvparse(const char *buf, size_t len, const char **refend, const ch
  */
 char *plugincsv()
 {
-	jx_t	*section, *settings;
+	edj_t	*section, *settings;
 
 	/* Add options for CSV */
-	section = jx_by_key(jx_config, "plugin");
-	settings = jx_parse_string(csvsettings);
-	jx_append(section, jx_key("csv", settings));
+	section = edj_by_key(edj_config, "plugin");
+	settings = edj_parse_string(csvsettings);
+	edj_append(section, edj_key("csv", settings));
 
 	/* Register the functions */
-	jx_print_table_hook("csv", csvprint);
-	jx_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
+	edj_print_table_hook("csv", csvprint);
+	edj_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
 
 	/* Success */
 	return NULL;

@@ -1,29 +1,29 @@
 #include <stdio.h>
-#include <jx.h>
+#include <edj.h>
 
 int main(int argc, char **argv)
 {
-	jxcmd_t *jc;
-	jxcmdout_t *result;
-	jxcontext_t *context;
+	edjcmd_t *jc;
+	edjcmdout_t *result;
+	edjcontext_t *context;
 
 	/* Create a context */
-	context = jx_context_std(NULL);
+	context = edj_context_std(NULL);
 
-	/* Parse the first command-line argument as a jx command */
-	jc = jx_cmd_parse_string(argv[1]);
-	if (jc != JX_CMD_ERROR) {
+	/* Parse the first command-line argument as an edj command */
+	jc = edj_cmd_parse_string(argv[1]);
+	if (jc != EDJ_CMD_ERROR) {
 		/* Run the command */
-		result = jx_cmd_run(jc, &context);
+		result = edj_cmd_run(jc, &context);
 
 		/* If it returned anything, say what it returned */
 		if (result) {
 			if (result->ret) {
 				/* Returned value */
 				printf("returning ");
-				jx_print(result->ret, NULL);
+				edj_print(result->ret, NULL);
 				putchar('\n');
-				jx_free(result->ret);
+				edj_free(result->ret);
 			} else {
 				/* Returned error */
 				printf("%s\n", result->text);
@@ -31,10 +31,10 @@ int main(int argc, char **argv)
 		}
 
 		/* Clean up */
-		jx_cmd_free(jc);
+		edj_cmd_free(jc);
 	}
 
 	/* Free the context */
-	jx_context_free(context);
+	edj_context_free(context);
 	return 0;
 }

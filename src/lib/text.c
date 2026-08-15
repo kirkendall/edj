@@ -1,23 +1,23 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <jx.h>
+#include <edj.h>
 
 static char *defaultvalue;
 
-/* Set the default value for jx_text, when no data is found.  Returns the
+/* Set the default value for edj_text, when no data is found.  Returns the
  * old default.
  */
-char *jx_default_text(char *newdefault)
+char *edj_default_text(char *newdefault)
 {
 	char	*olddefault = defaultvalue;
 	defaultvalue = newdefault;
 	return olddefault;
 }
 
-/* Return the value of a jx_t.  If given NULL, then it returns the default
- * value as set by jx_default_text().
+/* Return the value of an edj_t.  If given NULL, then it returns the default
+ * value as set by edj_default_text().
  */
-char *jx_text(jx_t *json)
+char *edj_text(edj_t *json)
 {
 	if (!json)
 		return defaultvalue;
@@ -26,25 +26,25 @@ char *jx_text(jx_t *json)
 }
 
 /* Return the value of a number as a double */
-double jx_double(jx_t *json)
+double edj_double(edj_t *json)
 {
-	if (!json || json->type != JX_NUMBER)
+	if (!json || json->type != EDJ_NUMBER)
 		return -1.0;
 	if (json->text[0] == '\0' && json->text[1] == 'i')
-		return (double)JX_INT(json);
+		return (double)EDJ_INT(json);
 	if (json->text[0] == '\0' && json->text[1] == 'd')
-		return JX_DOUBLE(json);
+		return EDJ_DOUBLE(json);
 	return atof(json->text);
 }
 
 /* Return the value of a number as an int */
-int jx_int(jx_t *json)
+int edj_int(edj_t *json)
 {
-	if (!json || json->type != JX_NUMBER)
+	if (!json || json->type != EDJ_NUMBER)
 		return -1;
 	if (json->text[0] == '\0' && json->text[1] == 'i')
-		return JX_INT(json);
+		return EDJ_INT(json);
 	if (json->text[0] == '\0' && json->text[1] == 'd')
-		return (int)JX_DOUBLE(json);
+		return (int)EDJ_DOUBLE(json);
 	return atoi(json->text);
 }

@@ -13,7 +13,7 @@
 #define __USE_XOPEN
 #include <wchar.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 
 /* These indicate whether stdout and stderr are connected to a terminal.
  * The alternative is that they're connected to a file/pipe which matters
@@ -22,22 +22,22 @@
 static int stdout_tty;
 static int stderr_tty;
 
-/* This points to the member value in jx_config for the current set of
+/* This points to the member value in edj_config for the current set of
  * colors and other attributes.  If none are selected, this will be NULL.
  */
 static const char *curstyle;	/* Name of the current style */
-static jx_t *jstyle;		/* Member of jx_config containing style */
+static edj_t *jstyle;		/* Member of edj_config containing style */
 static FILE *outfp;		/* stdout or stderr, depending on style */
 static int didesc;		/* boolean: Are attributes current set? */
 
 /* This stores a pointer to a function to intercept user output, or NULL */
-static int (*user_hook)(jx_t *format, int newformat, const char *text, size_t len);
+static int (*user_hook)(edj_t *format, int newformat, const char *text, size_t len);
 
 /* This stores a pointer to a function to handle the result of a stand-alone
  * expression.  Some user interfaces will use this to display the result in a
  * data-viewer window.
  */
-static int (*result_hook)(jx_t *result);
+static int (*result_hook)(edj_t *result);
 
 /* Convert a color name or other attribute to a number */
 static char *esccode(char *esc, const char *color)
@@ -81,7 +81,7 @@ static char *esccode(char *esc, const char *color)
  * to a buffer to receive the escape sequence.  "name" is the name of a color
  * setting, such as "gridhead". 'nounderlined" inhibits underlining if set to 1.
  */
-static void esc(char *buf, jx_t *style, int nounderlined)
+static void esc(char *buf, edj_t *style, int nounderlined)
 {
 	char	*wholebuf = buf;
 
@@ -96,23 +96,23 @@ static void esc(char *buf, jx_t *style, int nounderlined)
 	*buf++ = '[';
 
 	/* Foreground and background */
-	buf = esccode(buf, jx_text_by_key(style, "fg"));
-	buf = esccode(buf, jx_text_by_key(style, "bg"));
+	buf = esccode(buf, edj_text_by_key(style, "fg"));
+	buf = esccode(buf, edj_text_by_key(style, "bg"));
 
 	/* Other attributes */
-	if (jx_is_true(jx_by_key(style, "bold")))
+	if (edj_is_true(edj_by_key(style, "bold")))
 		buf = esccode(buf, "bold");
-	if (jx_is_true(jx_by_key(style, "dim")))
+	if (edj_is_true(edj_by_key(style, "dim")))
 		buf = esccode(buf, "dim");
-	if (jx_is_true(jx_by_key(style, "italic")))
+	if (edj_is_true(edj_by_key(style, "italic")))
 		buf = esccode(buf, "italic");
-	if (!nounderlined && jx_is_true(jx_by_key(style, "underlined")))
+	if (!nounderlined && edj_is_true(edj_by_key(style, "underlined")))
 		buf = esccode(buf, "underlined");
-	if (jx_is_true(jx_by_key(style, "blinking")))
+	if (edj_is_true(edj_by_key(style, "blinking")))
 		buf = esccode(buf, "blinking");
-	if (jx_is_true(jx_by_key(style, "boxed")))
+	if (edj_is_true(edj_by_key(style, "boxed")))
 		buf = esccode(buf, "boxed");
-	if (jx_is_true(jx_by_key(style, "strike")))
+	if (edj_is_true(edj_by_key(style, "strike")))
 		buf = esccode(buf, "strike");
 
 	/* We should have an extra ";" at the end, which we'll convert to
@@ -128,11 +128,11 @@ static void esc(char *buf, jx_t *style, int nounderlined)
 
 /* Write text to the user. "format" is the general format info, including the
  * format->fp field for writing to files.  "style" is the name of a member of
- * jx_config * that defines the colors and other attributes of the text; you
+ * edj_config * that defines the colors and other attributes of the text; you
  * can prefix it with "_" to inhibit underlining. "fmt" is a printf-style
  * formatting string.
  */
-void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
+void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ...)
 {
 	static char *buf;
 	static size_t buflen;
@@ -144,7 +144,7 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 
 	/* If no format specified, use default */
 	if (!format)
-		format = &jx_format_default;
+		format = &edj_format_default;
 
 	/* If writing to a file/pipe, then just do it */
 	if (format->fp && !isatty(fileno(format->fp))) {
@@ -191,7 +191,7 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 		/* Look up the new style.  If prefixed with "_" then inhibit
 		 * underlining.  Note that the style name does not come from
 		 * a script or user input; we can trust it to be the name of
-		 * an existing style so jx_config_style(...NULL) will *NOT*
+		 * an existing style so edj_config_style(...NULL) will *NOT*
 		 * create a new style.
 		 */
 		newstyle = 1;
@@ -201,12 +201,12 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 			nounderline = 1;
 			style++;
 		}
-		jstyle = jx_config_style(style, NULL);
+		jstyle = edj_config_style(style, NULL);
 
 		/* If the user interface supports writing to stdout/stderr,
 		 * then choose which one to write to, based on style.stderr.
 		 */
-		outfp = (jx_is_true(jx_by_key(jstyle, "stderr"))) ? stderr : stdout;
+		outfp = (edj_is_true(edj_by_key(jstyle, "stderr"))) ? stderr : stdout;
 	}
 
 	/* Try to print the text into the buffer. */
@@ -259,9 +259,9 @@ void jx_user_printf(jxformat_t *format, const char *style, const char *fmt, ...)
 /* Write a single character to the user.  If you pass a byte from a multibyte
  * UTF-8 character, this will accumulate all bytes before sending it to the
  * user's terminal or the user interface.  This will use the same attributes
- * as the most recent jx_user_printf() call.
+ * as the most recent edj_user_printf() call.
  */
-void jx_user_ch(int ch)
+void edj_user_ch(int ch)
 {
 	static char buf[10];
 	static int used;
@@ -298,7 +298,7 @@ void jx_user_ch(int ch)
  * behavior is to do nothing and return 0, but fancier user interfaces may
  * display the result in a data viewer window.
  */
-int jx_user_result(jx_t *result)
+int edj_user_result(edj_t *result)
 {
 	/* If there's a hook, give it a shot */
 	if (result_hook && (*result_hook)(result))
@@ -312,19 +312,19 @@ int jx_user_result(jx_t *result)
  * stdout/stderr.  The handler returns 0 normally, of 1 if the text should be
  * output in the normal manner (by writing to stdout/stderr).
  */
-void jx_user_hook(int (*handler)(jx_t *jstyle, int newstyle, const char *text, size_t len))
+void edj_user_hook(int (*handler)(edj_t *jstyle, int newstyle, const char *text, size_t len))
 {
 	user_hook = handler;
 }
 
 /* Register a function to handle the result of stand-alone expressions.  The
- * jx_user_result() function calls thisto give the user interface a chance
+ * edj_user_result() function calls thisto give the user interface a chance
  * to save the result in a data viewer window or something.  The handler
  * function should return 0 if the result will not be used and should be freed,
  * or 1 if the user interface is using it and wants to be responsible for
  * freeing it later.
  */
-void jx_user_result_hook(int (*handler)(jx_t *result))
+void edj_user_result_hook(int (*handler)(edj_t *result))
 {
 	result_hook = handler;
 }

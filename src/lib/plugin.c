@@ -3,15 +3,15 @@
 #include <string.h>
 #include <dlfcn.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This is an array of objects describing loaded plugins.  The "plugin"
  * member is name of the plugin.
  */
-jx_t *jx_plugins;
+edj_t *edj_plugins;
 
 #if defined(STATICCACHE) || defined(STATICCSV) || defined(STATICCURL) || defined(STATICEXAMPLE) || defined(STATICLOG) || defined(STATICMATH) || defined(STATICXML)
-/* The following code is only needed when the jxcalc library is compiled as
+/* The following code is only needed when the edjcalc library is compiled as
  * a static library.  We still want access to some plugins, but the -ldl
  * library for loading plugins at runtime doesn't work for statically-linked
  * programs, so we need to simulate parts of it.
@@ -104,7 +104,7 @@ char *dlerror(void)
 
 
 /* Load a plugin.  Returns NULL on success, or an error null on failure */
-jx_t *jx_plugin_load(const char *name)
+edj_t *edj_plugin_load(const char *name)
 {
 	char	*binfile;
 	char	*scriptfile;
@@ -112,12 +112,12 @@ jx_t *jx_plugin_load(const char *name)
 	char	initname[100];
 	char	*(*initfn)(void);
 	char	*err;
-	jx_t	*info, *val;
+	edj_t	*info, *val;
 
 	/* If already loaded, do nothing */
-	for (info = jx_plugins->first; info; info = info->next) { /* undeferred */
-		val = jx_by_key(info, "name");
-		if (val && val->type == JX_STRING && !strcmp(val->text, name))
+	for (info = edj_plugins->first; info; info = info->next) { /* undeferred */
+		val = edj_by_key(info, "name");
+		if (val && val->type == EDJ_STRING && !strcmp(val->text, name))
 			return NULL;
 	}
 
@@ -130,17 +130,17 @@ jx_t *jx_plugin_load(const char *name)
 		binfile = NULL;
 	}
 #else
-	binfile = jx_file_path("plugin",name,".so");
+	binfile = edj_file_path("plugin",name,".so");
 	if (!binfile)
-		binfile = jx_file_path("plugin",name,".so");
+		binfile = edj_file_path("plugin",name,".so");
 #endif
 
 	/* Look for a script file */
-	scriptfile = jx_file_path("plugin",name,".jx");
+	scriptfile = edj_file_path("plugin",name,".edj");
 
 	/* If neither was found, fail */
 	if (!binfile && !scriptfile)
-		return jx_error_null(0, "The \"%s\" plugin could not be located", name);
+		return edj_error_null(0, "The \"%s\" plugin could not be located", name);
 
 	/* If there's a binary plugin, load it and run its "init" function */
 	if (binfile) {
@@ -159,7 +159,7 @@ jx_t *jx_plugin_load(const char *name)
 				if (!*err)
 					err = dlerror();
 			}
-			return jx_error_null(0, "The \"%s\" plugin could not be loaded: %s", name, err);
+			return edj_error_null(0, "The \"%s\" plugin could not be loaded: %s", name, err);
 		}
 
 		/* Find the init function */
@@ -168,7 +168,7 @@ jx_t *jx_plugin_load(const char *name)
 		*(void **)(&initfn) = dlsym(dlhandle, initname);
 		if (!initfn) {
 			char *error = dlerror();
-			info = jx_error_null(0, "The \"%s\" plugin has no %s() function (%s)", initname, error);
+			info = edj_error_null(0, "The \"%s\" plugin has no %s() function (%s)", initname, error);
 			dlclose(dlhandle);
 			return info;
 		}
@@ -177,30 +177,30 @@ jx_t *jx_plugin_load(const char *name)
 		err = initfn();
 		if (err) {
 			dlclose(dlhandle);
-			return jx_error_null(0, "The \"%s\" plugin failed to initialize: %s", name, err);
+			return edj_error_null(0, "The \"%s\" plugin failed to initialize: %s", name, err);
 		}
 	}
 
 	/* If there's a script file, load it */
 	if (scriptfile) {
-		jxcmd_t *cmd = jx_cmd_parse_file(scriptfile);
+		edjcmd_t *cmd = edj_cmd_parse_file(scriptfile);
 		if (cmd) {
 			/* We don't have a context to run it in, so all we
 			 * can do is free it.  This means script plugins can
 			 * only load other plugins, or define functions.
 			 */
-			jx_cmd_free(cmd);
+			edj_cmd_free(cmd);
 		}
 	}
 
 	/* IF WE GET HERE, IT WAS SUCCESSFULLY LOADED */
 
-	/* Add it to the jx_plugin object */
-	info = jx_object();
-	jx_append(info, jx_key("name", jx_string(name, -1)));
-	jx_append(info, jx_key("binary", binfile ? jx_string(binfile, -1) : jx_null()));
-	jx_append(info, jx_key("script", scriptfile ? jx_string(scriptfile, -1) : jx_null()));
-	jx_append(jx_plugins, info);
+	/* Add it to the edj_plugin object */
+	info = edj_object();
+	edj_append(info, edj_key("name", edj_string(name, -1)));
+	edj_append(info, edj_key("binary", binfile ? edj_string(binfile, -1) : edj_null()));
+	edj_append(info, edj_key("script", scriptfile ? edj_string(scriptfile, -1) : edj_null()));
+	edj_append(edj_plugins, info);
 
 	/* Success */
 	return NULL;

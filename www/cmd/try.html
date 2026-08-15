@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>try</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx try - Catch errors">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj try - Catch errors">
     <meta name="keywords" content="command, command reference, try">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -58,18 +58,18 @@
 
         <li>JavaScript allows a <tt>finally</tt> <var>finalcmd</var> clause
             as part of its <tt>try</tt> statement.
-            jx doesn't support <tt>finally</tt>.
+            edj doesn't support <tt>finally</tt>.
 
 	<li>The "key" field, if present, is used to translate the message
 	    via the "messages" object.
 	    That object is loaded from a locale-specific file, typically
-	    /usr/share/jx/locale/$LC_MESSAGES/messages.json.
+	    /usr/share/edj/locale/$LC_MESSAGES/messages.json.
 
 	<li>The "message" field of the error object is human readable.
 	    It may be translated, so if you want to detect specific error types
 	    then you should use "key" instead of "message".
 
-	<li>In a future version of jx,
+	<li>In a future version of edj,
 	    the parenthesized name after the <tt>catch</tt> keyword
 	    may be extended to support a way to selectively catch some errors
 	    while allowing others to "percolate" out to either an outer

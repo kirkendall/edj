@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>Rationale</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx rationale">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, article, rationale">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj rationale">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, edj, article, rationale">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -20,7 +20,7 @@
     <ul>
       <li>To reduce the burden on new/occasional users.
       <li>JavaScript's syntax is fairly "normal".
-      <li>SQL is good with tables.  jx has "native" table operators, but they
+      <li>SQL is good with tables.  edj.has "native" table operators, but they
           aren't JavaScript so users aren't likely to guess them.  They can
           guess SQL syntax though.
     </ul>
@@ -30,7 +30,7 @@
       <li>Size.  JS interpreters are huge, and they need to load all data into
 	  memory (no deferred arrays).  JS also has many classes that have
 	  nothing to do with data.
-      <li>JS isn't really that good at querying tables.  jx's query language
+      <li>JS isn't really that good at querying tables.  edj's query language
           is better for that.
 
     </ul>
@@ -38,8 +38,9 @@
     <h3>Why not object classes?</h3>
     <ul>
       <li>JSON data doesn't have classes.
-      <li>OOP is a design methodology, but jx is mostly for ad hoc queries.
-      <li>jx uses call-by-value, making it hard for objects to modify
+      <li>OOP is a design methodology, but edj is mostly for ad hoc queries.
+          There just isn't a lot of designing happening there.
+      <li>edj uses call-by-value, making it hard for objects to modify
           themselves.
     </ul>
 
@@ -47,14 +48,17 @@
     <ul>
       <li>Convenience.
       <li>It's more like a web browser's debugging console.
+      <li>I wrote the expression evaluator first.
+          I hoped that would be enough, but eventually I ran into limitations
+          so I (somewhat reluctantly) added commands.
     </ul>
 
     <h3>Why add new operators?</h3>
     <ul>
       <li>Much JSON data is organized as tables.  Table operators help a lot.
       <li>Some operators such as "i...j" help compensate for missing features.
-	  jx's use of "..." is NOT incompatible with JavaScript's "spread"
-	  and "fill" operators, so jx could get ... as a spread/fill later.
+	  edj's use of "..." is NOT incompatible with JavaScript's "spread"
+	  and "fill" operators, so edj could get ... as a spread/fill later.
       <li>Other operators such as the low-precedence "expr..fn()" are useful as
 	  you incrementally refine a query.
     </ul>
@@ -69,26 +73,26 @@
     <ul>
       <li>We needed one, and SQL uses those operators and is case-insensitive.
       <li>= is also used for assignment, to remain similar to JavaScript.
-          This causes some compromise, though.
+          This rarely causes confusion though.
     </ul>
 
     <h3>Why support ISO-8601 date/time/period arithmetic?</h3>
     <ul>
       <li>Many JSON documents use ISO-8601.
-      <li>JavaScript's Date class is clunky, and jx doesn't use classes anyway.
+      <li>JavaScript's Date class is clunky, and edj doesn't use classes anyway.
       <li>It's beautiful!
     </ul>
 
     <h3>Why plugins?</h3>
     <ul>
       <li>Security - don't load shell or network support if you don't need it.
-      <li>Size - jx has many interactive features, which are useless in
+      <li>Size - edj.has many interactive features, which are useless in
           batch scripts.
       <li>Modularity - You can write your own plugin leaving the rest of
-          jx unchanged.
+          edj unchanged.
     </ul>
 
-    <h3>Why don't batch scripts support persistent settings, like interactive jx?</h3>
+    <h3>Why don't batch scripts support persistent settings, like interactive edj?</h3>
     <ul>
       <li>This is intended to give batch scripts a consistent run-time
           environment.  If a script needs a particular plugin or setting,
@@ -102,8 +106,7 @@
       <li>Fineline supports multi-line input, which allows examples to be
           formatted properly.
       <li>Fineline's multi-line feature allows it to be used as an embedded
-	  text editor.  This lets you revise function definitions without
-	  leaving jx.
+	  text editor.  You can edit function definitions without leaving edj.
       <li>Fineline has syntax coloring and hinting, which makes it easier
           to enter syntactically correct queries.
       <li>Fineline supports asynchronous "chat" display and code extraction,
@@ -114,20 +117,23 @@
 
     <h3>Why is fineline a separate project?</h3>
     <ul>
-      <li>fineline isn't inherently tied to jx.
+      <li>fineline isn't inherently tied to edj.
           It can be useful in other projects.
-      <li>jx and fineline have different licenses.
-          jx uses the normal GPL license, while fineline uses the weaker LGPL,
+      <li>edj and fineline have different licenses.
+          edj uses the normal GPL license, while fineline uses the weaker LGPL,
           making it easier to use in other projects (even closed-source ones).
           Using LGPL seemed appropriate since it's pretty much complete as-is,
-          while jx will forever be tweaked and extended.
+          while edj will forever be tweaked and extended.
+          I hope people will contribute code to edj,
+          but fineline doesn't really need that.
     </ul>
 
     <h3>Why support AI?</h3>
     <ul>
-      <li>Many users will use jx only occasionally.
+      <li>Many users will use edj only occasionally.
           They might not remember all of the details or available features.
           AI can help.
+      <li>It's all the rage.  So trendy!
     </ul>
 
     <h3>Why does the C library implement arrays as a linked list?</h3>
@@ -136,6 +142,27 @@
       <li>Most arrays get scanned from beginning to end anyway, so there's
           rarely a performance penalty.
       <li>It makes deferred arrays easier to implement.
+    </ul>
+
+    <h3>Why are JSON numbers left as text, initially?</h3>
+    <ul>
+      <li>It saves time.
+          Converting to/from binary is about the slowest thing
+          you can do with a floating point number.
+          Most numbers in a large JSON document will probably be ignored
+          or output without change anyway so let's skip converting them.
+      <li>It avoids drifting values.  Converting a number to binary and
+          back to text doesn't always yield the exact same value.
+      <li>Numbers generated by expressions (not parsed!) are stored in binary,
+          so we don't take a performance hit there.
+    </ul>
+
+    <h3>Why call <tt>malloc()</tt> so often?  Why not reuse <tt>edj_t</tt>s?</h3>
+    <ul>
+      <li>I tried that, and I gained a tremendous respect for whoever wrote
+          GNU <tt>malloc()</tt>.  Adding my own wrapper made my code more
+          complex but didn't improve the speed at all.
+          <tt>malloc()</tt> is wicked fast.
     </ul>
 
   </body>

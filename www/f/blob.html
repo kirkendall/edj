@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>blob</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx blob - Manipulate or convert binary data">
-    <meta name="keywords" content="string, array, jx, function reference, blob">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj blob - Manipulate or convert binary data">
+    <meta name="keywords" content="string, array, edj, function reference, blob">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -15,7 +15,7 @@
       A "blob" is a chunk of binary data.
       The name comes from SQL where it supposedly is short for
       "Binary Large Object".
-      In jx, binary data is internally stored as compact bytes
+      In edj, binary data is internally stored as compact bytes
       but externally it is presented as a deferred array of numbers
       representing the byte values.
       <p>
@@ -49,7 +49,7 @@
           Interprets <var>data</var> as a Latin-1 string.
           Latin-1 is a one-byte-per-character encoding that is limited to
           the first 256 UTF-8 characters.
-          Internally, jx always stores strings in UTF-8,
+          Internally, edj always stores strings in UTF-8,
           so if you request a Latin-1 conversion,
           you'll get bytes interpreted to Latin-1 converted UTF-8.
 	</td></tr>
@@ -85,6 +85,8 @@
     <details>
       <summary>Notes</summary>
       <ul>
+
+        <li>If you invoke edj with a binary data file, it'll be loaded as a blob.
 
         <li>The constants defined in the <tt>Blob</tt> object are negative
             numbers.  This is so that <tt>blob()</tt> can some day be

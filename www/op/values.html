@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>VALUES operator</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx - VALUES operator">
-    <meta name="keywords" content="array, object, jx, operator reference, values">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj - VALUES operator">
+    <meta name="keywords" content="array, object, edj, operator reference, values">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -72,13 +72,13 @@
 
 	<li>This operator is meant to resemble
 	    the "VALUES" clause of an SQL "INSERT" command.
-	    jx requires quotes around the keys, uses square brackets
+	    edj requires quotes around the keys, uses square brackets
 	    instead of parentheses, and requires an extra set of brackets
 	    around the whole list of value rows.
 	    SQL also requires the number of keys to match the number of values.
 	    <table>
 	      <tr><th>SQL:</th><td>(a,b) values (1,2), (3,4)</td></tr>
-	      <tr><th>jx:</th><td>["a","b"] values [[1,2], [3,4]]</td></tr>
+	      <tr><th>edj:</th><td>["a","b"] values [[1,2], [3,4]]</td></tr>
 	    </table>
 
 	<li>The <tt>VALUES</tt> operator can be handy when converting headless

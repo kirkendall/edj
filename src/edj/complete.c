@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <readline/readline.h>
-#include <jx.h>
-#include "jxprog.h"
+#include <edj.h>
+#include "edjprog.h"
 
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */
@@ -33,8 +33,8 @@ static void maybeQuoteCpy(char *dst, char *str)
 static char *global_name_generator(const char *text, int state)
 {
 	static size_t len;
-	static jx_t *scan;
-	static jxcontext_t *con;
+	static edj_t *scan;
+	static edjcontext_t *con;
 	char	*tmp;
 
 	/* First time? */
@@ -42,7 +42,7 @@ static char *global_name_generator(const char *text, int state)
 		/* Start with the newest context */
 		con = context;
 		scan = NULL;
-		len = jx_mbs_len(text);
+		len = edj_mbs_len(text);
 	}
 
 	/* If scan is NULL, then move it to the start of current context
@@ -51,7 +51,7 @@ static char *global_name_generator(const char *text, int state)
 	 */
 	if (!scan) {
 		/* Skip non-object contexts */
-		while (con && con->data->type != JX_OBJECT)
+		while (con && con->data->type != EDJ_OBJECT)
 			con = con->older;
 		if (!con)
 			return NULL;
@@ -65,8 +65,8 @@ static char *global_name_generator(const char *text, int state)
 	 */
 	for (;;) {
 		for (; scan; scan = scan->next) {
-			if (!jx_mbs_ncasecmp(scan->text, text, len)) {
-				if (scan->first->type == JX_OBJECT)
+			if (!edj_mbs_ncasecmp(scan->text, text, len)) {
+				if (scan->first->type == EDJ_OBJECT)
 					rl_completion_append_character = '.';
 				else
 					rl_completion_suppress_append = 1;
@@ -77,7 +77,7 @@ static char *global_name_generator(const char *text, int state)
 		}
 		do {
 			con = con->older;
-		} while (con && con->data->type != JX_OBJECT);
+		} while (con && con->data->type != EDJ_OBJECT);
 		if (!con)
 			return NULL;
 		scan = con->data->first;
@@ -85,42 +85,42 @@ static char *global_name_generator(const char *text, int state)
 }
 
 /* This tries to complete the name of a config setting.  A name could be...
- *   - a key in jx_config
- *   - a key in jx_config.interactive
+ *   - a key in edj_config
+ *   - a key in edj_config.interactive
  *   - the prefix "no" on either of those keys, if boolean
  *   - an element in a "*-list" array in either of those places
  * Note that the latter could be something like "on green" but since "green"
  * is also an possibility, we don't need to be smart about that.
  */
-static jx_t *config_section;
+static edj_t *config_section;
 static char *config_name_generator(const char *text, int state)
 {
 	static size_t len;
-	static jx_t *section, *scan, *elem;
+	static edj_t *section, *scan, *elem;
 	char	*tmp;
 
 	/* First time? */
 	if (state == 0) {
 		/* Basic initialization */
-		section = config_section; /* usually jx_config */
+		section = config_section; /* usually edj_config */
 		scan = section->first;
 		elem = NULL;
-		len = jx_mbs_len(text);
+		len = edj_mbs_len(text);
 
 		/* If there's already a name=... then look for that exact name.
 		 * If its value is a section, then use that section instead of
-		 * jx_config or jx_config.interactive.
+		 * edj_config or edj_config.interactive.
 		 */
 
 	}
 
-	/* If scan is NULL and section is jx_config, then move to the start
-	 * of jx_config.interactive.
+	/* If scan is NULL and section is edj_config, then move to the start
+	 * of edj_config.interactive.
 	 */
 	if (!scan) {
-		if (section != jx_config)
+		if (section != edj_config)
 			return NULL;
-		section = jx_by_key(jx_config, "interactive");
+		section = edj_by_key(edj_config, "interactive");
 		scan = section->first;
 	}
 
@@ -129,14 +129,14 @@ static char *config_name_generator(const char *text, int state)
 	 */
 	while (scan) {
 		/* Is this an "-list" array? */
-		if (scan->first->type == JX_ARRAY && jx_mbs_like(scan->text, "%-list")) {
+		if (scan->first->type == EDJ_ARRAY && edj_mbs_like(scan->text, "%-list")) {
 			/* Scan the elements.  If not resuming an earlier scan
 			 * then start at the array's first element.
 			 */
 			if (!elem)
 				elem = scan->first->first;
 			for (; elem; elem = elem->next) {
-				if (elem->type == JX_STRING && !jx_mbs_ncmp(text, elem->text, len)) {
+				if (elem->type == EDJ_STRING && !edj_mbs_ncmp(text, elem->text, len)) {
 					/* found a matching list element */
 					rl_completion_suppress_append = 1;
 					tmp = (char *)malloc(strlen(elem->text) + 3);
@@ -147,7 +147,7 @@ static char *config_name_generator(const char *text, int state)
 				}
 			}
 
-		} else if (!jx_mbs_ncmp(text, scan->text, len)) {
+		} else if (!edj_mbs_ncmp(text, scan->text, len)) {
 			/* found a matching member name */
 			rl_completion_suppress_append = 1;
 			tmp = (char *)malloc(strlen(scan->text) + 3);
@@ -156,8 +156,8 @@ static char *config_name_generator(const char *text, int state)
 			return tmp;
 		} else if (text[0] == 'n'
 			&& text[1] == 'o'
-			&& scan->first->type == JX_BOOLEAN
-			&& (len == 2 || !jx_mbs_ncmp(text + 2, scan->text, len - 2))) {
+			&& scan->first->type == EDJ_BOOLEAN
+			&& (len == 2 || !edj_mbs_ncmp(text + 2, scan->text, len - 2))) {
 			/* Found a matching member name for a "no" boolean */
 			rl_completion_suppress_append = 1;
 			tmp = (char *)malloc(strlen(scan->text) + 3);
@@ -170,8 +170,8 @@ static char *config_name_generator(const char *text, int state)
 
 		/* No match.  Move to the next member. */
 		scan = scan->next;
-		if (!scan && section == jx_config) {
-			section = jx_by_key(jx_config, "interactive");
+		if (!scan && section == edj_config) {
+			section = edj_by_key(edj_config, "interactive");
 			scan = section->first;
 		}
 	}
@@ -180,13 +180,13 @@ static char *config_name_generator(const char *text, int state)
 }
 
 
-/* For member completions, completion_container is set by jxcalc_completion()
+/* For member completions, completion_container is set by edjcalc_completion()
  * to an object whose member names are to be scanned.  completion_key is the
  * partial key to look for -- a pointer into readline's line buffer.  This
  * can be combined with the "text" parameter to determine the whole string
  * to return.
  */
-static jx_t	*completion_container;
+static edj_t	*completion_container;
 static int	completion_key_offset;
 
 /* Return the first (if state=0) or next (if state>0) name that matches text.
@@ -195,7 +195,7 @@ static int	completion_key_offset;
  */
 char *member_name_generator(const char *text, int state)
 {
-	static jx_t *scan;
+	static edj_t *scan;
 	char	buf[1000];
 	size_t	len;
 
@@ -209,12 +209,12 @@ char *member_name_generator(const char *text, int state)
 		scan = scan->next;
 
 	/* We're looking in a container (object) */
-	len = jx_mbs_len(text + completion_key_offset);
+	len = edj_mbs_len(text + completion_key_offset);
 	for (; scan; scan = scan->next) {
-		if (!jx_mbs_ncasecmp(scan->text, text + completion_key_offset, len)) {
-			if (scan->first->type == JX_OBJECT)
+		if (!edj_mbs_ncasecmp(scan->text, text + completion_key_offset, len)) {
+			if (scan->first->type == EDJ_OBJECT)
 				rl_completion_append_character = '.';
-			else if (scan->first->type == JX_ARRAY)
+			else if (scan->first->type == EDJ_ARRAY)
 				rl_completion_append_character = '[';
 			else
 				rl_completion_suppress_append = 1;
@@ -233,10 +233,10 @@ char *member_name_generator(const char *text, int state)
  * and "end" is the number of additional characters after "cursor" (though
  * the line buffer is '\0'-terminated so "end" isn't really needed.)
  */
-char **jx_completion(const char *text, int start, int end)
+char **edj_completion(const char *text, int start, int end)
 {
 	char	*key, *next, c;
-	jx_t	*breaker = NULL;
+	edj_t	*breaker = NULL;
 	int	scan, state;
 	char	buf[1000];
 
@@ -250,10 +250,10 @@ char **jx_completion(const char *text, int start, int end)
 	if (start >= 4 && !strncmp(buf, "set ", 4)) {
 		/* First, though, check to see if we've already hit a "name="
 		 * where the name's value is an object, in which case use that
-		 * as the section instead of all of jx_config.
+		 * as the section instead of all of edj_config.
 		 */
 		int equal = 0;
-		config_section = jx_config;
+		config_section = edj_config;
 		for (scan = start; scan >= 4 && buf[scan] != ','; scan--) {
 			if (buf[scan] == '=')
 				equal = scan;
@@ -262,11 +262,11 @@ char **jx_completion(const char *text, int start, int end)
 		}
 		if (scan < start && scan < equal) {
 			buf[equal] = '\0';
-			config_section = jx_by_key(jx_config, &buf[scan]);
+			config_section = edj_by_key(edj_config, &buf[scan]);
 			if (!config_section)
-				config_section = jx_by_key(jx_by_key(jx_config, "interactive"), &buf[scan]);
+				config_section = edj_by_key(edj_by_key(edj_config, "interactive"), &buf[scan]);
 			if (!config_section)
-				config_section = jx_config;
+				config_section = edj_config;
 			buf[equal] = '=';
 		}
 
@@ -330,7 +330,7 @@ char **jx_completion(const char *text, int start, int end)
 	next = strpbrk(&buf[scan], ".[");
 	c = *next;
 	*next = '\0';
-	completion_container = jx_context_by_key(context, &buf[scan], NULL);
+	completion_container = edj_context_by_key(context, &buf[scan], NULL);
 	*next = c;
 	if (!completion_container)
 		return NULL;
@@ -358,27 +358,27 @@ char **jx_completion(const char *text, int start, int end)
 		next = strpbrk(key, ".[");
 		if (!next) {
 			completion_key_offset = key - buf - start;
-			jx_break(breaker);
+			edj_break(breaker);
 			return rl_completion_matches(text, member_name_generator);
 		}
 		c = *next;
 		*next = '\0';
 
 		/* Find this container */
-		completion_container = jx_by_key(completion_container, key);
+		completion_container = edj_by_key(completion_container, key);
 		*next = c;
 
 		/* Since we're skipping over subscripts, if this is an array
 		 * then skip into its first element.  If no elements, then
 		 * we can't do the completion.
 		 */
-		while (completion_container && completion_container->type == JX_ARRAY)
-			completion_container = jx_first(completion_container);
+		while (completion_container && completion_container->type == EDJ_ARRAY)
+			completion_container = edj_first(completion_container);
 		if (!completion_container) {
-			jx_break(breaker);
+			edj_break(breaker);
 			return NULL;
 		}
-		if (jx_is_deferred_element(completion_container))
+		if (edj_is_deferred_element(completion_container))
 			breaker = completion_container;
 	}
 }

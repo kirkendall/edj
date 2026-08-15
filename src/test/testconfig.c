@@ -2,16 +2,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <locale.h>
-#include <jx.h>
+#include <edj.h>
 
 /* Run a single test */
 static int singletest(char *settings)
 {
-	jx_t	*err;
+	edj_t	*err;
 
-	err = jx_config_parse(NULL, settings, 0);
+	err = edj_config_parse(NULL, settings, 0);
 	if (!err) {
-		jx_print(jx_config, NULL);
+		edj_print(edj_config, NULL);
 		return 1;
 	}
 	if (isatty(0))
@@ -19,7 +19,7 @@ static int singletest(char *settings)
 	else {
 		puts(err->text);
 	}
-	jx_free(err);
+	edj_free(err);
 	return 0;
 }
 
@@ -27,19 +27,19 @@ int main(int argc, char **argv)
 {
 	int	i;
 	char	buf[100], *eol;
-	jx_t	*dummy;
+	edj_t	*dummy;
 
 	setlocale(LC_ALL,"");
-	jx_config_load("textconfig");
+	edj_config_load("textconfig");
 
 	/* Add a dummy plugin */
-	dummy = jx_object();
-	jx_append(dummy, jx_key("host", jx_string("localhost", -1)));
-	jx_append(dummy, jx_key("db", jx_string("", -1)));
-	jx_append(dummy, jx_key("user", jx_string("", -1)));
-	jx_append(jx_by_key(jx_config, "plugin"), jx_key("dummy",dummy));
+	dummy = edj_object();
+	edj_append(dummy, edj_key("host", edj_string("localhost", -1)));
+	edj_append(dummy, edj_key("db", edj_string("", -1)));
+	edj_append(dummy, edj_key("user", edj_string("", -1)));
+	edj_append(edj_by_key(edj_config, "plugin"), edj_key("dummy",dummy));
 
-	jx_print(jx_config, NULL);
+	edj_print(edj_config, NULL);
 	if (argc <= 1) {
 		for (;;) {
 			if (isatty(0))

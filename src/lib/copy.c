@@ -1,26 +1,26 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jx.h>
+#include <edj.h>
 
 /* Even if memory debugging is enabled, here we're defining the non-debugging
- * version of the jx_copy() and jx_copy_filter() functions.
+ * version of the edj_copy() and edj_copy_filter() functions.
  */
-#ifdef JX_DEBUG_MEMORY
-# undef jx_copy
-# undef jx_copy_filter
+#ifdef EDJ_DEBUG_MEMORY
+# undef edj_copy
+# undef edj_copy_filter
 #endif
 
 /* Return a deep copy of a json object... meaning that if "json" is a container
  * then its contents are deep-copied too.  The returned object will be identical
  * to the "json" object, but altering one will have no effect on the other.
  */
-jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
+edj_t *edj_copy_filter(edj_t *json, int (*test)(edj_t *elem))
 {
-	jx_t *copy;
-	jx_t *tail = NULL;
-	jx_t *scan;
-	jx_t *sub;
+	edj_t *copy;
+	edj_t *tail = NULL;
+	edj_t *scan;
+	edj_t *sub;
 
 	/* Defend against NULL */
 	if (!json)
@@ -33,11 +33,11 @@ jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
 	/* The top node's copy method depends on its type */
 	switch (json->type)
 	{
-	  case JX_OBJECT:
-		copy = jx_object();
+	  case EDJ_OBJECT:
+		copy = edj_object();
 		for (tail = NULL, scan = json->first; scan; scan = scan->next) /* object */
 		{
-			sub = jx_copy_filter(scan, test);
+			sub = edj_copy_filter(scan, test);
 			if (!sub)
 				continue;
 			if (tail)
@@ -48,14 +48,14 @@ jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
 		}
 		break;
 
-	  case JX_ARRAY:
-		copy = jx_array();
+	  case EDJ_ARRAY:
+		copy = edj_array();
 
 		/* For deferred arrays without a test, keep it deferred */
-		if (jx_is_deferred_array(json) && !test) {
-			jx_t basic;
-			jxdef_t *def = (jxdef_t *)json->first;
-			copy->first = jx_defer(def->fns);
+		if (edj_is_deferred_array(json) && !test) {
+			edj_t basic;
+			edjdef_t *def = (edjdef_t *)json->first;
+			copy->first = edj_defer(def->fns);
 
 			/* We want to copy all data associated with this
 			 * deferred array, except for "basic".  We keep
@@ -73,35 +73,35 @@ jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
 		}
 
 		/* Otherwise we scan, filter, and copy elements individually */
-		for (scan = jx_first(json); scan; scan = jx_next(scan))
+		for (scan = edj_first(json); scan; scan = edj_next(scan))
 		{
-			sub = jx_copy_filter(scan, test);
+			sub = edj_copy_filter(scan, test);
 			if (!sub)
 				continue;
-			jx_append(copy, sub);
+			edj_append(copy, sub);
 		}
 		break;
 
-	  case JX_KEY:
-		return jx_key(json->text, jx_copy(json->first));
+	  case EDJ_KEY:
+		return edj_key(json->text, edj_copy(json->first));
 
-	  case JX_STRING:
-	  case JX_BOOLEAN:
-	  case JX_NULL:
-		return jx_simple(json->text, -1, json->type);
+	  case EDJ_STRING:
+	  case EDJ_BOOLEAN:
+	  case EDJ_NULL:
+		return edj_simple(json->text, -1, json->type);
 
-	  case JX_NUMBER:
+	  case EDJ_NUMBER:
 		/* Numbers can be represented internally either as a string of
 		 * ASCII digits copied directly from a JSON document, or in
 		 * binary.  This affects the way we copy it.
 		 */
 		if (json->text[0])
-			return jx_number(json->text, -1);
+			return edj_number(json->text, -1);
 		if (json->text[1] == 'i')
-			return jx_from_int(JX_INT(json));
-		return jx_from_double(JX_DOUBLE(json));
+			return edj_from_int(EDJ_INT(json));
+		return edj_from_double(EDJ_DOUBLE(json));
 
-	  case JX_DEFER:
+	  case EDJ_DEFER:
 	  default:
 	  	return NULL; /* should never happen */
 	}
@@ -110,8 +110,8 @@ jx_t *jx_copy_filter(jx_t *json, int (*test)(jx_t *elem))
 	return copy;
 }
 
-jx_t *jx_copy(jx_t *json)
+edj_t *edj_copy(edj_t *json)
 {
 	/* !!! It'd be nice if a deferred array was copied as deferred too */
-	return jx_copy_filter(json, NULL);
+	return edj_copy_filter(json, NULL);
 }

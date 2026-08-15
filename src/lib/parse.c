@@ -6,40 +6,40 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 
 /* Here we need to access the "real" parse functions */
-#ifdef JX_DEBUG_MEMORY
-# undef jx_parse_string
+#ifdef EDJ_DEBUG_MEMORY
+# undef edj_parse_string
 #endif
 
 /* This data type is used only in this file to track the list of registered
  * table formats.
  */
-typedef struct jxparser_s {
-	struct jxparser_s *other;
+typedef struct edjparser_s {
+	struct edjparser_s *other;
 	const char	*name;
 	int	(*tester)(const char *str, size_t len);
-	jx_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
-	int	(*updater)(jx_t *data, const char *filename);
-} jxparser_t;
+	edj_t	*(*parser)(const char *str, size_t len, const char **refend, const char **referr);
+	int	(*updater)(edj_t *data, const char *filename);
+} edjparser_t;
 
-static jx_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer);
+static edj_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer);
 
 /******************************************************************************/
 /* This next section of code is all in support of deferred arrays.            */
 
 /* This is used to store the details of a deferred array */
 typedef struct {
-	jxdef_t basic; /* normal stuff */
+	edjdef_t basic; /* normal stuff */
 	const char *start;/* position within that file where array starts */
 	const char *end;  /* where it ends */
 } jdefarray_t;
 
 /* Parse the first element of the array, and return it.  This also involves
- * making a copy of the array's JX_DEFER node and related data.
+ * making a copy of the array's EDJ_DEFER node and related data.
  */
-static jx_t *jdefarray_first(jx_t *array)
+static edj_t *jdefarray_first(edj_t *array)
 {
 	/* Parse the first element.  Deferred arrays always have at least one
 	 * element.
@@ -47,14 +47,14 @@ static jx_t *jdefarray_first(jx_t *array)
 	jdefarray_t *def = (jdefarray_t *)array->first;
 	jdefarray_t *nextdef;
 	const char *next;
-	jx_t *elem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
+	edj_t *elem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
 
 	/* Make its "->next" point to a copy of "def" with its "->start"
 	 * pointing to the next element's position in the data source code.
 	 * Note that we don't copy basic.file because files' ref counts are
 	 * maintained per deferred array, not per deferred element.
 	 */
-	elem->next = jx_defer(def->basic.fns);
+	elem->next = edj_defer(def->basic.fns);
 	nextdef = (jdefarray_t *)elem->next;
 	nextdef->basic.fns = def->basic.fns;
 	nextdef->start = next;
@@ -65,36 +65,36 @@ static jx_t *jdefarray_first(jx_t *array)
 }
 
 /* Parse the next element of the array and return it.  This also frees the
- * previous element but reuses its JX_DEFER node.  If there is no next
- * element then also free the JX_DEFER node and return NULL.
+ * previous element but reuses its EDJ_DEFER node.  If there is no next
+ * element then also free the EDJ_DEFER node and return NULL.
  */
-static jx_t *jdefarray_next(jx_t *elem)
+static edj_t *jdefarray_next(edj_t *elem)
 {
 	jdefarray_t *def = (jdefarray_t *)elem->next;
 	const char *next;
 
 	/* Parse the next element.  If none, then return NULL and trust the
-	 * jx_next() function (which calls this) to do the cleanup.
+	 * edj_next() function (which calls this) to do the cleanup.
 	 */
-	jx_t *nextelem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
+	edj_t *nextelem = parseJSON(def->start, (def->end - def->start), &next, NULL, 0);
 	if (!nextelem)
 		return NULL;
 
 	/* Reuse the "def" with the next element, tweaking its "start" to point
 	 * to the next next element.
 	 */
-	nextelem->next = (jx_t *)def;
+	nextelem->next = (edj_t *)def;
 	def->start = next;
 
 	/* Free the previous element, but not its ->next */
 	elem->next = NULL;
-	jx_free(elem);
+	edj_free(elem);
 
 	return nextelem;
 }
 
 /* Test whether the current element is the last element. */
-static int jdefarray_islast(const jx_t *elem)
+static int jdefarray_islast(const edj_t *elem)
 {
 	jdefarray_t *def = (jdefarray_t *)elem->first;
 	const char *skip;
@@ -108,7 +108,7 @@ static int jdefarray_islast(const jx_t *elem)
 	return *skip == ']';
 }
 
-static jxdeffns_t jdefarrayfns = {
+static edjdeffns_t jdefarrayfns = {
 	sizeof(jdefarray_t),	/* size */
 	"JSON",			/* desc */
 	jdefarray_first,	/* first */
@@ -123,16 +123,16 @@ static jxdeffns_t jdefarrayfns = {
 
 
 /* Append an element to an array */
-static void jappendarray(jx_t *container, jx_t *more)
+static void jappendarray(edj_t *container, edj_t *more)
 {
-	jx_t	*scan;
+	edj_t	*scan;
 
 	if (!container->first) {
 		/* First element */
-		assert(JX_END_POINTER(container) == NULL);
+		assert(EDJ_END_POINTER(container) == NULL);
 		container->first = more;
-	} else if ((scan = JX_END_POINTER(container)) != NULL) {
-		/* Next element, optimized via JX_POINTER_END() */
+	} else if ((scan = EDJ_END_POINTER(container)) != NULL) {
+		/* Next element, optimized via EDJ_POINTER_END() */
 		assert(scan->next == NULL); /* undeferred */
 		scan->next = more; /* undeferred */
 	} else {
@@ -141,18 +141,18 @@ static void jappendarray(jx_t *container, jx_t *more)
 		}
 		scan->next = more; /* undeferred */
 	}
-	JX_END_POINTER(container) = more;
-	JX_ARRAY_LENGTH(container)++;
-	if (container->text[1] == 't' && (more->type != JX_OBJECT || more->first == NULL))
+	EDJ_END_POINTER(container) = more;
+	EDJ_ARRAY_LENGTH(container)++;
+	if (container->text[1] == 't' && (more->type != EDJ_OBJECT || more->first == NULL))
 		container->text[1] = 'n';
 }
 
 /* Append a member to an object.  This version is only useable in the parser
  * because it assumes each member is new (no duplicates).
  */
-static void jappendobject(jx_t *container, jx_t *more)
+static void jappendobject(edj_t *container, edj_t *more)
 {
-	jx_t	*scan;
+	edj_t	*scan;
 
 	if (!container->first) {
 		container->first = more;
@@ -161,31 +161,31 @@ static void jappendobject(jx_t *container, jx_t *more)
 			if (!scan->next) { /* object */
 				/* adding a new name */
 				scan->next = more; /* object */
-				JX_END_POINTER(container) = more;
+				EDJ_END_POINTER(container) = more;
 				return;
 			}
 		}
 
 		/* Replace the value of the member at "scan" */
-		jx_free(scan->first);
+		edj_free(scan->first);
 		scan->first = more->first;
 		more->first = NULL;
-		jx_free(more);
+		edj_free(more);
 	}
 }
 
 /* Add data to an object, array, or key.  Returns NULL normally, or an
  * error message if an error is detected.
  */
-char *jx_append(jx_t *container, jx_t *more)
+char *edj_append(edj_t *container, edj_t *more)
 {
 	assert(container != NULL && more != NULL);
-	assert(container->type == JX_ARRAY || container->type == JX_OBJECT || container->type == JX_KEY);
-	assert(container->type != JX_OBJECT || more->type == JX_KEY);
+	assert(container->type == EDJ_ARRAY || container->type == EDJ_OBJECT || container->type == EDJ_KEY);
+	assert(container->type != EDJ_OBJECT || more->type == EDJ_KEY);
 
 	switch (container->type) {
-	  case JX_KEY:
-		if (more->type == JX_KEY)
+	  case EDJ_KEY:
+		if (more->type == EDJ_KEY)
 			return "Attempt to add a key as a value of a key";
 
 		/* If the key already has a value, free it before storing
@@ -196,18 +196,18 @@ char *jx_append(jx_t *container, jx_t *more)
 		container->first = more;
 		break;
 
-	  case JX_ARRAY:
+	  case EDJ_ARRAY:
 		jappendarray(container, more);
 		break;
 
-	  case JX_OBJECT:
-		if (more->type != JX_KEY)
+	  case EDJ_OBJECT:
+		if (more->type != EDJ_KEY)
 			return "Attempt to add unkeyed data to an object";
 		jappendobject(container, more);
 		break;
 
-	  case JX_BADTOKEN:
-		return "jx_parse_append(..., JX_BADTOKEN)";
+	  case EDJ_BADTOKEN:
+		return "edj_parse_append(..., EDJ_BADTOKEN)";
 		break;
 
 	  default:
@@ -286,12 +286,12 @@ const char *jskim(const char *str, const char *end, int *refcount, int *reftable
 /* Parse an in-memory JSON document.  This could be a string, or an mmap()ed
  * file.
  */
-static jx_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
+static edj_t *parseJSON(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
 {
-	jx_t *stack[100];
+	edj_t *stack[100];
 	int	sp;
-	jx_t	arraybuf;
-	jx_t	*jc, *tail;
+	edj_t	arraybuf;
+	edj_t	*jc, *tail;
 	const char	*end, *error;
 	char	*key;
 	size_t	keysize;
@@ -301,18 +301,18 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 	int	defersize = 0;
 
 	/* Get parser config */
-	jc = jx_by_key(jx_config, "emptyobject");
-	if (jc && jc->type == JX_STRING)
+	jc = edj_by_key(edj_config, "emptyobject");
+	if (jc && jc->type == EDJ_STRING)
 		emptyobject = jc->text;
-	jc = jx_by_key(jx_config, "defersize");
-	if (jc && jc->type == JX_NUMBER)
-		defersize = jx_int(jc);
+	jc = edj_by_key(edj_config, "defersize");
+	if (jc && jc->type == EDJ_NUMBER)
+		defersize = edj_int(jc);
 
 	/* Start with a stack containing an empty array.  We expect parsing to
 	 * put one thing in the array.
 	 */
 	memset(&arraybuf, 0, sizeof arraybuf);
-	arraybuf.type = JX_ARRAY;
+	arraybuf.type = EDJ_ARRAY;
 	sp = 0;
 	stack[sp] = &arraybuf;
 
@@ -352,11 +352,11 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 			}
 
 			/* Is this supposed to be a key? Or a string value? */ 
-			if (stack[sp]->type == JX_OBJECT && !*key) {
+			if (stack[sp]->type == EDJ_OBJECT && !*key) {
 				/* It's a key.  But it could still use escapes */
 				if (escape) {
 					/* Get the length when unescaped */
-					size_t bytes = jx_mbs_unescape(NULL, str, tlen);
+					size_t bytes = edj_mbs_unescape(NULL, str, tlen);
 
 					/* Enlarge buffer if necessary */
 					if (bytes + 1 > keysize) {
@@ -366,7 +366,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 					}
 
 					/* Decode escapes, copy key to keybuf */
-					(void)jx_mbs_unescape(key, str, tlen);
+					(void)edj_mbs_unescape(key, str, tlen);
 					key[bytes] = '\0';
 				} else {
 					/* Enlarge buffer if necessary */
@@ -385,18 +385,18 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 				/* If it has escapes, process them */
 				if (escape) {
 					/* Get the length when unescaped */
-					size_t bytes = jx_mbs_unescape(NULL, str, tlen);
+					size_t bytes = edj_mbs_unescape(NULL, str, tlen);
 
-					/* Allocate a big enough JX_STRING */
-					jc = jx_string("", bytes);
+					/* Allocate a big enough EDJ_STRING */
+					jc = edj_string("", bytes);
 
 					/* Copy the value into the string,
 					 * converting any backslash escapes.
 					 */
-					(void)jx_mbs_unescape(jc->text, str, tlen);
+					(void)edj_mbs_unescape(jc->text, str, tlen);
 					jc->text[bytes] = '\0';
 				} else {
-					jc = jx_string(str, tlen);
+					jc = edj_string(str, tlen);
 				}
 			}
 
@@ -433,7 +433,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 				while (isdigit(str[tlen]))
 					tlen++;
 			}
-			jc = jx_number(str, tlen);
+			jc = edj_number(str, tlen);
 			str += tlen;
 			break;
 
@@ -441,7 +441,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 			/* "true" */
 			if (strncmp(str, "true", 4) || isalnum(str[4]))
 				goto BadSymbol;
-			jc = jx_boolean(1);
+			jc = edj_boolean(1);
 			str += 4;
 			break;
 
@@ -449,7 +449,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 			/* "false" */
 			if (strncmp(str, "false", 5) || isalnum(str[5]))
 				goto BadSymbol;
-			jc = jx_boolean(0);
+			jc = edj_boolean(0);
 			str += 5;
 			break;
 
@@ -457,13 +457,13 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 			/* "null" */
 			if (strncmp(str, "null", 4) || isalnum(str[4]))
 				goto BadSymbol;
-			jc = jx_null();
+			jc = edj_null();
 			str += 4;
 			break;
 
 		case '[':
 			/* Start of an array  -- maybe deferred? */
-			jc = jx_array();
+			jc = edj_array();
 			if (allowdefer && defersize > 0 && (end - str) >= defersize) {
 				/* Find the end of the array */
 				int count, istable;
@@ -473,12 +473,12 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 					/* Yes, defer it */
 					jdefarray_t *def;
 					jc->text[1] = istable ? 't' : 'n';
-					JX_ARRAY_LENGTH(jc) = count;
-					jc->first = jx_defer(&jdefarrayfns);
+					EDJ_ARRAY_LENGTH(jc) = count;
+					jc->first = edj_defer(&jdefarrayfns);
 					def = (jdefarray_t *)jc->first;
 					def->start = str + 1;
 					def->end = endarray;
-					def->basic.file = jx_file_containing(str, NULL);
+					def->basic.file = edj_file_containing(str, NULL);
 					if (def->basic.file)
 						def->basic.file->refs++;
 
@@ -493,7 +493,7 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 
 		case ']':
 			/* End of an array */
-			if (stack[sp]->type != JX_ARRAY) {
+			if (stack[sp]->type != EDJ_ARRAY) {
 				error = "Missing }";
 				goto Error;
 			}
@@ -503,13 +503,13 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 
 		case '{':
 			/* Start of object */
-			jc = jx_object();
+			jc = edj_object();
 			str++;
 			break;
 
 		case '}':
 			/* End of object */
-			if (stack[sp]->type != JX_OBJECT) {
+			if (stack[sp]->type != EDJ_OBJECT) {
 				error = "Missing ]";
 				goto Error;
 			}
@@ -519,9 +519,9 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 			 */
 			if (!stack[sp]->first) {
 				if (*emptyobject == 'a')
-					stack[sp]->type = JX_ARRAY;
+					stack[sp]->type = EDJ_ARRAY;
 				else if (*emptyobject == 's')
-					stack[sp]->type = JX_STRING;
+					stack[sp]->type = EDJ_STRING;
 			}
 			sp--;
 			str++;
@@ -550,8 +550,8 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 		/* If jc is set, add it to the container on the stack */
 		if (jc) {
 
-			if (stack[sp]->type == JX_OBJECT) {
-				jx_t *jk;
+			if (stack[sp]->type == EDJ_OBJECT) {
+				edj_t *jk;
 
 				if (!*key) {
 					error = "Object member has no key";
@@ -559,10 +559,10 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 				}
 
 				/* Combine the key and value */
-				jk = jx_key(key, jc);
+				jk = edj_key(key, jc);
 				*key = '\0';
 
-				/* We don't use jx_append() here because
+				/* We don't use edj_append() here because
 				 * we know this is a non-duplicate key and
 				 * hence must append.  We want to skip scanning
 				 * the whole object each time we do this, so
@@ -582,17 +582,17 @@ static jx_t *parseJSON(const char *str, size_t len, const char **refend, const c
 				tail = jk;
 			} else {
 				/* Append to an array.  Arrays maintain their
-				 * own "tail" pointer so jx_append() works
+				 * own "tail" pointer so edj_append() works
 				 * efficiently here.
 				 */
-				jx_append(stack[sp], jc);
+				edj_append(stack[sp], jc);
 			}
 
 			/* If it's a new array or object, push it onto the stack
 			 * so we can start to accumulate its members/elements.
 			 * Except if deferred array.
 			 */
-			if ((jc->type == JX_ARRAY && !jx_is_deferred_array(jc)) || jc->type == JX_OBJECT)
+			if ((jc->type == EDJ_ARRAY && !edj_is_deferred_array(jc)) || jc->type == EDJ_OBJECT)
 				stack[++sp] = jc;
 		}
 
@@ -616,9 +616,9 @@ Error:
 	 * &arraybuf, so it shouldn't be freed either, but arraybuf.first
 	 * should.  And maybe jc, if it isn't NULL.
 	 */
-	jx_free(arraybuf.first);
+	edj_free(arraybuf.first);
 	if (jc)
-		jx_free(jc);
+		edj_free(jc);
 	free(key);
 
 	/* Stuff the error info into the appropriate places */
@@ -630,14 +630,14 @@ Error:
 }
 
 /* List of registered parsers (other than the built-in JSON parser) */
-jxparser_t *parsers;
+edjparser_t *parsers;
 
-/* This is used by both jx_parse_file() and jx_parse_string() to do the
+/* This is used by both edj_parse_file() and edj_parse_string() to do the
  * actual JSON parsing.
  */
-static jx_t *parse(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
+static edj_t *parse(const char *str, size_t len, const char **refend, const char **referr, int allowdefer)
 {
-	jxparser_t *jp;
+	edjparser_t *jp;
 
 	/* If any add-on parser wants it, let it parse try */
 	for (jp = parsers; jp; jp = jp->other) {
@@ -646,43 +646,43 @@ static jx_t *parse(const char *str, size_t len, const char **refend, const char 
 	}
 
 	/* How about binary? */
-	if (jx_blob_test(str, len))
-		return jx_blob_parse(str, len, refend, referr);
+	if (edj_blob_test(str, len))
+		return edj_blob_parse(str, len, refend, referr);
 
 	/* Otherwise, fall back on the JSON parser */
 	return parseJSON(str, len, refend, referr, allowdefer);
 }
 
 
-/* Parse a string and return its jx_t.  If there's an error, then it will
- * return a "null" jx_t containing the error text.
+/* Parse a string and return its edj_t.  If there's an error, then it will
+ * return a "null" edj_t containing the error text.
  */
-jx_t *jx_parse_string(const char *str)
+edj_t *edj_parse_string(const char *str)
 {
 	const char 	*end, *error;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Parse it */
 	result = parse(str, strlen(str), &end, &error, 0);
 
-	/* If error, then return a "null" jx_t with an error message */
+	/* If error, then return a "null" edj_t with an error message */
 	if (!result)
-		return jx_error_null(NULL, "%s", error);
+		return edj_error_null(NULL, "%s", error);
 	return result;
 }
 
-/* Parse a file and return its jx_t.  Returns NULL if the file can't be
- * opened.  If it can be opened but not parsed, it returns a "null" jx_t
+/* Parse a file and return its edj_t.  Returns NULL if the file can't be
+ * opened.  If it can be opened but not parsed, it returns a "null" edj_t
  * containing the error message.  Otherwise it returns the parsed data.
  */
-jx_t *jx_parse_file(const char *filename)
+edj_t *edj_parse_file(const char *filename)
 {
-	jxfile_t *jf;
+	edjfile_t *jf;
 	const char	*end, *error;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Map the file into memory */
-	jf = jx_file_load(filename);
+	jf = edj_file_load(filename);
 	if (!jf)
 		return NULL;
 
@@ -690,11 +690,11 @@ jx_t *jx_parse_file(const char *filename)
 	result = parse(jf->base, jf->size, &end, &error, 1);
 
 	/* Close/unmap the file */
-	jx_file_unload(jf);
+	edj_file_unload(jf);
 
-	/* If error, then return a "null" jx_t with an error message */
+	/* If error, then return a "null" edj_t with an error message */
 	if (!result)
-		return jx_error_null(NULL, "%s", error);
+		return edj_error_null(NULL, "%s", error);
 	return result;
 }
 
@@ -704,19 +704,19 @@ jx_t *jx_parse_file(const char *filename)
  * tester function returns a non-zero value, then the parser function is used
  * to parse this data.
  */
-void jx_parse_hook(
+void edj_parse_hook(
 	const char *plugin,
 	const char *name,
 	const char *suffix,
 	const char *mimetype,
 	int (*tester)(const char *str, size_t len),
-	jx_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr),
-	int (*updater)(jx_t *data, const char *filename))
+	edj_t *(*parser)(const char *str, size_t len, const char **refend, const char **referr),
+	int (*updater)(edj_t *data, const char *filename))
 {
-	jx_t	*table, *row;
-	jxparser_t	*jp, *scan;
+	edj_t	*table, *row;
+	edjparser_t	*jp, *scan;
 
-	/* Allocate a new jxparser_t for it */
+	/* Allocate a new edjparser_t for it */
 	jp = malloc(sizeof *jp);
 	jp->other = NULL;
 	jp->name = name;
@@ -733,13 +733,13 @@ void jx_parse_hook(
 		parsers = jp;
 	}
 
-	/* Add a row to the "parsers" table in jx_system */
-	table = jx_by_key(jx_system, "parsers");
-	row = jx_object();
-	jx_append(row, jx_key("name", jx_string(name, -1)));
-	jx_append(row, jx_key("plugin", plugin ? jx_string(plugin, -1) : jx_null()));
-	jx_append(row, jx_key("suffix", suffix ? jx_string(suffix, -1) : jx_null()));
-	jx_append(row, jx_key("mimetype", mimetype ? jx_string(mimetype, -1) : jx_null()));
-	jx_append(row, jx_key("writable", jx_boolean(updater != NULL)));
-	jx_append(table, row);
+	/* Add a row to the "parsers" table in edj_system */
+	table = edj_by_key(edj_system, "parsers");
+	row = edj_object();
+	edj_append(row, edj_key("name", edj_string(name, -1)));
+	edj_append(row, edj_key("plugin", plugin ? edj_string(plugin, -1) : edj_null()));
+	edj_append(row, edj_key("suffix", suffix ? edj_string(suffix, -1) : edj_null()));
+	edj_append(row, edj_key("mimetype", mimetype ? edj_string(mimetype, -1) : edj_null()));
+	edj_append(row, edj_key("writable", edj_boolean(updater != NULL)));
+	edj_append(table, row);
 }

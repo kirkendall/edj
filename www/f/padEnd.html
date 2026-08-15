@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>padEnd</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj padEnd - Add padding to the end of string">
+    <meta name="keywords" content="string, number, edj, function reference, padEnd">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>padEnd - Add padding to the end of string</h1>
+    <dl>
+      <dt>padEnd(<var>subject</var>:string, <var>len</var>:number, <var>pad</var>?:string=" "):string
+      <dd>
+      The padEnd() function adds characters to the end of the
+      <var>subject</var> string, to make its overall length be <var>len</var>
+      characters.
+      By default, it adds space characters but you can pass some other string
+      to use for padding instead.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>"Chapter 3".padEnd(20, " . ")+"page 21"</kbd>
+	<samp>"Chapter 3 .  .  .  .page 21"</samp>
+        This appends multiple copies of the " . " string to "Chapter 3",
+        to give it the overall width of 20 characters.  Then it appends
+        "page 21".
+        Note that " . " is 3 character long but we only needed 17 characters
+        of padding, so the last instance only added 2 of the 3 characters.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This pads by character length (count), not by character width.
+            This means text containing composed diacritics, CJK characters,
+            or emoji won't line up properly.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=padStart">padStart()</td><td>Add padding to the start of a string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

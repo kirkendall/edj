@@ -5,7 +5,7 @@
  */
 
 /* The general idea here is: xml_unparse() sets up a state, and invokes
- * xml_unparse_helper() to generate all tags for the top-level of the jx_t
+ * xml_unparse_helper() to generate all tags for the top-level of the edj_t
  * argument.  xml_unparse_helper() calls xml_unparse_tag() to generate each tag
  * with its arguments and (by recursively calling xml_unparse_helper()) contents.
  *
@@ -29,7 +29,7 @@ typedef struct {
 } xml_unparse_state_t;
 
 
-static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state);
+static void xml_unparse_helper(edj_t *data, xml_unparse_state_t *state);
 
 
 /* Add text, without converting special characters to entities */
@@ -65,18 +65,18 @@ static void xml_unparse_add_text(const char *str, xml_unparse_state_t *state)
 }
 
 /* Generate an opening tag with a given name and attributes. */
-static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content, xml_unparse_state_t *state)
+static void xml_unparse_tag(const char *tagname, edj_t *attributes, edj_t *content, xml_unparse_state_t *state)
 {
-	jx_t	*attr;
+	edj_t	*attr;
 	char	*str, *entity;
 	char	*dup;
 
 	/* If attributes is a non-object or empty, ignore it */
-	if (attributes && (attributes->type != JX_OBJECT || !attributes->first))
+	if (attributes && (attributes->type != EDJ_OBJECT || !attributes->first))
 		attributes = NULL;
 
 	/* If content is null, ignore it */
-	if (content && content->type == JX_NULL)
+	if (content && content->type == EDJ_NULL)
 		content = NULL;
 
 	/* Add the indentation, if "pretty" */
@@ -100,9 +100,9 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 			/* Skip the the value is false or null */
 			if (!attr->first)
 				continue;
-			if (attr->first->type == JX_NULL)
+			if (attr->first->type == EDJ_NULL)
 				continue;
-			if (attr->first->type == JX_BOOLEAN && attr->first->text[0] == 'f')
+			if (attr->first->type == EDJ_BOOLEAN && attr->first->text[0] == 'f')
 				continue;
 
 			/* Add the name of the attribute */
@@ -110,7 +110,7 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 			xml_unparse_add(attr->text, state);
 
 			/* If the value is true then we're done */
-			if (attr->first->type == JX_BOOLEAN)
+			if (attr->first->type == EDJ_BOOLEAN)
 				continue;
 
 			/* Add =" before the value */
@@ -120,11 +120,11 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 			 * that's stored in string form), this is easy but
 			 * other values must be converted.
 			 */
-			if (attr->first->type == JX_STRING\
-			 || (attr->first->type == JX_NUMBER && attr->first->text[0]))
+			if (attr->first->type == EDJ_STRING\
+			 || (attr->first->type == EDJ_NUMBER && attr->first->text[0]))
 				xml_unparse_add_text(attr->first->text, state);
 			else {
-				str = jx_serialize(attr->first, NULL);
+				str = edj_serialize(attr->first, NULL);
 				xml_unparse_add_text(str, state);
 				free(str);
 			}
@@ -140,11 +140,11 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 		 * content is an object (embedded tags) then add a "\n"
 		 */
 		xml_unparse_add(">", state);
-		if (state->pretty && content->type == JX_OBJECT) 
+		if (state->pretty && content->type == EDJ_OBJECT) 
 			xml_unparse_add(state->crlf, state);
 
 		dup = NULL;
-		if (content->type == JX_OBJECT) {
+		if (content->type == EDJ_OBJECT) {
 			/* Generate the content, using a higher indentation
 			 * level.  If the tag name resides in state->namebuf
 			 * then make a local copy of it because state->namebuf
@@ -168,12 +168,12 @@ static void xml_unparse_tag(const char *tagname, jx_t *attributes, jx_t *content
 			}
 		} else {
 			/* Simple value.  Add the string form of it */
-			if (content->type == JX_STRING
-			 || (content->type == JX_NUMBER && content->text[0])
-			 || content->type == JX_BOOLEAN)
+			if (content->type == EDJ_STRING
+			 || (content->type == EDJ_NUMBER && content->text[0])
+			 || content->type == EDJ_BOOLEAN)
 				xml_unparse_add_text(content->text, state);
 			else {
-				str = jx_serialize(content, NULL);
+				str = edj_serialize(content, NULL);
 				xml_unparse_add_text(str, state);
 				free(str);
 			}
@@ -230,17 +230,17 @@ static void xml_unparse_name(const char *name, xml_unparse_state_t *state, int s
 		strcat(state->namebuf, state->suffix);
 }
 
-/* This file converts a jx_t object to an XML string.  Returns (in "state")
+/* This file converts an edj_t object to an XML string.  Returns (in "state")
  * the size of the string in bytes, not counting the terminating '\0' byte.
  * The string itself is stored at "buf", but you can also pass a NULL "buf"
  * to find the length without actually generating it.
  */
-static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
+static void xml_unparse_helper(edj_t *data, xml_unparse_state_t *state)
 {
 	size_t	len, piece_len;
-	jx_t	*mem, *attr, *mscan, *ascan;
+	edj_t	*mem, *attr, *mscan, *ascan;
 
-	assert(data->type == JX_OBJECT);
+	assert(data->type == EDJ_OBJECT);
 
 	/* For each member of the object... */
 	for (mem = data->first; mem; mem = mem->next) {
@@ -252,18 +252,18 @@ static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 			 */
 			if (!mem->first)
 				continue;
-			if (mem->first->type == JX_STRING) {
+			if (mem->first->type == EDJ_STRING) {
 				xml_unparse_add("<", state);
 				xml_unparse_add(mem->text, state);
 				xml_unparse_add(" ", state);
 				xml_unparse_add(mem->first->text, state);
 				xml_unparse_add(">", state);
 				xml_unparse_add(state->crlf, state);
-			} else if (mem->first->type == JX_ARRAY) {
-				for (ascan = jx_first(mem->first);
+			} else if (mem->first->type == EDJ_ARRAY) {
+				for (ascan = edj_first(mem->first);
 				     ascan;
-				     ascan = jx_next(ascan)) {
-					if (ascan->type != JX_STRING)
+				     ascan = edj_next(ascan)) {
+					if (ascan->type != EDJ_STRING)
 						continue;
 					xml_unparse_add("<", state);
 					xml_unparse_add(mem->text, state);
@@ -277,10 +277,10 @@ static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 		}
 
 		/* Is it an attribute bundle? */
-		if ((mem->first->type == JX_OBJECT || mem->first->type == JX_ARRAY) && xml_is_attributes(mem->text, state)) {
+		if ((mem->first->type == EDJ_OBJECT || mem->first->type == EDJ_ARRAY) && xml_is_attributes(mem->text, state)) {
 			/* If there's a non-attribute version, let that handle it */
 			xml_unparse_name(mem->text, state, -1);
-			if (jx_by_key(data, state->namebuf))
+			if (edj_by_key(data, state->namebuf))
 				continue;
 
 			/* Okay, attributes are all we've got.  Generate an
@@ -294,23 +294,23 @@ static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 
 		/* Look for attributes */
 		xml_unparse_name(mem->text, state, 1);
-		attr = jx_by_key(data, state->namebuf);
+		attr = edj_by_key(data, state->namebuf);
 
 		/* The value could be an array, or a single item. */
-		if (mem->first->type == JX_ARRAY) {
+		if (mem->first->type == EDJ_ARRAY) {
 			/* attr, if used, should also be an array */
-			if (attr && attr->type != JX_ARRAY)
+			if (attr && attr->type != EDJ_ARRAY)
 				attr = NULL;
 
 			/* Loop over the array, adding tags */
-			for (mscan = jx_first(mem->first), ascan = jx_first(attr);
+			for (mscan = edj_first(mem->first), ascan = edj_first(attr);
 			     mscan;
-			     mscan = jx_next(mscan), ascan = jx_next(ascan)) {
+			     mscan = edj_next(mscan), ascan = edj_next(ascan)) {
 				xml_unparse_tag(mem->text, ascan, mscan, state);
 			}
 		} else {
 			/* Single value. attr, if used, should also be single */
-			if (attr && attr->type == JX_ARRAY)
+			if (attr && attr->type == EDJ_ARRAY)
 				attr = NULL;
 
 			/* Add the tag */
@@ -319,23 +319,23 @@ static void xml_unparse_helper(jx_t *data, xml_unparse_state_t *state)
 	}
 }
 
-/* Converts jx_t data to an XML string.  Returns the string length.  "buf"
+/* Converts edj_t data to an XML string.  Returns the string length.  "buf"
  * should point to a large enough buffer, or be NULL to skip the actual
  * generation but still return the predicted length.  "data" must be an
  * object.
  */
-static size_t xml_unparse(char *buf, jx_t *data)
+static size_t xml_unparse(char *buf, edj_t *data)
 {
 	xml_unparse_state_t state;
 
 	/* Set up the state */
 	state.buffer = buf;
 	state.len = 0;
-	state.pretty = jx_config_get_boolean(NULL, "pretty");
-	state.tab = jx_config_get_int(NULL, "tab");
+	state.pretty = edj_config_get_boolean(NULL, "pretty");
+	state.tab = edj_config_get_int(NULL, "tab");
 	state.indent = 0;
-	state.crlf = jx_config_get_boolean("plugin.xml", "generateCRLF") ? "\r\n" : "\n";
-	state.suffix = jx_config_get_text("plugin.xml", "attributeSuffix");
+	state.crlf = edj_config_get_boolean("plugin.xml", "generateCRLF") ? "\r\n" : "\n";
+	state.suffix = edj_config_get_text("plugin.xml", "attributeSuffix");
 	state.suffixlen = strlen(state.suffix);
 	state.namesize = 128;
 	state.namebuf = (char *)malloc(state.namesize);

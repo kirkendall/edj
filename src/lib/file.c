@@ -8,23 +8,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This can be set to 'o' to make new/unreadable files contain an empty object,
  * or 'a' to make new/unreadable files contain an empty array.  If left to '\0'
  * then new/unreadable files will just fail to load.
  */
-char jx_file_new_type = '\0';
+char edj_file_new_type = '\0';
 
 /* This stores a linked list of loaded files */
-static jxfile_t *loaded;
+static edjfile_t *loaded;
 
 /* Open a file for reading.  This also locks one byte and maps it into memory */
-jxfile_t *jx_file_load(const char *filename)
+edjfile_t *edj_file_load(const char *filename)
 {
 	int	fd;
 	char	*base;
-	jxfile_t *jf;
+	edjfile_t *jf;
 	struct stat st;
 	size_t	size, used, nread;
 
@@ -35,12 +35,12 @@ jxfile_t *jx_file_load(const char *filename)
 		fd = open(filename, O_RDONLY);
 	if (fd < 0)
 	{
-		if (jx_file_new_type == 'o' || jx_file_new_type == 'a') {
-			jf = malloc(sizeof(jxfile_t));
+		if (edj_file_new_type == 'o' || edj_file_new_type == 'a') {
+			jf = malloc(sizeof(edjfile_t));
 			jf->fd = -1;
 			jf->isfile = 0;
 			jf->size = 3;
-			if (jx_file_new_type == 'o')
+			if (edj_file_new_type == 'o')
 				jf->base = strdup("{}\n");
 			else
 				jf->base = strdup("[]\n");
@@ -92,45 +92,45 @@ jxfile_t *jx_file_load(const char *filename)
 }
 
 /* Connect an open file with a deferred array.  This increments the deferred
- * count of the file, and stores the file's pointer in the array's jxdef_t.
+ * count of the file, and stores the file's pointer in the array's edjdef_t.
  */
-void jx_file_defer(jxfile_t *jf, jx_t *array)
+void edj_file_defer(edjfile_t *jf, edj_t *array)
 {
-	assert(array->type == JX_ARRAY && array->first && array->first->type == JX_DEFER);
+	assert(array->type == EDJ_ARRAY && array->first && array->first->type == EDJ_DEFER);
 
 	jf->refs++;
-	((jxdef_t *)(array->first))->file = jf;
+	((edjdef_t *)(array->first))->file = jf;
 }
 
 /* If a deferred array uses a file, disconnect it from the file.  If that was
  * the last deferred array using the file, then unload the file.  This is used
  * while free freeing a deferred array.
  */
-void jx_file_defer_free(jx_t *array)
+void edj_file_defer_free(edj_t *array)
 {
-	jxfile_t *jf;
+	edjfile_t *jf;
 
-	assert(array->type == JX_ARRAY && array->first && array->first->type == JX_DEFER);
+	assert(array->type == EDJ_ARRAY && array->first && array->first->type == EDJ_DEFER);
 
-	jf = ((jxdef_t *)(array->first))->file;
+	jf = ((edjdef_t *)(array->first))->file;
 	if (jf) {
 		assert(jf->refs > 0);
 		jf->refs--;
 		if (jf->refs == 0)
-			jx_file_unload(jf);
+			edj_file_unload(jf);
 	}
 }
 
 
-/* Close a file that was opened via jx_file_load() */
-void jx_file_unload(jxfile_t *jf)
+/* Close a file that was opened via edj_file_load() */
+void edj_file_unload(edjfile_t *jf)
 {
 	/* Can't actually unload if the refs is non-zero */
 	if (jf->refs > 0)
 		return;
 
 	/* Remove the jf structure from the loaded list */
-	jxfile_t *scan, *lag;
+	edjfile_t *scan, *lag;
 	for (lag = NULL, scan = loaded;
 	     scan && scan != jf;
 	     lag = scan, scan = scan->other) {
@@ -168,9 +168,9 @@ void jx_file_unload(jxfile_t *jf)
  * the given "where" pointer, return NULL. The "where" pointer is never
  * dereferenced, so you can be a bit sloppy about it.
  */
-jxfile_t *jx_file_containing(const char *where, int *refline)
+edjfile_t *edj_file_containing(const char *where, int *refline)
 {
-	jxfile_t *jf;
+	edjfile_t *jf;
 	const char *scan;
 	int	line;
 
@@ -201,7 +201,7 @@ jxfile_t *jx_file_containing(const char *where, int *refline)
  * difference between this and fopen(filename,"w").  When done, the FILE*
  * should be closed via the conventional fclose() function.
  */
-FILE *jx_file_update(const char *filename)
+FILE *edj_file_update(const char *filename)
 {
 	int	fd;
 
@@ -228,18 +228,18 @@ FILE *jx_file_update(const char *filename)
 	return fdopen(fd, "w");
 }
 
-/* Scan jx's path for a given file.  If found, return its full pathname
+/* Scan edj's path for a given file.  If found, return its full pathname
  * as a dynamically-allocated string (which the calling function must free).
  * If not found, return NULL.  If "filename" is NULL then just look for a
  * writable directory in the path.  If "ext" is non-NULL then append it to
  * the filename.
  */
-char *jx_file_path(const char *prefix, const char *name, const char *suffix)
+char *edj_file_path(const char *prefix, const char *name, const char *suffix)
 {
 	char	*pathname;	/* dynamically-allocated pathname */
 	size_t	pathsize;	/* allocated size of pathname */
 	char	*home;		/* User's home directory */
-	jx_t	*path;		/* Array of directories to check */
+	edj_t	*path;		/* Array of directories to check */
 	size_t	needsize;	/* Size of the pathname we're considering */
 	int	first;
 
@@ -262,9 +262,9 @@ char *jx_file_path(const char *prefix, const char *name, const char *suffix)
 	if (!home)
 		home = ".";
 
-	/* Get the path from jx_config */
-	path = jx_by_key(jx_system, "path");
-	if (!path || path->type != JX_ARRAY) {
+	/* Get the path from edj_config */
+	path = edj_by_key(edj_system, "path");
+	if (!path || path->type != EDJ_ARRAY) {
 		free(pathname);
 		return NULL;
 	}

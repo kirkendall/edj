@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <curl/curl.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This plugin gives access to the "curl" library, for sending requests over
  * the internet using a wide variety of protocols.
@@ -106,10 +106,10 @@ static void curlcleanup(void)
 }
 
 
-/* Convert a big header string into a jx array of header lines */
-static jx_t *headerArray(char *header)
+/* Convert a big header string into an edj array of header lines */
+static edj_t *headerArray(char *header)
 {
-	jx_t *array = jx_array();
+	edj_t *array = edj_array();
 	size_t	len;
 
 	/* Until we hit the blank line marking the end... */
@@ -117,7 +117,7 @@ static jx_t *headerArray(char *header)
 		/* Look for the end of this line */
 		for (len = 1; header[len] >= ' '; len++) {
 		}
-		jx_append(array, jx_string(header, len));
+		edj_append(array, edj_string(header, len));
 		if (header[len] == '\r' && header[len + 1] == '\n')
 			header += len + 2;
 		else
@@ -131,19 +131,19 @@ static jx_t *headerArray(char *header)
  * an object or string.  Returns the length of the string not counting the
  * terminating NUL byte.  If buf is non-NULL then the text is stored there.
  */
-static size_t urlencode(jx_t *data, char *buf, int component)
+static size_t urlencode(edj_t *data, char *buf, int component)
 {
 	size_t	len, chunk;
 	char	*text;
-	jx_t	*scan;
+	edj_t	*scan;
 	char	*special = " %";
 
 	if (component)
 		special = " %:/?&#";
 
-	if (data->type == JX_STRING
-	 || data->type == JX_BOOLEAN
-	 || (data->type == JX_NUMBER && *data->text)) {
+	if (data->type == EDJ_STRING
+	 || data->type == EDJ_BOOLEAN
+	 || (data->type == EDJ_NUMBER && *data->text)) {
 		/* Printable ASCII is left unchanged except that spaces become
 		 * "+", "+" and "&" become %2B and %26 respectively, and every
 		 * other byte is converted to %xx hex.  This means multibyte
@@ -166,28 +166,28 @@ static size_t urlencode(jx_t *data, char *buf, int component)
 		if (buf)
 			buf[len] = '\0';
 		return len;
-	} else if (data->type == JX_NUMBER) {
+	} else if (data->type == EDJ_NUMBER) {
 		/* Convert to a string, and convert it recursively */
-		scan = jx_string("", 40);
+		scan = edj_string("", 40);
 		if (data->text[1] == 'i')
-			snprintf(scan->text, 40, "%d", JX_INT(data));
+			snprintf(scan->text, 40, "%d", EDJ_INT(data));
 		else
-			snprintf(scan->text, 40, "%g", JX_DOUBLE(data));
+			snprintf(scan->text, 40, "%g", EDJ_DOUBLE(data));
 		len = urlencode(scan, buf, 1);
-		jx_free(scan);
+		edj_free(scan);
 		return len;
-	} else if (data->type == JX_NULL) {
+	} else if (data->type == EDJ_NULL) {
 		/* ignore it */
 		return 0;
-	} else if (data->type == JX_OBJECT) {
+	} else if (data->type == EDJ_OBJECT) {
 		/* Convert to a series of name=value strings */
 		len = 0;
 		for (scan = data->first; scan; scan = scan->next) {
 			/* Skip if value is another object or an array.  Note
 			 * that since this is an object member, "scan" points
-			 * to a JX_KEY and the value is scan->first.
+			 * to a EDJ_KEY and the value is scan->first.
 			 */
-			if (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY)
+			if (scan->first->type == EDJ_OBJECT || scan->first->type == EDJ_ARRAY)
 				continue;
 
 			/* If not first, then add a "&" */
@@ -238,20 +238,20 @@ typedef struct {
 /* Parse a series of flags.  For each one, either set a curl option directly
  * or update the data in "flags".
  *
- * This returns NULL on success, or a jx_t error on failure.  For failure,
+ * This returns NULL on success, or an edj_t error on failure.  For failure,
  * the calling function is responsible for doing cleanup before returning,
  * including freeing flags->slist.
  */
-static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, receiver_t *rcv, jx_t *more)
+static edj_t *doFlags(char *fn, CURL *curl, edj_t *data, curlflags_t *flags, receiver_t *rcv, edj_t *more)
 {
-	jx_t	*err;
+	edj_t	*err;
 	char	*str;
 	int	diduseragent = 0;
 
 	/* For each item in the list... */
 	for (; more; more = more->next) {
 		/* If it's an array, process it recursively */
-		if (more->type == JX_ARRAY) {
+		if (more->type == EDJ_ARRAY) {
 			err = doFlags(fn, curl, data, flags, rcv, more->first);
 			if (err)
 				return err;
@@ -259,38 +259,38 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 		}
 
 		/* If it isn't an option number, that's a problem */
-		if (more->type != JX_NUMBER) {
-			if (more->type == JX_STRING)
-				return jx_error_null(NULL, "Bad extra argument \"%s\" passed to the %s() function", more->text, fn);
-			return jx_error_null(NULL, "Bad extra argument passed to the %s() function", fn);
+		if (more->type != EDJ_NUMBER) {
+			if (more->type == EDJ_STRING)
+				return edj_error_null(NULL, "Bad extra argument \"%s\" passed to the %s() function", more->text, fn);
+			return edj_error_null(NULL, "Bad extra argument passed to the %s() function", fn);
 		}
 
 		/* Process each option flag separately */
-		switch (jx_int(more)) {
+		switch (edj_int(more)) {
 		case OPT_PROXY_:
-			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), CURL.proxy_ needs to be followed by a URL string", fn);
+			if (!more->next || more->next->type != EDJ_STRING)
+				return edj_error_null(NULL, "In %s(), CURL.proxy_ needs to be followed by a URL string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PROXY, more->text);
 			curl_easy_setopt(curl, CURLOPT_HTTPPROXYTUNNEL, 1L);
 			break;
 
 		case OPT_USERNAME_:
-			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), CURL.username_ needs to be followed by a username string", fn);
+			if (!more->next || more->next->type != EDJ_STRING)
+				return edj_error_null(NULL, "In %s(), CURL.username_ needs to be followed by a username string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 			curl_easy_setopt(curl, CURLOPT_USERNAME, more->text);
 			break;
 		case OPT_PASSWORD_:
-			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), CURL.password needs to be followed by a password string", fn);
+			if (!more->next || more->next->type != EDJ_STRING)
+				return edj_error_null(NULL, "In %s(), CURL.password needs to be followed by a password string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_PASSWORD, more->text);
 			break;
 		case OPT_BEARER_:
-			if (!more->next || more->next->type != JX_STRING)
-				return jx_error_null(NULL, "In %s(), CURL.bearer_ needs to be followed by a bearer token string", fn);
+			if (!more->next || more->next->type != EDJ_STRING)
+				return edj_error_null(NULL, "In %s(), CURL.bearer_ needs to be followed by a bearer token string", fn);
 			more = more->next;
 			curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BEARER);
 			curl_easy_setopt(curl, CURLOPT_XOAUTH2_BEARER, more->text);
@@ -300,23 +300,23 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			break;
 		case OPT_CONTENT:
 			if (!data)
-				return jx_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
+				return edj_error_null(NULL, "In %s(), CURL.reqContent only works if content is given after URL", fn);
 			flags->content = 1;
 			break;
 		case OPT_CONTENTTYPE_:
 			if (!more->next
-			 || more->next->type != JX_STRING
+			 || more->next->type != EDJ_STRING
 			 || strchr(more->next->text, ':')
 			 || !strchr(more->next->text, '/')) {
-				return jx_error_null(NULL, "In %s(), CURL.contenType_ needs to be followed by a MIME type", fn);
+				return edj_error_null(NULL, "In %s(), CURL.contenType_ needs to be followed by a MIME type", fn);
 			}
 			more = more->next;
 			flags->reqcontenttype = more->text;
 			break;
 		case OPT_HEADER_:
 			more = more->next;
-			if (!more || more->type != JX_STRING || !strchr(more->text, ':'))
-				return jx_error_null(NULL, "In %s(), CURL.header_ needs to be followed by a header line", fn);
+			if (!more || more->type != EDJ_STRING || !strchr(more->text, ':'))
+				return edj_error_null(NULL, "In %s(), CURL.header_ needs to be followed by a header line", fn);
 			if (!strncasecmp(more->text, "User-agent:", 11))
 				diduseragent = 1;
 			flags->slist = curl_slist_append(flags->slist, more->text);
@@ -329,11 +329,11 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			break;
 		case OPT_COOKIES:
 			/* If cookiejar is "" then make one up */
-			str = jx_config_get("plugin.curl", "cookieJar")->text;
+			str = edj_config_get("plugin.curl", "cookieJar")->text;
 			if (!str || !*str)
 				str = tempcookiejar;
 			if (!str) {
-				str = jx_file_path(NULL, NULL, NULL);
+				str = edj_file_path(NULL, NULL, NULL);
 				tempcookiejar = (char *)malloc(strlen(str) + 18);
 				strcpy(tempcookiejar, str);
 				strcat(tempcookiejar, "cookiejar.XXXXXX");
@@ -360,17 +360,17 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
 			rcv->debug = 1;
 			break;
 		default:
-			return jx_error_null(NULL, "Invalid option number %d passed to %s()", jx_int(more), fn);
+			return edj_error_null(NULL, "Invalid option number %d passed to %s()", edj_int(more), fn);
 		}
 
 	}
 
 	/* If no User-agent: header line was specified, add the default */
 	if (!diduseragent) {
-		jx_t *jxver = jx_by_key(jx_system, "version");
+		edj_t *edjver = edj_by_key(edj_system, "version");
 		curl_version_info_data *curlver = curl_version_info(CURLVERSION_NOW);
 		char tmp[100];
-		sprintf(tmp, "User-agent: jx-%s(curl-%s)", jxver->text, curlver->version);
+		sprintf(tmp, "User-agent: edj-%s(curl-%s)", edjver->text, curlver->version);
 		flags->slist = curl_slist_append(flags->slist, tmp);
 	}
 	return NULL;
@@ -380,7 +380,7 @@ static jx_t *doFlags(char *fn, CURL *curl, jx_t *data, curlflags_t *flags, recei
  * downloads when the user hits ^C.
  */
 static int curlProgress(void *clientp, double dltotal, double dlnow, double ultotal, double ulnow) {
-	return jx_interrupt;
+	return edj_interrupt;
 }
 
 /* Construct a CURL request, send it, and receive the response.  "fn" is the
@@ -388,25 +388,25 @@ static int curlProgress(void *clientp, double dltotal, double dlnow, double ulto
  * "GET" or "POST", but it could be "HEAD", "DELETE", or whatever.  "argsfirst"
  * is the first element of a JSON array of arguments.
  */
-static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
+static edj_t *curlHelper(char *fn, char *request, edj_t *argsfirst)
 {
 	CURL	*curl;
 	CURLcode result;
 	char	*url, *str, *mustfree;
-	jx_t	*data, *err;
+	edj_t	*data, *err;
 	curlflags_t flags = {NULL};
 	size_t	arglen;
 	receiver_t rcv = {0}, hdr = {0}, reqhdr = {0};
-	jx_t	*more, *scan, *response;
+	edj_t	*more, *scan, *response;
 
 	/* Allocate a CURL handle */
 	curl = curl_easy_init();
 	if (!curl)
-		return jx_error_null(NULL, "Failed to allocate a CURL handle in %s()", fn);
+		return edj_error_null(NULL, "Failed to allocate a CURL handle in %s()", fn);
 
 	/* First argument must be URL */
-	if (!argsfirst || argsfirst->type != JX_STRING)
-		return jx_error_null(NULL, "The %s() function requires a URL string", fn);
+	if (!argsfirst || argsfirst->type != EDJ_STRING)
+		return edj_error_null(NULL, "The %s() function requires a URL string", fn);
 	url = argsfirst->text;
 
 	/* If next arg isn't a number, then it must be data... except that if
@@ -414,11 +414,11 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 	 */
 	data = NULL;
 	more = argsfirst->next;
-	if (more && more->type == JX_NULL) {
+	if (more && more->type == EDJ_NULL) {
 		more = more->next;
 		/* but leave data set to NULL */
 	}
-	else if (more && more->type != JX_NUMBER) {
+	else if (more && more->type != EDJ_NUMBER) {
 		data = more;
 		more = more->next;
 	}
@@ -441,7 +441,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 	if (flags.content && !data) {
 		curl_easy_cleanup(curl);
 		curl_slist_free_all(flags.slist);
-		return jx_error_null(NULL, "The %s() function needs data to send", fn);
+		return edj_error_null(NULL, "The %s() function needs data to send", fn);
 	}
 
 	/* If a content type was given, and the content isn't a string, then
@@ -451,10 +451,10 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 	mustfree = str = NULL;
 	if (data) {
 		if (flags.reqcontenttype) {
-			if (data->type == JX_STRING)
+			if (data->type == EDJ_STRING)
 				str = data->text;
 			else if (strstr(flags.reqcontenttype, "json") || strstr(flags.reqcontenttype, "JSON")) {
-				mustfree = str = jx_serialize(data, NULL);
+				mustfree = str = edj_serialize(data, NULL);
 			} else if (strstr(flags.reqcontenttype, "form") || strstr(flags.reqcontenttype, "FORM")) {
 				size_t arglen = urlencode(data, NULL, 1);
 				mustfree = str = (char *)malloc(arglen + 1);
@@ -462,9 +462,9 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 			} else {
 				curl_easy_cleanup(curl);
 				curl_slist_free_all(flags.slist);
-				return jx_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
+				return edj_error_null(NULL, "The %s() function can't convert data to %s", fn, flags.reqcontenttype);
 			}
-		} else if (data->type == JX_STRING) {
+		} else if (data->type == EDJ_STRING) {
 			switch (*data->text) {
 			case '{': /* } */
 			case '[': flags.reqcontenttype = "application/json";	break;
@@ -472,20 +472,20 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 			default:  flags.reqcontenttype = "application/x-www-form-urlencoded";
 			}
 			str = data->text;
-		} else if (data->type == JX_ARRAY) {
+		} else if (data->type == EDJ_ARRAY) {
 			flags.reqcontenttype = "application/json";
-			mustfree = str = jx_serialize(data, NULL);
-		} else if (data->type == JX_OBJECT) {
+			mustfree = str = edj_serialize(data, NULL);
+		} else if (data->type == EDJ_OBJECT) {
 			/* If all member values are strings or numbers, assume
 			 * HTML form otherwise assume JSON
 			 */
 			for (scan = data->first; scan; scan = scan->next) {
-				if (scan->first->type != JX_STRING && scan->first->type != JX_NUMBER && scan->first->type != JX_BOOLEAN && scan->first->type != JX_NULL)
+				if (scan->first->type != EDJ_STRING && scan->first->type != EDJ_NUMBER && scan->first->type != EDJ_BOOLEAN && scan->first->type != EDJ_NULL)
 					break;
 			}
 			if (scan) {
 				/* complex values, can't be a form so assume JSON */
-				str = jx_serialize(data, NULL);
+				str = edj_serialize(data, NULL);
 				flags.reqcontenttype = "application/json";
 			} else {
 				/* simple values, it's probably form data */
@@ -497,7 +497,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 		} else {
 			curl_easy_cleanup(curl);
 			curl_slist_free_all(flags.slist);
-			return jx_error_null(NULL, "The %s() function can't guess the content type", fn);
+			return edj_error_null(NULL, "The %s() function can't guess the content type", fn);
 		}
 	}
 
@@ -565,7 +565,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 			free(hdr.buf);
 		if (mustfree)
 			free(mustfree);
-		return jx_error_null(NULL, "CURL error: %s", curl_easy_strerror(result));
+		return edj_error_null(NULL, "CURL error: %s", curl_easy_strerror(result));
 	}
 
 	/* Maybe try to parse it; otherwise convert the returned data to a
@@ -578,36 +578,36 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 		 * display the error message as a warning and fall back on
 		 * returning the response as a string.
 		 */
-		response = jx_parse_string(rcv.buf);
-		if (jx_is_error(response)) {
-			if (jx_is_true(jx_by_expr(jx_config, "plugin.curl.warn.badparse", NULL, NULL, NULL)))
+		response = edj_parse_string(rcv.buf);
+		if (edj_is_error(response)) {
+			if (edj_is_true(edj_by_expr(edj_config, "plugin.curl.warn.badparse", NULL, NULL, NULL)))
 				fprintf(stderr, "%s: %s\n", url, response->text);
-			jx_free(response);
+			edj_free(response);
 			response = NULL;
 		}
 	}
 	if (!response)
-		response = jx_string(rcv.buf ? rcv.buf : "", rcv.used);
+		response = edj_string(rcv.buf ? rcv.buf : "", rcv.used);
 
 	/* If supposed to return headers, then build an object containing
 	 * both the headers and the response.
 	 */
 	if (flags.reqheaders || flags.reqcontent || flags.headers) {
-		jx_t *obj = jx_object();
+		edj_t *obj = edj_object();
 		if (flags.reqheaders)
-			jx_append(obj, jx_key("reqHeaders", headerArray(reqhdr.buf)));
+			edj_append(obj, edj_key("reqHeaders", headerArray(reqhdr.buf)));
 		if (flags.reqcontent) {
-			jx_t *value;
+			edj_t *value;
 			if (str && flags.content)
-				value = jx_string(str, -1);
+				value = edj_string(str, -1);
 			else
-				value = jx_null();
-			jx_append(obj, jx_key("reqContent", value));
+				value = edj_null();
+			edj_append(obj, edj_key("reqContent", value));
 		}
 		if (flags.headers)
-			jx_append(obj, jx_key("headers", headerArray(hdr.buf)));
-		jx_append(obj, jx_key("response", response));
-		jx_append(obj, jx_key("responseLength", jx_from_int(rcv.used)));
+			edj_append(obj, edj_key("headers", headerArray(hdr.buf)));
+		edj_append(obj, edj_key("response", response));
+		edj_append(obj, edj_key("responseLength", edj_from_int(rcv.used)));
 		response = obj;
 	}
 
@@ -624,7 +624,7 @@ static jx_t *curlHelper(char *fn, char *request, jx_t *argsfirst)
 /* curlGet(url:string, data?:string|object, flags?:number|string|array,...):any
  * Read a URL using HTTP "GET"
  */
-static jx_t *jfn_curlGet(jx_t *args, void *agdata)
+static edj_t *jfn_curlGet(edj_t *args, void *agdata)
 {
 	return curlHelper("curlGet", "GET", args->first);
 }
@@ -632,7 +632,7 @@ static jx_t *jfn_curlGet(jx_t *args, void *agdata)
 /* curlPost(url:string, data:any|null, flags?:number|string|array,...):any
  * Send data via an HTTP "POST" request, and return the response string.
  */
-static jx_t *jfn_curlPost(jx_t *args, void *agdata)
+static edj_t *jfn_curlPost(edj_t *args, void *agdata)
 {
 	return curlHelper("curlPost", "POST", args->first);
 }
@@ -640,25 +640,25 @@ static jx_t *jfn_curlPost(jx_t *args, void *agdata)
 /* curlOther(verb:string, url:string, data:string|object|array, ...):any
  * Send data via an HTTP "POST" request, and return the response string.
  */
-static jx_t *jfn_curlOther(jx_t *args, void *agdata)
+static edj_t *jfn_curlOther(edj_t *args, void *agdata)
 {
-	if (args->first->type != JX_STRING)
-		return jx_error_null(NULL, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "The first argument to %s() should be a request verb such as \"%s\"", "curlOther", "DELETE");
 	return curlHelper("curlOther", args->first->text, args->first->next);
 }
 
-static jx_t *jfn_encodeURI(jx_t *args, void *agdata)
+static edj_t *jfn_encodeURI(edj_t *args, void *agdata)
 {
 	size_t	len;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 0);
 	if (len == 0)
-		return jx_error_null(NULL, "Bad argument for %s()", "encodeURI");
+		return edj_error_null(NULL, "Bad argument for %s()", "encodeURI");
 
 	/* Allocate a result buffer */
-	result = jx_string("", len);
+	result = edj_string("", len);
 
 	/* Store the text in the result */
 	urlencode(args->first, result->text, 0);
@@ -667,18 +667,18 @@ static jx_t *jfn_encodeURI(jx_t *args, void *agdata)
 	return result;
 }
 
-static jx_t *jfn_encodeURIComponent(jx_t *args, void *agdata)
+static edj_t *jfn_encodeURIComponent(edj_t *args, void *agdata)
 {
 	size_t	len;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Predict the length */
 	len = urlencode(args->first, NULL, 1);
 	if (len == 0)
-		return jx_error_null(NULL, "Bad argument for %s()", "encodeURIComponent");
+		return edj_error_null(NULL, "Bad argument for %s()", "encodeURIComponent");
 
 	/* Allocate a result buffer */
-	result = jx_string("", len);
+	result = edj_string("", len);
 
 	/* Store the text in the result */
 	urlencode(args->first, result->text, 1);
@@ -687,11 +687,11 @@ static jx_t *jfn_encodeURIComponent(jx_t *args, void *agdata)
 	return result;
 }
 
-static jx_t *jfn_uuid(jx_t *args, void *agdata)
+static edj_t *jfn_uuid(edj_t *args, void *agdata)
 {
 	int	fd, i;
 	char	bytes[16];
-	jx_t	*result;
+	edj_t	*result;
 	char	*build;
 
 	/* Read 16 bytes from /dev/urandom or /dev/random.  If that fails,
@@ -709,7 +709,7 @@ static jx_t *jfn_uuid(jx_t *args, void *agdata)
 	}
 
 	/* Convert it to a string in 8-4-4-4-12 format. */
-	result = jx_string("", 36);
+	result = edj_string("", 36);
 	for (i = 0, build = result->text; i < sizeof bytes; i++) {
 		if (i == 4 || i == 6 || i == 8 || i == 10)
 			*build++ = '-';
@@ -730,38 +730,38 @@ static jx_t *jfn_uuid(jx_t *args, void *agdata)
 const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* Convert a string to MIME base-64 encoding */
-static jx_t *jfn_mime64(jx_t *args, void *agdata)
+static edj_t *jfn_mime64(edj_t *args, void *agdata)
 {
 	size_t	len, i, j;
-	jx_t	*result;
+	edj_t	*result;
 	char *data, *mustfree;
-	jxblobconv_t conv;
+	edjblobconv_t conv;
 	char	*str, *end;
 	int	digit;
 
 	/* Look for conversion method */
 	if (args->first->next ) {
-		if (args->first->next->type != JX_NUMBER)
+		if (args->first->next->type != EDJ_NUMBER)
 			goto BadArgs;
-		conv = jx_int(args->first->next);
-		if (conv < JX_BLOB_BYTES || conv > JX_BLOB_ANY)
+		conv = edj_int(args->first->next);
+		if (conv < EDJ_BLOB_BYTES || conv > EDJ_BLOB_ANY)
 			goto BadArgs;
 	} else {
-		conv = JX_BLOB_UTF8;
+		conv = EDJ_BLOB_UTF8;
 	}
 
 	/* We expect a single string as argument, or an array of bytes */
 	data = mustfree = NULL;
-	if ((data = (char *)jx_blob_data(args->first, &len)) == NULL) {
-		if (args->first->type == JX_STRING && conv == JX_BLOB_UTF8){
+	if ((data = (char *)edj_blob_data(args->first, &len)) == NULL) {
+		if (args->first->type == EDJ_STRING && conv == EDJ_BLOB_UTF8){
 			data = args->first->text;
 			len = strlen(data); /* byte count */
 		} else {
-			len = jx_blob_unconvert(args->first, NULL, conv);
+			len = edj_blob_unconvert(args->first, NULL, conv);
 			if (len == 0)
 				goto BadArgs;
 			data = mustfree = (char *)malloc(len);
-			(void)jx_blob_unconvert(args->first, data, conv);
+			(void)edj_blob_unconvert(args->first, data, conv);
 		}
 	}
 
@@ -772,7 +772,7 @@ static jx_t *jfn_mime64(jx_t *args, void *agdata)
 	len = ((len + 2) / 3) * 4;
 
 	/* Allocate the result buffer */
-	result = jx_string("", len);
+	result = edj_string("", len);
 
 	/* Convert each group of 3 bytes */
 	for (str = data, j = 0; str + 3 < end; str += 3) {
@@ -833,14 +833,14 @@ static jx_t *jfn_mime64(jx_t *args, void *agdata)
 	return result;
 
 BadArgs:
-	return jx_error_null(NULL, "stringarg:The %s() function takes a single string or bytes array as its argument", "mime64");
+	return edj_error_null(NULL, "stringarg:The %s() function takes a single string or bytes array as its argument", "mime64");
 }
 
 /* Convert a MIME64 string back into data.  If the data doesn't look like
  * UTF-8 text, then each byte will be interpreted as a Latin-1 character and
  * converted to UTF-8.
  */
-static jx_t *jfn_unmime64(jx_t *args, void *agdata)
+static edj_t *jfn_unmime64(edj_t *args, void *agdata)
 {
 	char	*mimetext;
 	int	conversion;
@@ -849,18 +849,18 @@ static jx_t *jfn_unmime64(jx_t *args, void *agdata)
 	int	notutf8;
 	int	phase, i;
 	char	*c;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Check arguments.  Mandatory first argument should be a string of
 	 * MIME64 data, second optional argument should be representation type.
 	 */
-	if (args->first->type != JX_STRING)
-		return jx_error_null(NULL, "stringargplus:The %s() function takes a string argument", "unmime64");
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "stringargplus:The %s() function takes a string argument", "unmime64");
 	mimetext = args->first->text;
 	if (!args->first->next)
-		conversion = JX_BLOB_ANY;
-	else if (args->first->next->type != JX_NUMBER || (conversion = jx_int(args->first->next)) < JX_BLOB_BYTES || conversion > JX_BLOB_ANY) {
-		return jx_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
+		conversion = EDJ_BLOB_ANY;
+	else if (args->first->next->type != EDJ_NUMBER || (conversion = edj_int(args->first->next)) < EDJ_BLOB_BYTES || conversion > EDJ_BLOB_ANY) {
+		return edj_error_null(NULL, "binaryfmt:Invalid binary format indicator for the %s() function", "unmime64");
 	}
 
 	/* Convert the string to binary data.  It will never be longer than the
@@ -909,11 +909,11 @@ static jx_t *jfn_unmime64(jx_t *args, void *agdata)
 	/* NOTE: bpos now indicates the length of the binary data */
 
 	/* Try to convert to the requested format */
-	result = jx_blob_convert(binary, bpos, conversion);
+	result = edj_blob_convert(binary, bpos, conversion);
 	if (!result)
-		result = jx_error_null(NULL, "utf8:Data is not valid UTF-8");
+		result = edj_error_null(NULL, "utf8:Data is not valid UTF-8");
 
-	/* Discard the binary version of the data, and return the jx_t */
+	/* Discard the binary version of the data, and return the edj_t */
 	free(binary);
 	return result;
 }
@@ -924,30 +924,30 @@ static jx_t *jfn_unmime64(jx_t *args, void *agdata)
  */
 char *plugincurl()
 {
-	jx_t	*curl;
+	edj_t	*curl;
 
 	/* Store the curl plugin's settings */
-	curl = jx_by_key(jx_config, "plugin");
-	jx_append(curl, jx_key("curl", jx_parse_string(settings)));
+	curl = edj_by_key(edj_config, "plugin");
+	edj_append(curl, edj_key("curl", edj_parse_string(settings)));
 
-	/* Add a "curl" object to jx_system, to hold option consts */
-	curl = jx_object();
-	jx_append(curl, jx_key("proxy_", jx_from_int(OPT_PROXY_)));
-	jx_append(curl, jx_key("username_", jx_from_int(OPT_USERNAME_)));
-	jx_append(curl, jx_key("password_", jx_from_int(OPT_PASSWORD_)));
-	jx_append(curl, jx_key("bearer_", jx_from_int(OPT_BEARER_)));
-	jx_append(curl, jx_key("insecure", jx_from_int(OPT_INSECURE)));
-	jx_append(curl, jx_key("content", jx_from_int(OPT_CONTENT)));
-	jx_append(curl, jx_key("contentType_", jx_from_int(OPT_CONTENTTYPE_)));
-	jx_append(curl, jx_key("header_", jx_from_int(OPT_HEADER_)));
-	jx_append(curl, jx_key("reqHeaders", jx_from_int(OPT_REQHEADERS)));
-	jx_append(curl, jx_key("reqContent", jx_from_int(OPT_REQCONTENT)));
-	jx_append(curl, jx_key("cookies", jx_from_int(OPT_COOKIES)));
-	jx_append(curl, jx_key("followLocation", jx_from_int(OPT_FOLLOWLOCATION)));
-	jx_append(curl, jx_key("raw", jx_from_int(OPT_RAW)));
-	jx_append(curl, jx_key("headers", jx_from_int(OPT_HEADERS)));
-	jx_append(curl, jx_key("debugrcv", jx_from_int(OPT_DEBUGRCV)));
-	jx_append(jx_system, jx_key("CURL", curl));
+	/* Add a "curl" object to edj_system, to hold option consts */
+	curl = edj_object();
+	edj_append(curl, edj_key("proxy_", edj_from_int(OPT_PROXY_)));
+	edj_append(curl, edj_key("username_", edj_from_int(OPT_USERNAME_)));
+	edj_append(curl, edj_key("password_", edj_from_int(OPT_PASSWORD_)));
+	edj_append(curl, edj_key("bearer_", edj_from_int(OPT_BEARER_)));
+	edj_append(curl, edj_key("insecure", edj_from_int(OPT_INSECURE)));
+	edj_append(curl, edj_key("content", edj_from_int(OPT_CONTENT)));
+	edj_append(curl, edj_key("contentType_", edj_from_int(OPT_CONTENTTYPE_)));
+	edj_append(curl, edj_key("header_", edj_from_int(OPT_HEADER_)));
+	edj_append(curl, edj_key("reqHeaders", edj_from_int(OPT_REQHEADERS)));
+	edj_append(curl, edj_key("reqContent", edj_from_int(OPT_REQCONTENT)));
+	edj_append(curl, edj_key("cookies", edj_from_int(OPT_COOKIES)));
+	edj_append(curl, edj_key("followLocation", edj_from_int(OPT_FOLLOWLOCATION)));
+	edj_append(curl, edj_key("raw", edj_from_int(OPT_RAW)));
+	edj_append(curl, edj_key("headers", edj_from_int(OPT_HEADERS)));
+	edj_append(curl, edj_key("debugrcv", edj_from_int(OPT_DEBUGRCV)));
+	edj_append(edj_system, edj_key("CURL", curl));
 
 	/* Initialize CURL */
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
@@ -956,14 +956,14 @@ char *plugincurl()
 	}
 
 	/* Register the functions */
-	jx_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);
-	jx_calc_function_hook("curlPost", "url:string, data:any, ...", "string | any", jfn_curlPost);
-	jx_calc_function_hook("curlOther", "verb:string, url:string, data?:any, ...", "string | any", jfn_curlOther);
-	jx_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
-	jx_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
-	jx_calc_function_hook("uuid",  "", "string", jfn_uuid);
-	jx_calc_function_hook("mime64",  "data:string", "string", jfn_mime64);
-	jx_calc_function_hook("unmime64",  "data:string, convertsion?:number", "string", jfn_unmime64);
+	edj_calc_function_hook("curlGet", "url:string, data?:string|object, ...", "string | any", jfn_curlGet);
+	edj_calc_function_hook("curlPost", "url:string, data:any, ...", "string | any", jfn_curlPost);
+	edj_calc_function_hook("curlOther", "verb:string, url:string, data?:any, ...", "string | any", jfn_curlOther);
+	edj_calc_function_hook("encodeURI",  "data:object|string|number|boolean", "string", jfn_encodeURI);
+	edj_calc_function_hook("encodeURIComponent",  "data:object|string|number|boolean", "string", jfn_encodeURIComponent);
+	edj_calc_function_hook("uuid",  "", "string", jfn_uuid);
+	edj_calc_function_hook("mime64",  "data:string", "string", jfn_mime64);
+	edj_calc_function_hook("unmime64",  "data:string, convertsion?:number", "string", jfn_unmime64);
 
 	/* Success */
 	return NULL;

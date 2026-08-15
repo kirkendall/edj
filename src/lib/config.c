@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 #include "version.h"
 
 static const char *defaultconfig = "{"
@@ -44,7 +44,7 @@ static const char *defaultconfig = "{"
 		"\"prefix\":\"\","
 		"\"null\":\"\","
 	"},"
-	"\"diffstyle\":13," /* JX_DIFF_BESIDE|JX_DIFF_VALUE|JX_DIFF_EDIT */
+	"\"diffstyle\":13," /* EDJ_DIFF_BESIDE|EDJ_DIFF_VALUE|EDJ_DIFF_EDIT */
 	"\"common\":{"
 		"\"in\":\"Y\","
 		"\"out\":\"\","
@@ -174,36 +174,36 @@ static const char *defaultconfig = "{"
 
 
 /* This stores a pointer to the config data */
-jx_t *jx_config;
+edj_t *edj_config;
 
 /* This is a combination of all system data.  It is initialized by
- * jx_config_load(), though other code may add to it.
+ * edj_config_load(), though other code may add to it.
  */
-jx_t *jx_system;
+edj_t *edj_system;
 
-static void merge(jx_t *old, jx_t *newload);
+static void merge(edj_t *old, edj_t *newload);
 
 /* Merge table "newload" into table "old".  Use the "key" to find the
  * corresponding rows.  We assume both are known to be tables, and that
  * "old" is undeferred.
  */
-static void merge_table(jx_t *old, jx_t *newload, char *key)
+static void merge_table(edj_t *old, edj_t *newload, char *key)
 {
-	jx_t *newrow, *oldrow, *tmp;
+	edj_t *newrow, *oldrow, *tmp;
 	char *value;
 
 	/* For each row from newload... */
-	for (newrow = jx_first(newload); newrow; newrow = jx_next(newrow)) {
+	for (newrow = edj_first(newload); newrow; newrow = edj_next(newrow)) {
 		/* Fetch the key value.  Skip if there is none */
-		tmp = jx_by_key(newrow, key);
-		if (!tmp || tmp->type != JX_STRING)
+		tmp = edj_by_key(newrow, key);
+		if (!tmp || tmp->type != EDJ_STRING)
 			continue;
 		value = tmp->text;
 
 		/* Look for a corresponding row in the old table */
-		for (oldrow = jx_first(old); oldrow; oldrow = jx_next(oldrow)) {
-			tmp = jx_by_key(oldrow, key);
-			if (!tmp || tmp->type != JX_STRING)
+		for (oldrow = edj_first(old); oldrow; oldrow = edj_next(oldrow)) {
+			tmp = edj_by_key(oldrow, key);
+			if (!tmp || tmp->type != EDJ_STRING)
 				continue;
 			if (!strcmp(value, tmp->text))
 				break;;
@@ -215,83 +215,83 @@ static void merge_table(jx_t *old, jx_t *newload, char *key)
 		if (oldrow)
 			merge(oldrow, newrow);
 		else
-			jx_append(old, jx_copy(newload));
+			edj_append(old, edj_copy(newload));
 	}
 }
 
 /* Merge new settings into old settings. */
-static void merge(jx_t *old, jx_t *newload)
+static void merge(edj_t *old, edj_t *newload)
 {
-	jx_t *newkey, *oldmem;
+	edj_t *newkey, *oldmem;
 
 	/* Only works on objects */
-	if (old->type != JX_OBJECT || newload->type != JX_OBJECT)
+	if (old->type != EDJ_OBJECT || newload->type != EDJ_OBJECT)
 		return;
 
 	/* For each new member */
 	for (newkey = newload->first; newkey; newkey = newkey->next) { /* object */
 		/* Look for a corresponding old member */
-		oldmem = jx_by_key(old, newkey->text);
+		oldmem = edj_by_key(old, newkey->text);
 
 		/* If no corresponding old member, then add a copy of new */
 		if (!oldmem) {
-			jx_append(old, jx_key(newkey->text, jx_copy(newkey->first)));
+			edj_append(old, edj_key(newkey->text, edj_copy(newkey->first)));
 			continue;
 		}
 
 		/* If both are objects, merge recursively */
-		if (oldmem->type == JX_OBJECT && newkey->first->type == JX_OBJECT) {
+		if (oldmem->type == EDJ_OBJECT && newkey->first->type == EDJ_OBJECT) {
 			merge(oldmem, newkey->first);
 			continue;
 		}
 
 		/* If both are tables, merge the tables. */
-		if (jx_is_table(oldmem) && jx_is_table(newkey->first)) {
+		if (edj_is_table(oldmem) && edj_is_table(newkey->first)) {
 			merge_table(oldmem, newkey->first, oldmem->first->first->text);
 			continue;
 		}
 
 		/* If both are some other type, then replace the value */
 		if (oldmem->type == newkey->first->type) {
-			jx_append(old, jx_key(newkey->text, jx_copy(newkey->first)));
+			edj_append(old, edj_key(newkey->text, edj_copy(newkey->first)));
 			continue;
 		}
 
-		/* Otherwise ignore it.  This could happen if jx's
+		/* Otherwise ignore it.  This could happen if edj's
 		 * option format got redefined, so the new settings 
 		 */
 	}
 }
 
 /* Add a directory name to the path, if the directory exists */
-static void addpath(jx_t *path, const char *dirname)
+static void addpath(edj_t *path, const char *dirname)
 {
 	if (access(dirname, F_OK) == 0)
-		jx_append(path, jx_string(dirname, -1));
+		edj_append(path, edj_string(dirname, -1));
 }
 
-/* Return an array of directory names to look in for files related to jx
+/* Return an array of directory names to look in for files related to edj
  * -- plugins and documentation mostly.
  */
-static jx_t *configpath(const char *envvar)
+static edj_t *configpath(const char *envvar)
 {
 	const char *env;
-	jx_t *path, *entry;
+	edj_t *path, *entry;
 	int	isjxpath;
 	size_t	len;
 
 	/* If no envvar then just fake it completely */
 	if (!envvar) {
-		path = jx_array();
-		jx_append(path, jx_string("~/.config/jx", -1));
-		addpath(path, "/usr/local/lib64/jx");
-		addpath(path, "/usr/local/lib/jx");
-		addpath(path, "/usr/lib64/jx");
-		addpath(path, "/usr/lib/jx");
-		addpath(path, "/lib64/jx");
-		addpath(path, "/lib/jx");
-		addpath(path, "/usr/local/share/jx");
-		addpath(path, "/usr/share/jx");
+		path = edj_array();
+		edj_append(path, edj_string("~/.config/edj", -1));
+		addpath(path, "/usr/local/lib64/edj");
+		addpath(path, "/usr/local/lib/edj");
+		addpath(path, "/usr/lib64/edj");
+		addpath(path, "/usr/lib/edj");
+		addpath(path, "/lib64/edj");
+		addpath(path, "/lib/edj");
+		addpath(path, "/usr/local/share/edj");
+		addpath(path, "/usr/share/edj");
 		return path;
 	}
 
@@ -300,190 +300,190 @@ static jx_t *configpath(const char *envvar)
 	if (!env)
 		return NULL;
 
-	/* Distinguish between $JXPATH and other paths */
-	isjxpath = !strcmp(envvar, "JXPATH");
+	/* Distinguish between $EDJPATH and other paths */
+	isjxpath = !strcmp(envvar, "EDJPATH");
 
-	/* Start building an array of entries.  If not $JXPATH then
+	/* Start building an array of entries.  If not $EDJPATH then
 	 * put the config directory first.
 	 */
-	path = jx_array();
+	path = edj_array();
 	if (!isjxpath)
-		jx_append(path, jx_string("~/.config/jx", -1));
+		edj_append(path, edj_string("~/.config/edj", -1));
 
 	/* For each entry in the path... */
 	while (*env) {
 		/* Find the end of this entry */
-		for (len = 0; env[len] && env[len] != JX_PATH_DELIM; len++) {
+		for (len = 0; env[len] && env[len] != EDJ_PATH_DELIM; len++) {
 		}
 
-		/* Convert it to a string.  If not from $JXPATH then
-		 * add "/jx" to the string.
+		/* Convert it to a string.  If not from $EDJPATH then
+		 * add "/edj" to the string.
 		 */
 		if (len == 0)
-			entry = jx_string(".", 1);
+			entry = edj_string(".", 1);
 		else if (isjxpath) {
-			entry = jx_string(env, len);
+			entry = edj_string(env, len);
 		} else {
-			entry = jx_string(env, len + 3);
-			strcat(entry->text, "/jx");
+			entry = edj_string(env, len + 3);
+			strcat(entry->text, "/edj");
 		}
 
 		/* Add it to the path */
-		jx_append(path, entry);
+		edj_append(path, entry);
 
 		/* Move to the next entry */
 		env += len;
-		if (*env == JX_PATH_DELIM)
+		if (*env == EDJ_PATH_DELIM)
 			env++;
 	}
 
-	/* If not $JXPATH then add shared directories */
+	/* If not $EDJPATH then add shared directories */
 	if (!isjxpath) {
-		addpath(path, "/usr/local/share/jx");
-		addpath(path, "/usr/share/jx");
+		addpath(path, "/usr/local/share/edj");
+		addpath(path, "/usr/share/edj");
 	}
 	return path;
 }
 
 /* Load the configuration data */
-void jx_config_load(const char *name)
+void edj_config_load(const char *name)
 {
 	char	*pathname;
-	jx_t	*conf, *value;
+	edj_t	*conf, *value;
 
 	/* Load the default config */
-	jx_config = jx_parse_string(defaultconfig);
+	edj_config = edj_parse_string(defaultconfig);
 
-	/* If jx_system isn't set up yet, then set it up now */
-	if (!jx_system) {
-		jx_system = jx_object();
+	/* If edj_system isn't set up yet, then set it up now */
+	if (!edj_system) {
+		edj_system = edj_object();
 
 		/* We also want to add the path for plugins and documentation.
-		 * This is from $JXPATH, but if $JXPATH isn't set
+		 * This is from $EDJPATH, but if $EDJPATH isn't set
 		 * then we want to derive it from $LD_LIBRARY_PATH.  And if
 		 * $LD_LIBRARY_PATH isn't set then we simulate that too.
 		 */
-		value = configpath("JXPATH");
+		value = configpath("EDJPATH");
 		if (!value)
 			value = configpath("LD_LIBRARY_PATH");
 		if (!value)
 			value = configpath(NULL);
-		jx_append(jx_system, jx_key("path", value));
+		edj_append(edj_system, edj_key("path", value));
 
-		jx_append(jx_system, jx_key("config", jx_config));
-		pathname = jx_file_path(NULL, NULL, NULL);
-		jx_append(jx_system, jx_key("configdir", jx_string(pathname, -1)));
+		edj_append(edj_system, edj_key("config", edj_config));
+		pathname = edj_file_path(NULL, NULL, NULL);
+		edj_append(edj_system, edj_key("configdir", edj_string(pathname, -1)));
 		free(pathname);
 
 		/* Add an empty list of plugins.  As plugins are loaded,
 		 * this will become populated.
 		 */
-		if (!jx_plugins)
-			jx_plugins = jx_array();
-		jx_append(jx_system, jx_key("plugins", jx_plugins));
+		if (!edj_plugins)
+			edj_plugins = edj_array();
+		edj_append(edj_system, edj_key("plugins", edj_plugins));
 
 		/* Add a table of parsers.  Initially it'll contain only the
 		 * built-in JSON parser, but as plugins register their parsers
-		 * via jx_parse_hook(), they'll be added here too.
+		 * via edj_parse_hook(), they'll be added here too.
 		 */
-		conf = jx_array();
-		value = jx_object();
-		jx_append(value, jx_key("name", jx_string("json", -1)));
-		jx_append(value, jx_key("plugin", jx_null()));
-		jx_append(value, jx_key("suffix", jx_string(".json", -1)));
-		jx_append(value, jx_key("mimetype", jx_string("application/json", -1)));
-		jx_append(value, jx_key("writable", jx_boolean(1)));
-		jx_append(conf, value);
-		value = jx_object();
-		jx_append(value, jx_key("name", jx_string("blob", -1)));
-		jx_append(value, jx_key("plugin", jx_null()));
-		jx_append(value, jx_key("suffix", jx_null()));
-		jx_append(value, jx_key("mimetype", jx_string("application/octet-stream", -1)));
-		jx_append(value, jx_key("writable", jx_boolean(1)));
-		jx_append(conf, value);
-		jx_append(jx_system, jx_key("parsers", conf));
+		conf = edj_array();
+		value = edj_object();
+		edj_append(value, edj_key("name", edj_string("json", -1)));
+		edj_append(value, edj_key("plugin", edj_null()));
+		edj_append(value, edj_key("suffix", edj_string(".json", -1)));
+		edj_append(value, edj_key("mimetype", edj_string("application/json", -1)));
+		edj_append(value, edj_key("writable", edj_boolean(1)));
+		edj_append(conf, value);
+		value = edj_object();
+		edj_append(value, edj_key("name", edj_string("blob", -1)));
+		edj_append(value, edj_key("plugin", edj_null()));
+		edj_append(value, edj_key("suffix", edj_null()));
+		edj_append(value, edj_key("mimetype", edj_string("application/octet-stream", -1)));
+		edj_append(value, edj_key("writable", edj_boolean(1)));
+		edj_append(conf, value);
+		edj_append(edj_system, edj_key("parsers", conf));
 
 		/* Add empty JSON and Math objects, for JS compatibility. */
-		jx_append(jx_system, jx_key("JSON", jx_object()));
-		jx_append(jx_system, jx_key("Math", jx_object()));
+		edj_append(edj_system, edj_key("JSON", edj_object()));
+		edj_append(edj_system, edj_key("Math", edj_object()));
 
 		/* Add a "Blob" object with constants selecting how to handle
 		 * binary data.
 		 */
-		value = jx_object();
-		jx_append(value, jx_key("any", jx_from_int(JX_BLOB_ANY)));
-		jx_append(value, jx_key("string", jx_from_int(JX_BLOB_STRING)));
-		jx_append(value, jx_key("utf8", jx_from_int(JX_BLOB_UTF8)));
-		jx_append(value, jx_key("latin1", jx_from_int(JX_BLOB_LATIN1)));
-		jx_append(value, jx_key("bytes", jx_from_int(JX_BLOB_BYTES)));
-		jx_append(jx_system, jx_key("Blob", value));
+		value = edj_object();
+		edj_append(value, edj_key("any", edj_from_int(EDJ_BLOB_ANY)));
+		edj_append(value, edj_key("string", edj_from_int(EDJ_BLOB_STRING)));
+		edj_append(value, edj_key("utf8", edj_from_int(EDJ_BLOB_UTF8)));
+		edj_append(value, edj_key("latin1", edj_from_int(EDJ_BLOB_LATIN1)));
+		edj_append(value, edj_key("bytes", edj_from_int(EDJ_BLOB_BYTES)));
+		edj_append(edj_system, edj_key("Blob", value));
 
 		/* Add a "Diff" object with constants for selecting the format */
-		value = jx_object();
-		jx_append(value, jx_key("value", jx_from_int(JX_DIFF_VALUE)));
-		jx_append(value, jx_key("span", jx_from_int(JX_DIFF_SPAN)));
-		jx_append(value, jx_key("beside", jx_from_int(JX_DIFF_BESIDE)));
-		jx_append(value, jx_key("edit", jx_from_int(JX_DIFF_EDIT)));
-		jx_append(value, jx_key("context", jx_from_int(JX_DIFF_CONTEXT)));
-		jx_append(value, jx_key("bits", jx_parse_string("[\"value\",\"span\",\"beside\",\"edit\",\"context\"]")));
-		jx_append(jx_system, jx_key("Diff", value));
+		value = edj_object();
+		edj_append(value, edj_key("value", edj_from_int(EDJ_DIFF_VALUE)));
+		edj_append(value, edj_key("span", edj_from_int(EDJ_DIFF_SPAN)));
+		edj_append(value, edj_key("beside", edj_from_int(EDJ_DIFF_BESIDE)));
+		edj_append(value, edj_key("edit", edj_from_int(EDJ_DIFF_EDIT)));
+		edj_append(value, edj_key("context", edj_from_int(EDJ_DIFF_CONTEXT)));
+		edj_append(value, edj_key("bits", edj_parse_string("[\"value\",\"span\",\"beside\",\"edit\",\"context\"]")));
+		edj_append(edj_system, edj_key("Diff", value));
 
 		/* Add a "Common" object with constants for selecting the format */
-		value = jx_object();
-		jx_append(value, jx_key("index", jx_from_int(JX_COMMON_INDEX)));
-		jx_append(value, jx_key("count", jx_from_int(JX_COMMON_COUNT)));
-		jx_append(value, jx_key("check", jx_from_int(JX_COMMON_CHECK)));
-		jx_append(value, jx_key("in", jx_from_int(JX_COMMON_IN)));
-		jx_append(value, jx_key("all", jx_from_int(JX_COMMON_ALL)));
-		jx_append(value, jx_key("inOnly", jx_from_int(JX_COMMON_IN_ONLY)));
-		jx_append(value, jx_key("outOnly", jx_from_int(JX_COMMON_OUT_ONLY)));
-		jx_append(value, jx_key("none", jx_from_int(JX_COMMON_NONE)));
-		jx_append(value, jx_key("mix", jx_from_int(JX_COMMON_MIX)));
-		jx_append(value, jx_key("stats", jx_from_int(JX_COMMON_STATS)));
-		jx_append(value, jx_key("noSort", jx_from_int(JX_COMMON_NOSORT)));
-		jx_append(value, jx_key("force", jx_from_int(JX_COMMON_FORCE)));
-		jx_append(value, jx_key("recheck", jx_from_int(JX_COMMON_RECHECK)));
-		jx_append(value, jx_key("bits", jx_parse_string("[[\"index\",\"count\",\"check\",\"in\"],\"all\",[\"inOnly\",\"outOnly\",\"none\",\"mix\"],\"stats\",\"noSort\",\"force\",\"recheck\"]")));
-		jx_append(jx_system, jx_key("Common", value));
+		value = edj_object();
+		edj_append(value, edj_key("index", edj_from_int(EDJ_COMMON_INDEX)));
+		edj_append(value, edj_key("count", edj_from_int(EDJ_COMMON_COUNT)));
+		edj_append(value, edj_key("check", edj_from_int(EDJ_COMMON_CHECK)));
+		edj_append(value, edj_key("in", edj_from_int(EDJ_COMMON_IN)));
+		edj_append(value, edj_key("all", edj_from_int(EDJ_COMMON_ALL)));
+		edj_append(value, edj_key("inOnly", edj_from_int(EDJ_COMMON_IN_ONLY)));
+		edj_append(value, edj_key("outOnly", edj_from_int(EDJ_COMMON_OUT_ONLY)));
+		edj_append(value, edj_key("none", edj_from_int(EDJ_COMMON_NONE)));
+		edj_append(value, edj_key("mix", edj_from_int(EDJ_COMMON_MIX)));
+		edj_append(value, edj_key("stats", edj_from_int(EDJ_COMMON_STATS)));
+		edj_append(value, edj_key("noSort", edj_from_int(EDJ_COMMON_NOSORT)));
+		edj_append(value, edj_key("force", edj_from_int(EDJ_COMMON_FORCE)));
+		edj_append(value, edj_key("recheck", edj_from_int(EDJ_COMMON_RECHECK)));
+		edj_append(value, edj_key("bits", edj_parse_string("[[\"index\",\"count\",\"check\",\"in\"],\"all\",[\"inOnly\",\"outOnly\",\"none\",\"mix\"],\"stats\",\"noSort\",\"force\",\"recheck\"]")));
+		edj_append(edj_system, edj_key("Common", value));
 
-		/* Add members to jx_system, describing the environment */
-		jx_append(jx_system, jx_key("runmode", jx_string("interactive", -1)));
-		jx_append(jx_system, jx_key("update", jx_boolean(0)));
-		jx_append(jx_system, jx_key("version", jx_number(JX_VERSION, -1)));
-		jx_append(jx_system, jx_key("copyright", jx_string(JX_COPYRIGHT, -1)));
+		/* Add members to edj_system, describing the environment */
+		edj_append(edj_system, edj_key("runmode", edj_string("interactive", -1)));
+		edj_append(edj_system, edj_key("update", edj_boolean(0)));
+		edj_append(edj_system, edj_key("version", edj_number(EDJ_VERSION, -1)));
+		edj_append(edj_system, edj_key("copyright", edj_string(EDJ_COPYRIGHT, -1)));
 
 	}
 
 	/* Look for the config file */
-	pathname = jx_file_path(NULL, name, ".json");
+	pathname = edj_file_path(NULL, name, ".json");
 	if (!pathname)
 		return;
 
 	/* Parse it */
-	conf = jx_parse_file(pathname);
+	conf = edj_parse_file(pathname);
 	free(pathname);
 	if (!conf)
 		return;
-	if (conf->type != JX_OBJECT) {
-		jx_free(conf);
+	if (conf->type != EDJ_OBJECT) {
+		edj_free(conf);
 		return;
 	}
 
 	/* Merge its settings into the default config */
-	merge(jx_config, conf);
+	merge(edj_config, conf);
 
 	/* Free the data from the file */
-	jx_free(conf);
+	edj_free(conf);
 }
 
-/* Select whether this part of jx_config gets saved.  It should save
+/* Select whether this part of edj_config gets saved.  It should save
  * everything except "batch", members that have names ending with "-list",
  * and a few others.
  */
-static int notlist(jx_t *mem)
+static int notlist(edj_t *mem)
 {
 	/* Non-members are always kept */
-	if (mem->type != JX_KEY)
+	if (mem->type != EDJ_KEY)
 		return 1;
 
 	/* Members named "batch" or "*-list" are skipped */
@@ -500,17 +500,17 @@ static int notlist(jx_t *mem)
 }
 
 /* Save the config data */
-void jx_config_save(const char *name)
+void edj_config_save(const char *name)
 {
 	char	*pathname;
-	jx_t	*copy;
+	edj_t	*copy;
 	FILE	*fp;
 
 	/* We generally want to save options in the first writable directory
-	 * in the JXPATH, even if the "config.json" file doesn't exist
+	 * in the EDJPATH, even if the "config.json" file doesn't exist
 	 * there yet.
 	 */
-	pathname = jx_file_path(NULL, NULL, NULL);
+	pathname = edj_file_path(NULL, NULL, NULL);
 	if (pathname) {
 		char *tmp = malloc(strlen(pathname) + strlen(name) + 6);
 		strcpy(tmp, pathname);
@@ -519,7 +519,7 @@ void jx_config_save(const char *name)
 		free(pathname);
 		pathname = tmp;
 	} else {
-		pathname = jx_file_path(NULL, name, ".json");
+		pathname = edj_file_path(NULL, name, ".json");
 		if (!pathname)
 			return; /* no place to save it */
 	}
@@ -527,18 +527,18 @@ void jx_config_save(const char *name)
 	/* We want to save everything EXCEPT members with names ending with
 	 * "-list".  Make a copy of the config with "-list" members removed.
 	 */
-	copy = jx_copy_filter(jx_config, notlist);
+	copy = edj_copy_filter(edj_config, notlist);
 
 	/* Write it to the file */
-	fp = jx_file_update(pathname);
+	fp = edj_file_update(pathname);
 	if (fp) {
-		jxformat_t fmt = jx_format_default;
+		edjformat_t fmt = edj_format_default;
 		fmt.string = fmt.elem = fmt.sh = fmt.ascii = fmt.color = 0;
 		fmt.fp = fp;
-		jx_print(copy, &fmt);
+		edj_print(copy, &fmt);
 		fclose(fp);
 	}
-	jx_free(copy);
+	edj_free(copy);
 	free(pathname);
 }
 
@@ -551,31 +551,31 @@ void jx_config_save(const char *name)
  * the plugin can directly modify member values as appropriate.  Note that
  * settings from -s/-S flags or the config file are loaded later.
  *
- * If called with a reference to a (jx_t*) as the second argument, then it'll
+ * If called with a reference to a (edj_t*) as the second argument, then it'll
  * store the "config.styles" pointer there if the style is found.  If the style
  * is not found, the function will return NULL.  The config code itself uses
  * this method to avoid creating bogus/misspelled names.
  */
-jx_t *jx_config_style(const char *name, jx_t **refstyles)
+edj_t *edj_config_style(const char *name, edj_t **refstyles)
 {
-	jx_t *styles, *scan, *style;
+	edj_t *styles, *scan, *style;
 
 	/* Find "config.styles" */
-	styles = jx_by_key(jx_config, "styles");
-	assert(styles != NULL && styles->type == JX_ARRAY);
+	styles = edj_by_key(edj_config, "styles");
+	assert(styles != NULL && styles->type == EDJ_ARRAY);
 
-	/* Scan for the requested style.  We don't use jx_by_key_value()
+	/* Scan for the requested style.  We don't use edj_by_key_value()
 	 * for this because we hope to avoid converting the name from (char *)
-	 * to (jx_t *).
+	 * to (edj_t *).
 	 */
-	for (scan = jx_first(styles); scan; scan = jx_next(scan)) {
-		assert(scan->type == JX_OBJECT);
-		style = jx_by_key(scan, "style");
-		assert(style && style->type == JX_STRING);
-		if (!jx_mbs_casecmp(style->text, name)) {
+	for (scan = edj_first(styles); scan; scan = edj_next(scan)) {
+		assert(scan->type == EDJ_OBJECT);
+		style = edj_by_key(scan, "style");
+		assert(style && style->type == EDJ_STRING);
+		if (!edj_mbs_casecmp(style->text, name)) {
 			/* Found!  Return it.  Note that config.styles is
 			 * not a deferred array, so we don't need to call
-			 * jx_break()
+			 * edj_break()
 			 */
 			if (refstyles)
 				*refstyles = styles;
@@ -593,34 +593,34 @@ jx_t *jx_config_style(const char *name, jx_t **refstyles)
 	 * to add it.  Start with a copy of "normal" (the first element of
 	 * config.styles) and stuff the new name into the copy.
 	 */
-	scan = jx_copy(styles->first);
-	jx_append(scan, jx_key("style", jx_string(name, -1)));
-	jx_append(styles, scan);
+	scan = edj_copy(styles->first);
+	edj_append(scan, edj_key("style", edj_string(name, -1)));
+	edj_append(styles, scan);
 	return scan;
 }
 
 /* Get an option from a given section of the settings.  If you pass NULL
  * for the section name, then it'll look in the top level of the config data,
  * or in the "interactive" or "batch" subsection as appropriate.  Returns
- * the jx_t of the found value, or NULL if not found.
+ * the edj_t of the found value, or NULL if not found.
  */
-jx_t *jx_config_get(const char *section, const char *key)
+edj_t *edj_config_get(const char *section, const char *key)
 {
-	jx_t *jsect;
+	edj_t *jsect;
 
 	/* Locate the section.  If section is NULL, use the format settings */
 	if (section) {
-		jsect = jx_by_expr(jx_config, section, NULL, NULL, NULL); /* undeferred */
+		jsect = edj_by_expr(edj_config, section, NULL, NULL, NULL); /* undeferred */
 		if (!jsect)
 			return NULL;
 	} else {
-		jsect = jx_by_key(jx_config, jx_text_by_key(jx_system, "runmode"));
-		if (jx_by_key(jsect, key) == NULL)
-			jsect = jx_config;
+		jsect = edj_by_key(edj_config, edj_text_by_key(edj_system, "runmode"));
+		if (edj_by_key(jsect, key) == NULL)
+			jsect = edj_config;
 	}
 
 	/* Look for the requested key in that section */
-	return jx_by_key(jsect, key);
+	return edj_by_key(jsect, key);
 }
 
 /* Set an option in a given section of the settings.  If you pass NULL for
@@ -628,29 +628,29 @@ jx_t *jx_config_get(const char *section, const char *key)
  * or in the "interactive" or "batch" subsection as appropriate.  If you
  * pass a non-NULL section name and that name doesn't exist, then it'll be
  * added.  THIS FUNCTION DOESN'T VERIFY THAT NAMES OR DATA TYPES ARE CORRECT.
- * Also, the "value" is incorporated into the jx_config tree, so it can't be
- * used anywhere else in order to avoid memory issues.  Maybe use jx_copy().
+ * Also, the "value" is incorporated into the edj_config tree, so it can't be
+ * used anywhere else in order to avoid memory issues.  Maybe use edj_copy().
  */
-void jx_config_set(const char *section, const char *key, jx_t *value)
+void edj_config_set(const char *section, const char *key, edj_t *value)
 {
-	jx_t	*jsect;
+	edj_t	*jsect;
 
-	/* Locate the section.  If section is NULL, use all of jx_config,
+	/* Locate the section.  If section is NULL, use all of edj_config,
 	 * or the "interactive" or "batch" subsection, as appropriate.
 	 * If a section name is given but the requested section doesn't exist,
 	 * then create an empty object to hold that section.
 	 */
 	if (section) {
 		/* Use the named section */
-		jsect = jx_by_expr(jx_config, section, NULL, NULL, NULL); /* undeferred */
+		jsect = edj_by_expr(edj_config, section, NULL, NULL, NULL); /* undeferred */
 		if (!jsect) {
 			if (!strncmp(section, "plugin.", 7)) {
-				jsect = jx_by_key(jx_config, "plugin");
-				jx_append(jsect, jx_key(section + 7, jx_object()));
-				jsect = jx_by_key(jsect, section + 7);
+				jsect = edj_by_key(edj_config, "plugin");
+				edj_append(jsect, edj_key(section + 7, edj_object()));
+				jsect = edj_by_key(jsect, section + 7);
 			} else {
-				jsect = jx_object();
-				jx_append(jx_config, jx_key(section, jsect));
+				jsect = edj_object();
+				edj_append(edj_config, edj_key(section, jsect));
 			}
 		}
 	} else {
@@ -658,13 +658,13 @@ void jx_config_set(const char *section, const char *key, jx_t *value)
 		 * or "batch" subsection, as appropriate, if the key already
 		 * exists there.
 		 */
-		jsect = jx_by_key(jx_config, jx_text_by_key(jx_system, "runmode"));
-		if (!jx_by_key(jsect, key))
-			jsect = jx_config;
+		jsect = edj_by_key(edj_config, edj_text_by_key(edj_system, "runmode"));
+		if (!edj_by_key(jsect, key))
+			jsect = edj_config;
 	}
 
 	/* Append the value to the section */
-	jx_append(jsect, jx_key(key, value));
+	edj_append(jsect, edj_key(key, value));
 }
 
 /* Parse an option string, and merge its settings into a given section.
@@ -689,19 +689,19 @@ void jx_config_set(const char *section, const char *key, jx_t *value)
  * also has the side-effect if disabling the use of commas as delimiters,
  * so all of the object's settings must be space-delimited.
  *
- * Returns NULL on success, or a jx_t containing an error message if error.
+ * Returns NULL on success, or an edj_t containing an error message if error.
  */
-jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
+edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend)
 {
 	size_t	namelen, namealloc = 0, len;
 	int	negate;
 	char	*name = NULL;
 	const char *value;
-	jx_t	*thisconfig, *found, *list, *jvalue;
+	edj_t	*thisconfig, *found, *list, *jvalue;
 
-	/* Passing NULL for config is equivalent to passing jx_config */
+	/* Passing NULL for config is equivalent to passing edj_config */
 	if (!config)
-		config = jx_config;
+		config = edj_config;
 
 	/* Until we hit the end... */
 	while (*settings && (!refend || *settings != ',')) {
@@ -725,7 +725,7 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			free(name);
 			if (refend)
 				*refend = settings;
-			return jx_error_null(0, "Malformed option \"%s\"", settings);
+			return edj_error_null(0, "Malformed option \"%s\"", settings);
 		}
 
 		/* Make a copy of the name */
@@ -738,17 +738,17 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 
 		/* Look for an existing member with that key */
 		thisconfig = config;
-		found = jx_by_key(config, name);
+		found = edj_by_key(config, name);
 
 		/* If not found in "config" then try the whole config, or
 		 * in the "styles" array.
 		 */
 		if (!found) {
-			thisconfig = jx_config;
-			found = jx_by_key(jx_config, name);
+			thisconfig = edj_config;
+			found = edj_by_key(edj_config, name);
 		}
 		if (!found) {
-			found = jx_config_style(name, &thisconfig);
+			found = edj_config_style(name, &thisconfig);
 		}
 
 		/* Followed by "=" ?  Or, equivalently, '.' to make deeply
@@ -757,7 +757,7 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 		if (settings[namelen] == '=' || settings[namelen] == '.') {
 			/* If the member doesn't exist, that's an error */
 			if (!found) {
-				found = jx_error_null(0, "Unknown option \"%s\"", name);
+				found = edj_error_null(0, "Unknown option \"%s\"", name);
 				free(name);
 				if (refend)
 					*refend = settings;
@@ -769,11 +769,11 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 
 			/* Processing of the value depends on the type */
 			switch (found->type) {
-			case JX_OBJECT:
+			case EDJ_OBJECT:
 				{
 					/* Recursively parse the object's settings */
 					const char *end;
-					jvalue = jx_config_parse(found, settings + namelen + 1, &end);
+					jvalue = edj_config_parse(found, settings + namelen + 1, &end);
 					if (jvalue) {
 						/* Oops, we found an error */
 						free(name);
@@ -785,7 +785,7 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 				}
 				continue;
 
-			case JX_BOOLEAN:
+			case EDJ_BOOLEAN:
 				/* should be true or false */
 				if (!strncasecmp(value, "true", 4) && !isalnum(value[4])) {
 					strcpy(found->text, "true");
@@ -797,11 +797,11 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 					free(name);
 					if (refend)
 						*refend = settings;
-					return jx_error_null(0, "Invalid boolean option value \"%s\"", value);
+					return edj_error_null(0, "Invalid boolean option value \"%s\"", value);
 				}
 				continue;
 
-			case JX_NUMBER:
+			case EDJ_NUMBER:
 				{
 					char	*lend, *dend;
 					long	l;
@@ -814,25 +814,25 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 						free(name);
 						if (refend)
 							*refend = settings;
-						return jx_error_null(0, "Invalid number value \"%s\"", value);
+						return edj_error_null(0, "Invalid number value \"%s\"", value);
 					}
 					if (lend < dend) {
 						/* It's floating-point */
 						found->text[0] = 0;
 						found->text[1] = 'd';
-						JX_DOUBLE(found) = d;
+						EDJ_DOUBLE(found) = d;
 						settings = dend;
 					} else {
 						/* It's integer */
 						found->text[0] = 0;
 						found->text[1] = 'i';
-						JX_INT(found) = (int)l;
+						EDJ_INT(found) = (int)l;
 						settings = lend;
 					}
 				}
 				continue;
 
-			case JX_STRING:
+			case EDJ_STRING:
 				/* May be quoted or unquoted */
 				if (*value == '"' || *value == '\'') {
 					size_t mbslen;
@@ -842,22 +842,22 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 						if (value[len] == '\\' && value[len + 1])
 							len++;
 					}
-					mbslen = jx_mbs_unescape(NULL, value + 1, len - 1);
-					jvalue = jx_string("", mbslen);
-					jx_mbs_unescape(jvalue->text, value + 1, len - 1);
+					mbslen = edj_mbs_unescape(NULL, value + 1, len - 1);
+					jvalue = edj_string("", mbslen);
+					edj_mbs_unescape(jvalue->text, value + 1, len - 1);
 					settings = value + len + 1;
 				} else {
 					/* Unquoted */
 					for (len = 0; value[len] && value[len] != ',' && value[len] != ' '; len++) {
 					}
-					jvalue = jx_string(value, len);
+					jvalue = edj_string(value, len);
 					settings = value + len;
 				}
-				jx_append(thisconfig, jx_key(name, jvalue));
+				edj_append(thisconfig, edj_key(name, jvalue));
 				continue;
 
 			default:
-				found = jx_error_null(0, "Bad type for option \"%s\"", name);
+				found = edj_error_null(0, "Bad type for option \"%s\"", name);
 				free(name);
 				if (refend)
 					*refend = settings;
@@ -865,27 +865,27 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			}
 
 		} else { /* name or noname without = */
-			if (found && found->type == JX_BOOLEAN) {
+			if (found && found->type == EDJ_BOOLEAN) {
 				strcpy(found->text, negate ? "false" : "true" );
 				settings += namelen;
 				continue;
 			} else if (found) {
-				found = jx_error_null(0, "Option \"%s\" is not boolean", name);
+				found = edj_error_null(0, "Option \"%s\" is not boolean", name);
 				free(name);
 				if (refend)
 					*refend = settings;
 				return found;
 			} else if (!strncmp(name, "no", 2)) {
 				thisconfig = config;
-				found = jx_by_key(config, name + 2);
+				found = edj_by_key(config, name + 2);
 				if (!found) {
-					thisconfig = jx_config;
-					found = jx_by_key(jx_config, name + 2);
+					thisconfig = edj_config;
+					found = edj_by_key(edj_config, name + 2);
 				}
 				/* NOTE: We don't need to check for a color name
 				 * because you can never say "set noprompt".
 				 */
-				if (found && found->type == JX_BOOLEAN) {
+				if (found && found->type == EDJ_BOOLEAN) {
 					strcpy(found->text, "false");
 					settings += namelen;
 					continue;
@@ -895,20 +895,20 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			/* If we get here, then the only remaining possibility
 			 * for success is if it's a value from an enumerated
 			 * list.  The list could only be in "config", not at
-			 * the top-level "jx_config".  Look for lists!
+			 * the top-level "edj_config".  Look for lists!
 			 */
 			for (list = config->first; list; list = list->next) { /* object */
 				/* Skip if not "somename-list" array */
 				len = strlen(list->text);
 				if (len <= 5
 				 || strcasecmp(list->text + len - 5, "-list")
-				 || list->first->type != JX_ARRAY)
+				 || list->first->type != EDJ_ARRAY)
 					continue;
 
 				/* For each element in the list... */
-				for (found = jx_first(list->first); found; found = jx_next(found)) {
+				for (found = edj_first(list->first); found; found = edj_next(found)) {
 					/* Skip if not a string */
-					if (found->type != JX_STRING)
+					if (found->type != EDJ_STRING)
 						continue;
 
 					/* Skip if not a match.  Since the list
@@ -916,8 +916,8 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 					 * compare to "name" -- we need to look
 					 * at the "settings" string.
 					 */
-					len = jx_mbs_len(found->text);
-					if (!jx_mbs_ncasecmp(found->text, settings, len)
+					len = edj_mbs_len(found->text);
+					if (!edj_mbs_ncasecmp(found->text, settings, len)
 						&& !isalnum(settings[strlen(found->text)])) {
 						/* FOUND! */
 						goto BreakBreak;
@@ -926,7 +926,7 @@ jx_t *jx_config_parse(jx_t *config, const char *settings, const char **refend)
 			}
 
 			/* Dang.  What is this? */
-			found = jx_error_null(0, "Unknown option \"%s\"", name);
+			found = edj_error_null(0, "Unknown option \"%s\"", name);
 			free(name);
 			if (refend)
 				*refend = settings;
@@ -947,14 +947,14 @@ BreakBreak:
 			name[namelen] = '\0';
 
 			/* Store the setting as a string */
-			jx_append(config, jx_key(name, jx_string(found->text, -1)));
+			edj_append(config, edj_key(name, edj_string(found->text, -1)));
 
 			/* If the list was deferred (unlikely!) then let the
 			 * library know that we abandoned the scanning loop
 			 * before its end.  The "found" pointer will be invalid
 			 * after this.
 			 */
-			jx_break(found);
+			edj_break(found);
 
 			/* Move past the enumerated value */
 			settings += strlen(found->text);

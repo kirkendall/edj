@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>padStart</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj padStart - Add padding to the start of string">
+    <meta name="keywords" content="string, number, edj, function reference, padStart">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>padStart - Add padding to the start of string</h1>
+    <dl>
+      <dt>padStart(<var>subject</var>:string, <var>len</var>:number, <var>pad</var>?:string=" "):string
+      <dd>
+      The padStart() function adds characters to the start of the
+      <var>subject</var> string, to make its overall length be <var>len</var>
+      characters.
+      By default, it adds space characters but you can pass some other string
+      to use for padding instead.
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>98.6.toFixed(2).padStart(10)</kbd>
+	<samp>"     98.60"</samp>
+        This formats the number 98.6 as a string with two digits after the
+        decimal, and then pads the string on the right to an overall width
+        of 10 characters.
+        Padding like this can be handy for making decimal points line up when
+        using <a target="_PARENT" href="../index.html?f=toFixed">toFixed()</a>
+        or <a target="_PARENT" href="../index.html?f=money">money()</a> in a
+        table column.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>This pads by character length, not by character width.
+            This means text containing composed diacritics, CJK characters,
+            or emoji won't line up properly.  It should work okay for
+            numbers though.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=padEnd">padEnd()</td><td>Add padding to the end of a string</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=toFixed">toFixed()</td><td>Use a specified number of digits after the decimal</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=money">money()</td><td>Convert a number to a money string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

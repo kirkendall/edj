@@ -5,17 +5,17 @@
 #include <string.h>
 #include <regex.h>
 #include <ctype.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This stores the search criteria and a incremental results.  The help_find()
  * function is heavily recursive, so if we had to pass all of this as
  * parameters individually it'd be a big burden.
  */
 typedef struct {
-	jx_t	*needle;	/* String or number to search for */
+	edj_t	*needle;	/* String or number to search for */
 	regex_t *regex;		/* Regular expression to search for */
-	jxcalc_t *calc;		/* Expression to look for (RHS of @ operator) */
-	jxcontext_t *context;	/* Context of the "calc" expression */
+	edjcalc_t *calc;		/* Expression to look for (RHS of @ operator) */
+	edjcontext_t *context;	/* Context of the "calc" expression */
 	char	*needkey;	/* If not NULL, key must match this */
 	int	needint;	/* Integer to search for */
 	double	needdouble;	/* Double to search for */
@@ -28,14 +28,14 @@ typedef struct {
 	char	*expr;		/* Buffer for building an expression ex match */
 	size_t	size;		/* Size of expr buffer */
 	size_t	used;		/* Amount of expr buffer that's used now */
-	jx_t	*result;	/* Table of found matches */
-} jxfind_t;
+	edj_t	*result;	/* Table of found matches */
+} edjfind_t;
 
 /* Append a string to find->expr, expanding it if necessary.  When we move
  * deeper into a data structure, this is used to build the path up to whatever
  * part we're scanning now.
  */
-static void help_find_cat(jxfind_t *find, char *str)
+static void help_find_cat(edjfind_t *find, char *str)
 {
 	size_t len, quotes, newsize;
 
@@ -76,29 +76,29 @@ static void help_find_cat(jxfind_t *find, char *str)
 }
 
 /* Append a row to the find->result table */
-static void help_find_row(jxfind_t *find, jx_t *node)
+static void help_find_row(edjfind_t *find, edj_t *node)
 {
 	/* If doing grep, then don't add rows this way. */
 	if (find->grep)
 		return;
 
 	/* Add a row describing where the value was found */
-	jx_t *found = jx_object();
+	edj_t *found = edj_object();
 	if (find->index >= 0)
-		jx_append(found, jx_key("index", jx_from_int(find->index)));
+		edj_append(found, edj_key("index", edj_from_int(find->index)));
 	if (find->key)
-		jx_append(found, jx_key("key", jx_string(find->key, -1)));
-	jx_append(found, jx_key("value", jx_copy(node)));
-	jx_append(found, jx_key("expr", jx_string(find->expr, find->used)));
-	jx_append(find->result, found);
+		edj_append(found, edj_key("key", edj_string(find->key, -1)));
+	edj_append(found, edj_key("value", edj_copy(node)));
+	edj_append(found, edj_key("expr", edj_string(find->expr, find->used)));
+	edj_append(find->result, found);
 }
 
 /* Do a deep search for a value.  This is a helper function for jfn_find(),
- * which implement's jx's find() function.
+ * which implement's edj's find() function.
  */
-static int help_find(jx_t *haystack, jxfind_t *find)
+static int help_find(edj_t *haystack, edjfind_t *find)
 {
-	jx_t	*scan;
+	edj_t	*scan;
 	int	wasused, wasindex, i, match;
 	char	*waskey;
 	char	indexstr[40];
@@ -107,9 +107,9 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 	 * but DON'T continue to scan its contents for additional matches.
 	 */
 	if (find->calc) {
-		jx_t *test = jx_calc(find->calc, find->context, NULL);
-		match = jx_is_true(test);
-		jx_free(test);
+		edj_t *test = edj_calc(find->calc, find->context, NULL);
+		match = edj_is_true(test);
+		edj_free(test);
 		if (match) {
 			help_find_row(find, haystack);
 			return 1;
@@ -117,11 +117,11 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 	}
 
 	/* Arrays and objects are treated a bit differently */
-	if (haystack->type == JX_ARRAY) {
+	if (haystack->type == EDJ_ARRAY) {
 		/* For each element... */
-		for (i = 0, scan = jx_first(haystack); scan && !jx_interrupt; i++, scan = jx_next(scan)) {
+		for (i = 0, scan = edj_first(haystack); scan && !edj_interrupt; i++, scan = edj_next(scan)) {
 			/* If the value is an object or array, recurse */
-			if (scan->type == JX_OBJECT || scan->type == JX_ARRAY) {
+			if (scan->type == EDJ_OBJECT || scan->type == EDJ_ARRAY) {
 				/* Append this element's index to expr */
 				wasused = find->used;
 				snprintf(indexstr, sizeof indexstr, "[%d]", i);
@@ -130,7 +130,7 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 				if (find->index == -1)
 					find->index = i;
 				if (find->context)
-					find->context = jx_context(find->context, scan, JX_CONTEXT_NOFREE|JX_CONTEXT_THIS);
+					find->context = edj_context(find->context, scan, EDJ_CONTEXT_NOFREE|EDJ_CONTEXT_THIS);
 
 				/* Recurse */
 				if (help_find(scan, find) && find->grep)
@@ -138,14 +138,14 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 
 				/* Restore expr */
 				if (find->context)
-					find->context = jx_context_free(find->context);
+					find->context = edj_context_free(find->context);
 				find->used = wasused;
 				find->index = wasindex;
 				continue;
 			} else if (find->calc) {
 				/* Already did the calc test */
 				continue;
-			} else if (find->needkey && (!find->key || 0 != jx_mbs_casecmp(find->needkey, find->key) )) {
+			} else if (find->needkey && (!find->key || 0 != edj_mbs_casecmp(find->needkey, find->key) )) {
 				/* Wrong key.  The only reason we're scanning
 				 * this array is that it might have an element
 				 * that's an object with needkey, but this
@@ -164,35 +164,35 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 				 */
 				if (find->needkey)
 					continue;
-			} else if (scan->type == JX_STRING && find->regex) {
+			} else if (scan->type == EDJ_STRING && find->regex) {
 				/* Compare against the regexp */
 				regmatch_t matches[10];
 				if (regexec(find->regex, scan->text, 10, matches, 0) != 0)
 					continue;
-			} else if (scan->type == JX_STRING && find->needle && find->needle->type == JX_STRING) {
+			} else if (scan->type == EDJ_STRING && find->needle && find->needle->type == EDJ_STRING) {
 				/* Compare as strings */
 				if (find->ignorecase) {
-					if (0 != jx_mbs_casecmp(find->needle->text, scan->text))
+					if (0 != edj_mbs_casecmp(find->needle->text, scan->text))
 						continue;
 				} else {
 					if (0 != strcmp(find->needle->text, scan->text))
 						continue;
 				}
-			} else if (scan->type == JX_NUMBER && find->needle && find->needle->type == JX_NUMBER) {
+			} else if (scan->type == EDJ_NUMBER && find->needle && find->needle->type == EDJ_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
 				if (scan->text[0] == 0 && scan->text[1] == 'i' && find->int_or_double == 'i') {
 					/* Compare binary integers */
-					if (jx_int(scan) != find->needint)
+					if (edj_int(scan) != find->needint)
 						continue;
 				} else {
 					/* Compare as double */
-					if (jx_double(scan) != find->needdouble)
+					if (edj_double(scan) != find->needdouble)
 						continue;
 				}
 
-			} else if (scan->type == JX_STRING && find->needle && find->needle->type == JX_NUMBER && find->int_or_double == 'i') {
+			} else if (scan->type == EDJ_STRING && find->needle && find->needle->type == EDJ_NUMBER && find->int_or_double == 'i') {
 				/* Compare a digit string to an integer */
 				if (strcmp(scan->text, find->needdigits))
 					continue;
@@ -206,7 +206,7 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 			 * result array
 			 */
 			if (find->grep) {
-				jx_break(scan);
+				edj_break(scan);
 				return 1;
 			}
 			wasused = find->used;
@@ -220,11 +220,11 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 			find->used = wasused;
 			continue;
 		}
-	} else /* JX_OBJECT */ {
+	} else /* EDJ_OBJECT */ {
 		/* For each member... */
-		for (scan = haystack->first; scan && !jx_interrupt; scan = scan->next) { /* object */
+		for (scan = haystack->first; scan && !edj_interrupt; scan = scan->next) { /* object */
 			/* If the value is an object or array, recurse */
-			if (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY) {
+			if (scan->first->type == EDJ_OBJECT || scan->first->type == EDJ_ARRAY) {
 				/* Append this member's key to expr */
 				wasused = find->used;
 				help_find_cat(find, scan->text);
@@ -236,7 +236,7 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 				if (!find->needle
 				 && !find->regex
 				 && !find->calc
-				 && (!find->needkey || !jx_mbs_casecmp(find->needkey, scan->text))) {
+				 && (!find->needkey || !edj_mbs_casecmp(find->needkey, scan->text))) {
 					if (find->grep)
 						return 1;
 					help_find_row(find, scan->first);
@@ -248,7 +248,7 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 				waskey = find->key;
 				find->key = scan->text;
 				if (find->context)
-					find->context = jx_context(find->context, scan, JX_CONTEXT_NOFREE|JX_CONTEXT_THIS);
+					find->context = edj_context(find->context, scan, EDJ_CONTEXT_NOFREE|EDJ_CONTEXT_THIS);
 
 				/* Recurse */
 				if (help_find(scan->first, find) && find->grep)
@@ -256,41 +256,41 @@ static int help_find(jx_t *haystack, jxfind_t *find)
 
 				/* Restore expr */
 				if (find->context)
-					find->context = jx_context_free(find->context);
+					find->context = edj_context_free(find->context);
 				find->key = waskey;
 				find->used = wasused;
 				continue;
 			} else if (find->calc) {
 				/* We already checked */
 				continue;
-			} else if (find->needkey && 0 != jx_mbs_casecmp(find->needkey, scan->text)) {
+			} else if (find->needkey && 0 != edj_mbs_casecmp(find->needkey, scan->text)) {
 				/* Wrong key */
 				continue;
-			} else if (scan->first->type == JX_STRING && find->needle && find->needle->type == JX_STRING) {
+			} else if (scan->first->type == EDJ_STRING && find->needle && find->needle->type == EDJ_STRING) {
 				/* Compare as strings */
 				if (find->ignorecase) {
-					if (0 != jx_mbs_casecmp(find->needle->text, scan->first->text))
+					if (0 != edj_mbs_casecmp(find->needle->text, scan->first->text))
 						continue;
 				} else {
 					if (0 != strcmp(find->needle->text, scan->first->text))
 						continue;
 				}
-			} else if (scan->first->type == JX_STRING && find->regex) {
+			} else if (scan->first->type == EDJ_STRING && find->regex) {
 				/* Compare against the regexp */
 				regmatch_t matches[10];
 				if (regexec(find->regex, scan->first->text, 10, matches, 0) != 0)
 					continue;
-			} else if (scan->first->type == JX_NUMBER && find->needle && find->needle->type == JX_NUMBER) {
+			} else if (scan->first->type == EDJ_NUMBER && find->needle && find->needle->type == EDJ_NUMBER) {
 				/* Does it match? */
 
 				/* Optimization for comparing binary integers */
 				if (scan->first->text[0] == 0 && scan->first->text[1] == 'i' && find->int_or_double == 'i') {
 					/* Compare binary integers */
-					if (jx_int(scan->first) != find->needint)
+					if (edj_int(scan->first) != find->needint)
 						continue;
 				} else {
 					/* Compare as double */
-					if (jx_double(scan->first) != find->needdouble)
+					if (edj_double(scan->first) != find->needdouble)
 						continue;
 				}
 
@@ -337,20 +337,20 @@ static int help_find(jx_t *haystack, jxfind_t *find)
  *   index	The outermost array subscript of the match. Omitted if no array.
  *   key	The innermost member name of the match.  Omitted if no object.
  *   value	The matching value that was found.
- *   expr	Expression for the match, suitable for use with jx_by_expr()
+ *   expr	Expression for the match, suitable for use with edj_by_expr()
  *
  * If no matches are found, an empty array is returned.  Parameter errors cause
- * a "null" jx_t to be returned containing an error message.
+ * a "null" edj_t to be returned containing an error message.
  */
-static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *regex, char *needkey, int grep, jxcalc_t *calc, jxcontext_t *context)
+static edj_t *find_any(edj_t *haystack, edj_t *needle, int ignorecase, regex_t *regex, char *needkey, int grep, edjcalc_t *calc, edjcontext_t *context)
 {
-	jxfind_t find;
+	edjfind_t find;
 
 	/* Check parameters */
-	if (haystack->type != JX_ARRAY && haystack->type != JX_OBJECT)
-		return jx_error_null(0, "Can only find within an object or array");
-	if (!regex && needle && (needle->type != JX_STRING && needle->type != JX_NUMBER))
-		return jx_error_null(0, "Can only find string, number, or regex");
+	if (haystack->type != EDJ_ARRAY && haystack->type != EDJ_OBJECT)
+		return edj_error_null(0, "Can only find within an object or array");
+	if (!regex && needle && (needle->type != EDJ_STRING && needle->type != EDJ_NUMBER))
+		return edj_error_null(0, "Can only find string, number, or regex");
 
 	/* Fill in the find argument block */
 	memset(&find, 0, sizeof find);
@@ -366,10 +366,10 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 	find.size = 100;
 	find.used = 0;
 	find.expr = malloc(find.size);
-	find.result = jx_array();
+	find.result = edj_array();
 
 	/* If searching for a number, convert it to binary */
-	if (needle && needle->type == JX_NUMBER) {
+	if (needle && needle->type == EDJ_NUMBER) {
 		if (needle->text[0] == '\0') {
 			find.int_or_double = needle->text[1];
 		} else {
@@ -381,30 +381,30 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 				find.int_or_double = 'i';
 		}
 		if (find.int_or_double == 'i') {
-			find.needint = jx_int(needle);
+			find.needint = edj_int(needle);
 			find.needdouble = (double)find.needint;
 			snprintf(find.needdigits, sizeof find.needdigits, "%d", find.needint);
 		} else {
-			find.needdouble = jx_double(needle);
+			find.needdouble = edj_double(needle);
 			/* don't need find->needint */
 		}
 	}
 
 	/* Let the helper function do most of the work */
 	if (grep) {
-		jx_t *scan;
-		for (scan = jx_first(haystack); scan && !jx_interrupt; scan = jx_next(scan)) {
+		edj_t *scan;
+		for (scan = edj_first(haystack); scan && !edj_interrupt; scan = edj_next(scan)) {
 			/* Since help_find can only handle arrays and objects,
 			 * we need to stuff each element into a bogus array
 			 * of its own.
 			 */
-			jx_t array, *next;
-			array.type = JX_ARRAY;
+			edj_t array, *next;
+			array.type = EDJ_ARRAY;
 			array.first = scan;
 			next = scan->next;
 			scan->next = NULL;
 			if (help_find(&array, &find))
-				jx_append(find.result, jx_copy(scan));
+				edj_append(find.result, edj_copy(scan));
 			scan->next = next;
 
 		}
@@ -418,13 +418,13 @@ static jx_t *find_any(jx_t *haystack, jx_t *needle, int ignorecase, regex_t *reg
 }
 
 /* Do a deep search for a value */
-jx_t *jx_find(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
+edj_t *edj_find(edj_t *haystack, edj_t *needle, int ignorecase, char *needkey)
 {
 	return find_any(haystack, needle, ignorecase, NULL, needkey, 0, NULL, NULL);
 }
 
 /* Do a deep search for a regular expression */
-jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey)
+edj_t *edj_find_regex(edj_t *haystack, regex_t *regex, char *needkey)
 {
 	return find_any(haystack, NULL, 0, regex, needkey, 0, NULL, NULL);
 }
@@ -432,23 +432,23 @@ jx_t *jx_find_regex(jx_t *haystack, regex_t *regex, char *needkey)
 /* Do a deep search for a value that makes an expression true.  This is used
  * to implement the "@" operator.
  */
-jx_t *jx_find_calc(jx_t *haystack, jxcalc_t *calc, jxcontext_t *context)
+edj_t *edj_find_calc(edj_t *haystack, edjcalc_t *calc, edjcontext_t *context)
 {
 	return find_any(haystack, NULL, 0, NULL, NULL, 0, calc, context);
 }
 
 /* Do a deep search for a value in rows of a table*/
-jx_t *jx_grep(jx_t *haystack, jx_t *needle, int ignorecase, char *needkey)
+edj_t *edj_grep(edj_t *haystack, edj_t *needle, int ignorecase, char *needkey)
 {
-	if (haystack->type != JX_ARRAY)
-		return jx_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
+	if (haystack->type != EDJ_ARRAY)
+		return edj_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
 	return find_any(haystack, needle, ignorecase, NULL, needkey, 1, NULL, NULL);
 }
 
 /* Do a deep search for a regular expression in rows of a table */
-jx_t *jx_grep_regex(jx_t *haystack, regex_t *regex, char *needkey)
+edj_t *edj_grep_regex(edj_t *haystack, regex_t *regex, char *needkey)
 {
-	if (haystack->type != JX_ARRAY)
-		return jx_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
+	if (haystack->type != EDJ_ARRAY)
+		return edj_error_null(NULL, "needarray:The first argument to %s() must be an array", "grep");
 	return find_any(haystack, NULL, 0, regex, needkey, 1, NULL, NULL);
 }

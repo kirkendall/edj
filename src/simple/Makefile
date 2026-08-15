@@ -2,11 +2,11 @@ LIB=	../../lib
 INC=	../../include
 CFLAGS=	-I$(INC)
 LDFLAGS=-L$(LIB)
-LDLIBS=	-ljx
+LDLIBS=	-ledj
 
 all: simple
 
-simple: simple.c $(LIB)/libjx.so
+simple: simple.c $(LIB)/libedj.so
 	$(CC) $(CFLAGS) $(LDFLAGS) simple.c $(LDLIBS) -o simple
 
 clean:

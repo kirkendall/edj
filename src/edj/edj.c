@@ -9,8 +9,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <sys/stat.h>
-#include <jx.h>
-#include "jxprog.h"
+#include <edj.h>
+#include "edjprog.h"
 #include "version.h"
 
 
@@ -30,14 +30,14 @@ int restricted = 0;
 int allow_update = 0;
 
 /* -D -- This is a directory to check for autoload */
-jx_t *autoload_list = NULL;
+edj_t *autoload_list = NULL;
 
 /* This is the context -- a stack of data that is available to expressions. */
-jxcontext_t *context;
+edjcontext_t *context;
 
 /* These are lists of commands to execute once, or for each data file. */
-jxcmd_t *autocmd = NULL; /* Once, from -Fscript */
-jxcmd_t *initcmd = NULL; /* For each data file, from -ccommand or -fscript */
+edjcmd_t *autocmd = NULL; /* Once, from -Fscript */
+edjcmd_t *initcmd = NULL; /* For each data file, from -ccommand or -fscript */
 
 
 /* Output a debugging flag usage message */
@@ -46,8 +46,8 @@ void debug_usage()
 	puts("The -jflags option controls debugging flags.  The flags are single letters");
 	puts("indicating what should be debugged.  The flag letters are:");
 	puts("  a  Call abort() when an error is detected.");
-	puts("  e  Output info about jx_by_expr() calls.");
-	puts("  c  Output info about jx_calc() calls.");
+	puts("  e  Output info about edj_by_expr() calls.");
+	puts("  c  Output info about edj_calc() calls.");
 	puts("  t  Trace each command as it is run.");
 	puts("");
 	puts("You may also put a + or - or = between -j and the flags to alter the way the new");
@@ -60,7 +60,7 @@ void debug_usage()
 /* Output a usage message and then exit. */
 static void usage(char *fmt, char *data)
 {
-	puts("Usage: jx [flags] [script] [name=value]... [file.json]...");
+	puts("Usage: edj [flags] [script] [name=value]... [file.json]...");
 	puts("Flags: -c command        Evaluate command for each input file, and quit.");
 	puts("       -f/-F script      Run script for each input file, or once persistently.");
 	puts("       -i                Interactive.");
@@ -105,38 +105,38 @@ int isdirectory(const char *filename)
  * sampledata directory.  If it is the name of one of those files, then it
  * loads the file into memory and returns that.
  */
-jx_t *autoload(char *key)
+edj_t *autoload(char *key)
 {
 	char    filename[1000];
-	jx_t  *dir, *parser, *ext;
+	edj_t  *dir, *parser, *ext;
 
 	/* Scan for a key.json (or other known extensions) file in any of
 	 * the autoload directories.
 	 */
-	dir = jx_by_key(jx_config, "autoload");
-	if (!dir || dir->type != JX_ARRAY)
+	dir = edj_by_key(edj_config, "autoload");
+	if (!dir || dir->type != EDJ_ARRAY)
 		return NULL;
-	for (dir = jx_first(dir); dir; dir = jx_next(dir)) {
-		if (dir->type != JX_STRING)
+	for (dir = edj_first(dir); dir; dir = edj_next(dir)) {
+		if (dir->type != EDJ_STRING)
 			continue;
-		parser = jx_by_key(jx_system, "parsers");
+		parser = edj_by_key(edj_system, "parsers");
 		if (!parser)
 			continue;
-		for (parser = jx_first(parser); parser; parser = jx_next(parser)) {
-			if (parser->type != JX_OBJECT)
+		for (parser = edj_first(parser); parser; parser = edj_next(parser)) {
+			if (parser->type != EDJ_OBJECT)
 				continue;
-			ext = jx_by_key(parser, "suffix");
+			ext = edj_by_key(parser, "suffix");
 			if (!ext)
 				continue;
-			for (ext = jx_first(ext); ext; ext = jx_next(ext)) {
-				if (ext->type != JX_STRING)
+			for (ext = edj_first(ext); ext; ext = edj_next(ext)) {
+				if (ext->type != EDJ_STRING)
 					continue;
 				sprintf(filename, "%s/%s%s", dir->text, key, ext->text);
 				if (access(filename, R_OK) == 0) {
-					jx_break(ext);
-					jx_break(parser);
-					jx_break(dir);
-					return jx_parse_file(filename);
+					edj_break(ext);
+					edj_break(parser);
+					edj_break(dir);
+					return edj_parse_file(filename);
 				}
 			}
 		}
@@ -151,10 +151,10 @@ jx_t *autoload(char *key)
 /* This is a context hook.  It adds a layer a the standard context for
  * autoloading files from the -ddirectory.
  */
-static jxcontext_t *autodir(jxcontext_t *context)
+static edjcontext_t *autodir(edjcontext_t *context)
 {
 	/* Add the autoloader */
-	context = jx_context(context, jx_object(), JX_CONTEXT_GLOBAL);
+	context = edj_context(context, edj_object(), EDJ_CONTEXT_GLOBAL);
 	context->autoload = autoload;
 	return context;
 }
@@ -197,29 +197,29 @@ char *jcreadscript(const char *filename)
 	return buf;
 }
 
-void run(jxcmd_t *jc, jxcontext_t **refcontext)
+void run(edjcmd_t *jc, edjcontext_t **refcontext)
 {
-	jxcmdout_t *result;
+	edjcmdout_t *result;
 
-	result = jx_cmd_run(jc, &context);
+	result = edj_cmd_run(jc, &context);
 	if (result) {
-		if (result->ret == &jx_cmd_break)
-			jx_user_printf(NULL, "debug", "RETURNED A \"BREAK\"\n");
-		else if (result->ret == &jx_cmd_continue)
-			jx_user_printf(NULL, "debug", "RETURNED A \"CONTINUE\"\n");
+		if (result->ret == &edj_cmd_break)
+			edj_user_printf(NULL, "debug", "RETURNED A \"BREAK\"\n");
+		else if (result->ret == &edj_cmd_continue)
+			edj_user_printf(NULL, "debug", "RETURNED A \"CONTINUE\"\n");
 		else if (result->ret) {
-			jx_user_printf(NULL, "debug", "RETURNED A VALUE: ");
-			jx_print(result->ret, NULL);
-			jx_free(result->ret);
+			edj_user_printf(NULL, "debug", "RETURNED A VALUE: ");
+			edj_print(result->ret, NULL);
+			edj_free(result->ret);
 		} else {
 			if (result->where) {
 				int lineno;
-				jxfile_t *jf = jx_file_containing(result->where, &lineno);
+				edjfile_t *jf = edj_file_containing(result->where, &lineno);
 				if (jf)
-					jx_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
+					edj_user_printf(NULL, "error", "%s:%d: ", jf->filename, lineno);
 			}
-			jx_user_printf(NULL, "error", "%s", result->text);
-			jx_user_printf(NULL, "normal", "\n");
+			edj_user_printf(NULL, "error", "%s", result->text);
+			edj_user_printf(NULL, "normal", "\n");
 		}
 		free(result);
 	}
@@ -246,7 +246,7 @@ int isscript(char *filename)
 		 || !strcasecmp(ext, ".wsdl")
 		 || !strcasecmp(ext, ".csv"))
 			return 0;
-		if (!strcasecmp(ext, ".jx")
+		if (!strcasecmp(ext, ".edj")
 		 || !strcasecmp(ext, ".js")) /* I know, but it isn't data */
 			return 1;
 	}
@@ -278,9 +278,9 @@ int isscript(char *filename)
 }
 
 /* Delete a string from an array of strings */
-static void delete_from_array(jx_t *array, const char *str)
+static void delete_from_array(edj_t *array, const char *str)
 {
-	jx_t *scan, *lag;
+	edj_t *scan, *lag;
 
 	/* If array is empty, do nothing */
 	if (!array->first)
@@ -296,7 +296,7 @@ static void delete_from_array(jx_t *array, const char *str)
 		else
 			array->first = scan->next;
 		scan->next = NULL;
-		jx_free(scan);
+		edj_free(scan);
 	}
 }
 
@@ -305,7 +305,7 @@ static void delete_from_array(jx_t *array, const char *str)
 int main(int argc, char **argv)
 {
 	int	i;
-	jx_t	*args, *section, *err, *omitplugins, *omitscripts;
+	edj_t	*args, *section, *err, *omitplugins, *omitscripts;
 	char	*val, *plugin;
 	int	anypersistent = 0;
 	int	anyfiles = 0;
@@ -314,7 +314,7 @@ int main(int argc, char **argv)
 	int	opt;
 	int	exitcode = 0;
 
-	/* Set the locale.  JSON data and JX scripts always uses numbers
+	/* Set the locale.  JSON data and edj scripts always uses numbers
 	 * formatted for the "C" locale, but we can use the real locale
 	 * for everything else.
 	 */
@@ -324,8 +324,8 @@ int main(int argc, char **argv)
 
 	/* Detect "--version" */
 	if (argc >= 2 && !strcmp(argv[1], "--version")) {
-		printf("jx %s\n", JX_VERSION);
-		printf("Copyright %s\n", JX_COPYRIGHT);
+		printf("edj %s\n", EDJ_VERSION);
+		printf("Copyright %s\n", EDJ_COPYRIGHT);
 		puts("Freely redistributable under the terms of the");
 		puts("GNU General Public License v3 or later.");
 		return 0;
@@ -338,26 +338,26 @@ int main(int argc, char **argv)
 	}
 
 	/* Try to load the config.  If not found, use built-in defaults.
-	 * This also sets up jx_system and jx_config.  It also fetches
+	 * This also sets up edj_system and edj_config.  It also fetches
 	 * the list of persistent plugins, if there is one.
 	 */
-	jx_config_load("jx");
+	edj_config_load("edj");
 
 	/* The library's default settings don't include an "autoload" directory
 	 * list, "autoscript" script list, or "autoplugin" plugin list because
-	 * the library doesn't support those itself; the jx program does.
+	 * the library doesn't support those itself; the edj program does.
 	 * If we reloaded those values from the config file then keep them;
 	 * if they're missing from config then add them now.
 	 */
-	section = jx_by_key(jx_config, "autoload");
-	if (!section || section->type != JX_ARRAY)
-		jx_append(jx_config, jx_key("autoload", jx_array()));
-	section = jx_by_key(jx_config, "autoscript");
-	if (!section || section->type != JX_ARRAY)
-		jx_append(jx_config, jx_key("autoscript", jx_array()));
-	section = jx_by_key(jx_config, "autoplugin");
-	if (!section || section->type != JX_ARRAY)
-		jx_append(jx_config, jx_key("autoplugin", jx_array()));
+	section = edj_by_key(edj_config, "autoload");
+	if (!section || section->type != EDJ_ARRAY)
+		edj_append(edj_config, edj_key("autoload", edj_array()));
+	section = edj_by_key(edj_config, "autoscript");
+	if (!section || section->type != EDJ_ARRAY)
+		edj_append(edj_config, edj_key("autoscript", edj_array()));
+	section = edj_by_key(edj_config, "autoplugin");
+	if (!section || section->type != EDJ_ARRAY)
+		edj_append(edj_config, edj_key("autoplugin", edj_array()));
 
 	/* Scan the options for things we need to know to decide whether this
 	 * will be batch or interactive.  Check whether the first arg after
@@ -366,8 +366,8 @@ int main(int argc, char **argv)
 	 * -l-plugin to temporarily remove a persistent plugin.
 	 */
 	interactive = -1;
-	omitplugins = jx_array();
-	omitscripts = jx_array();
+	omitplugins = edj_array();
+	omitscripts = edj_array();
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
 		switch (opt) {
 		case 'c':
@@ -381,14 +381,14 @@ int main(int argc, char **argv)
 			break;
 		case 'u':
 			allow_update = 1;
-			jx_append(jx_system, jx_key("update", jx_boolean(1)));
+			edj_append(edj_system, edj_key("update", edj_boolean(1)));
 			break;
 		case 'L':
 			/* Adjust the list of persistent plugins but DON'T LOAD
 			 * YET!  We'll load the whole persistent list after
 			 * we're done processing all -L flags, if interactive.
 			 */
-			section = jx_by_key(jx_config, "autoplugin");
+			section = edj_by_key(edj_config, "autoplugin");
 			plugin = strdup(optarg);
 			val = strchr(plugin, ',');
 			if (val)
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
 				 * to the end of the list.
 				 */
 				delete_from_array(section, plugin);
-				jx_append(section, jx_string(plugin, -1));
+				edj_append(section, edj_string(plugin, -1));
 			}
 			free(plugin);
 			break;
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
 			 */
 			if (optarg[0] == '-') {
 				/* Add it to the omitscripts list */
-				jx_append(omitscripts, jx_string(optarg + 1, val - optarg));
+				edj_append(omitscripts, edj_string(optarg + 1, val - optarg));
 			} else {
 				/* Using -f means it isn't interactive unless
 				 * -i is also given.
@@ -435,13 +435,13 @@ int main(int argc, char **argv)
 					val = optarg + strlen(optarg);
 
 				/* Add it to the omitplugins list */
-				jx_append(omitplugins, jx_string(optarg + 1, val - optarg));
+				edj_append(omitplugins, edj_string(optarg + 1, val - optarg));
 			}
 			break;
 
 		case '?':
-			jx_free(omitplugins);
-			jx_free(omitscripts);
+			edj_free(omitplugins);
+			edj_free(omitscripts);
 			usage(NULL, NULL);
 			break;
 		}
@@ -454,9 +454,9 @@ int main(int argc, char **argv)
 		interactive = 1;
 	optind = 1;
 
-	/* Set the runmode in jx_system to "interactive" or "batch" */
+	/* Set the runmode in edj_system to "interactive" or "batch" */
 	val = interactive ? "interactive" : "batch";
-	jx_append(jx_system, jx_key("runmode", jx_string(val, -1)));
+	edj_append(edj_system, edj_key("runmode", edj_string(val, -1)));
 
 	/* When running in batch mode, we use a separate set of formatting
 	 * options which are NOT persistent, because we want batch scripts to
@@ -466,10 +466,10 @@ int main(int argc, char **argv)
 	 */
 	if (!interactive && isatty(1)) {
 		/* Copy "graphic", "color", and "table" from interactive */
-		section = jx_by_key(jx_config, "interactive");
-		jx_config_set("batch", "graphic", jx_copy(jx_by_key(section, "graphic")));
-		jx_config_set("batch", "color", jx_copy(jx_by_key(section, "color")));
-		jx_config_set("batch", "table", jx_copy(jx_by_key(section, "table")));
+		section = edj_by_key(edj_config, "interactive");
+		edj_config_set("batch", "graphic", edj_copy(edj_by_key(section, "graphic")));
+		edj_config_set("batch", "color", edj_copy(edj_by_key(section, "color")));
+		edj_config_set("batch", "table", edj_copy(edj_by_key(section, "table")));
 	}
 
 	/* Load the persistent plugins.  We have to do this before we process
@@ -478,7 +478,7 @@ int main(int argc, char **argv)
 	 */
 	if (interactive) {
 		/* Plugins first */
-		section = jx_by_key(jx_config, "autoplugin");
+		section = edj_by_key(edj_config, "autoplugin");
 		for (args = section->first; args; args = args->next) {
 			/* Skip if in "omitplugins" list (abusing the "err" variable)*/
 			for (err = omitplugins->first; err; err = err->next)
@@ -488,17 +488,17 @@ int main(int argc, char **argv)
 				continue;
 
 			/* load it */
-			err = jx_plugin_load(args->text);
+			err = edj_plugin_load(args->text);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
-				jx_free(err);
+				edj_free(err);
 				exitcode = 1;
 				goto CleanExit;
 			}
 		}
 
 		/* Then scripts */
-		section = jx_by_key(jx_config, "autoscript");
+		section = edj_by_key(edj_config, "autoscript");
 		for (args = section->first; args; args = args->next) {
 			/* Skip if in "omitscripts" list (abusing the "err" variable)*/
 			for (err = omitscripts->first; err; err = err->next)
@@ -511,13 +511,13 @@ int main(int argc, char **argv)
 			 * we really care about) but we need to wait to execute
 			 * other parts of it until we've created the context.
 			 */
-			autocmd = jx_cmd_append(autocmd, jx_cmd_parse_file(optarg), NULL);
+			autocmd = edj_cmd_append(autocmd, edj_cmd_parse_file(optarg), NULL);
 		}
 	}
 
 	/* Free the "omitplugins" and "omitscripts" lists */
-	jx_free(omitplugins);
-	jx_free(omitscripts);
+	edj_free(omitplugins);
+	edj_free(omitscripts);
 
 	/* Parse persistent flags */
 	while ((opt = getopt(argc, argv, OPTFLAGS)) >= 0) {
@@ -531,7 +531,7 @@ int main(int argc, char **argv)
 		anypersistent = 1;
 		switch (opt) {
 		case 'F':
-			section = jx_by_key(jx_config, "autoscript");
+			section = edj_by_key(edj_config, "autoscript");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -540,13 +540,13 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = jx_string(optarg, -1);
+				args = edj_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
 			break;
 		case 'D':
-			section = jx_by_key(jx_config, "autoload");
+			section = edj_by_key(edj_config, "autoload");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -555,7 +555,7 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = jx_string(optarg, -1);
+				args = edj_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
@@ -573,9 +573,9 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 				/* Find this plugin's settings */
-				section = jx_by_key(jx_config, "plugin");
+				section = edj_by_key(edj_config, "plugin");
 				if (section)
-					section = jx_by_key(section, plugin);
+					section = edj_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
 					exitcode = 1;
@@ -583,10 +583,10 @@ int main(int argc, char **argv)
 				}
 
 				/* Adjust the settings */
-				err = jx_config_parse(section, val, NULL);
+				err = edj_config_parse(section, val, NULL);
 				if (err) {
 					puts(err->text);
-					jx_free(err);
+					edj_free(err);
 					exitcode = 1;
 					goto CleanExit;
 				}
@@ -596,11 +596,11 @@ int main(int argc, char **argv)
 
 		case 'S':
 			/* Parse the options. */
-			section = jx_by_key(jx_config, "interactive");
-			err = jx_config_parse(section, optarg, NULL);
+			section = edj_by_key(edj_config, "interactive");
+			err = edj_config_parse(section, optarg, NULL);
 			if (err) {
 				puts(err->text);
-				jx_free(err);
+				edj_free(err);
 				exitcode = 1;
 				goto CleanExit;
 			}
@@ -611,22 +611,22 @@ int main(int argc, char **argv)
 
 	/* If any persistent settings were changed, save the config */
 	if (anypersistent)
-		jx_config_save("jx");
+		edj_config_save("edj");
 
 	/* Register the autoload handler if we're interactive.  If we end up
 	 * not using autoload, having this registered will be only a minor
 	 * inefficiency.
 	 */
 	if (interactive)
-		jx_context_hook(autodir);
+		edj_context_hook(autodir);
 
 	/* Create an object that will hold any name=value parameters, and
 	 * start a context using it.  We have to do this before our final
 	 * scan of command-line options because we need to know the context
 	 * while parsing -ccommand or -fscript options.
 	 */
-	args = jx_object();
-	context = jx_context_std(args);
+	args = edj_object();
+	context = edj_context_std(args);
 
 	/* Parse most remaining command-line flags.  In particular, we load
 	 * any scripts so that we can process the "plugin" commands they
@@ -638,13 +638,13 @@ int main(int argc, char **argv)
 			restricted = 1;
 			break;
 		case 'o':
-			jx_file_new_type = 'o';
+			edj_file_new_type = 'o';
 			break;
 		case 'a':
-			jx_file_new_type = 'a';
+			edj_file_new_type = 'a';
 			break;
 		case 'd':
-			section = jx_by_key(jx_config, "autoload");
+			section = edj_by_key(edj_config, "autoload");
 			if (*optarg == '-') {
 				/* Delete from the list */
 				delete_from_array(section, optarg + 1);
@@ -653,7 +653,7 @@ int main(int argc, char **argv)
 				delete_from_array(section, optarg);
 
 				/* Insert at front of the list */
-				args = jx_string(optarg, -1);
+				args = edj_string(optarg, -1);
 				args->next = section->first;
 				section->first = args;
 			}
@@ -675,10 +675,10 @@ int main(int argc, char **argv)
 				*val++ = '\0';
 
 			/* Load the plugin */
-			err = jx_plugin_load(plugin);
+			err = edj_plugin_load(plugin);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
-				jx_free(err);
+				edj_free(err);
 				free(plugin);
 				exitcode = 1;
 				goto CleanExit;
@@ -687,12 +687,12 @@ int main(int argc, char **argv)
 			/* If there are options, process them now */
 			if (val && *val)
 			{ 
-				/* Find the jx_config.plugin.{plugin} section.
+				/* Find the edj_config.plugin.{plugin} section.
 				 * If it doesn't exist, then fail.
 				 */
-				section = jx_by_key(jx_config, "plugin");
+				section = edj_by_key(edj_config, "plugin");
 				if (section)
-					section = jx_by_key(section, plugin);
+					section = edj_by_key(section, plugin);
 				if (!section) {
 					fprintf(stderr, "The \"%s\" plugin doesn't use settings\n", plugin);
 					free(plugin);
@@ -701,10 +701,10 @@ int main(int argc, char **argv)
 				}
 
 				/* Parse the options.  Watch for errors */
-				err = jx_config_parse(section, val, NULL);
+				err = edj_config_parse(section, val, NULL);
 				if (err) {
 					fprintf(stderr, "%s\n", err->text);
-					jx_free(err);
+					edj_free(err);
 					free(plugin);
 					exitcode = 1;
 					goto CleanExit;
@@ -713,8 +713,8 @@ int main(int argc, char **argv)
 			free(plugin);
 			break;
 		case 's':
-			section = jx_by_key(jx_config, interactive ? "interactive" : "batch");
-			err = jx_config_parse(section, optarg, NULL);
+			section = edj_by_key(edj_config, interactive ? "interactive" : "batch");
+			err = edj_config_parse(section, optarg, NULL);
 			if (err) {
 				fprintf(stderr, "%s\n", err->text);
 				exitcode = 1;
@@ -725,21 +725,21 @@ int main(int argc, char **argv)
 			pretty++;
 			break;
 		case 'j':
-			if (*optarg == '?' || jx_debug(optarg)) {
+			if (*optarg == '?' || edj_debug(optarg)) {
 				debug_usage();
 				goto CleanExit;
 			}
 			break;
 		case 'c':
 			/* Parse a command and add it to the initcmd list. */
-			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_string(optarg), context);
+			initcmd = edj_cmd_append(initcmd, edj_cmd_parse_string(optarg), context);
 			break;
 		case 'f':
 			/* Add commands from the script to initcmd.  It is also
 			 * likely to have defined some functions, which don't
 			 * add anything to initcmd.
 			 */
-			initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(optarg), context);
+			initcmd = edj_cmd_append(initcmd, edj_cmd_parse_file(optarg), context);
 			break;
 		case 'F':
 		case 'L':
@@ -777,8 +777,8 @@ int main(int argc, char **argv)
 		default:val = "nopretty,json,oneline=70";
 		}
 
-		section = jx_by_key(jx_config, "batch");
-		err = jx_config_parse(section, val, NULL);
+		section = edj_by_key(edj_config, "batch");
+		err = edj_config_parse(section, val, NULL);
 		if (err) {
 			fprintf(stderr, "%s\n", err->text);
 			exitcode = 1;
@@ -791,40 +791,40 @@ int main(int argc, char **argv)
 	 * then parse it like a -fscript flag.
 	 */
 	if (firstscript) {
-		initcmd = jx_cmd_append(initcmd, jx_cmd_parse_file(argv[optind]), context);
+		initcmd = edj_cmd_append(initcmd, edj_cmd_parse_file(argv[optind]), context);
 		optind++;
 	}
 
 	/* If -ccmd or -fscript resulted in an error (already reported) then
 	 * quit now.
 	 */
-	if (initcmd == JX_CMD_ERROR || autocmd == JX_CMD_ERROR) {
+	if (initcmd == EDJ_CMD_ERROR || autocmd == EDJ_CMD_ERROR) {
 		exitcode = 1;
 		goto CleanExit;
 	}
 
 	/* Set the formatting from the config */
-	jx_format_set(NULL, NULL);
+	edj_format_set(NULL, NULL);
 
 	/* Add any name=value parameters to the "args" object that we created
 	 * when we started the context.  Also, add any data files named on
-	 * the command line, via jx_context_file().
+	 * the command line, via edj_context_file().
 	 */
 	for (i = optind; i < argc; i++) {
-		jx_t *tmp;
+		edj_t *tmp;
 
 		/* If it looks like a file, then add it to the list of files */
-		if (((strchr(argv[i], '.') && jx_file_new_type != '\0')
+		if (((strchr(argv[i], '.') && edj_file_new_type != '\0')
 		  || !strcmp(argv[i], "-")
 		  || 0 == access(argv[i], F_OK))
 		 && !isdirectory(argv[i])) {
 			/* If it doesn't exist and no -a/-o was given, fail */
-			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && jx_file_new_type == '\0'){
+			if (strcmp(argv[i], "-") && 0 != access(argv[i], F_OK) && edj_file_new_type == '\0'){
 				perror(argv[i]);
 				exitcode = 1;
 				goto CleanExit;
 			}
-			jx_context_file(context, argv[i], allow_update, NULL);
+			edj_context_file(context, argv[i], allow_update, NULL);
 			anyfiles = 1;
 		} else {
 			/* In a name=value string, separate the name from the value */
@@ -839,15 +839,15 @@ int main(int argc, char **argv)
 			 || !strcmp("true", val)
 			 || !strcmp("false", val)
 			 || !strcmp("null", val))
-				tmp = jx_parse_string(val);
+				tmp = edj_parse_string(val);
 			else
-				tmp = jx_string(val, -1);
-			jx_append(args, jx_key(argv[i], tmp));
+				tmp = edj_string(val, -1);
+			edj_append(args, edj_key(argv[i], tmp));
 		}
 	}
 
 	/* Start on the first file named on the command line, if any */
-	jx_context_file(context, NULL, 0, NULL);
+	edj_context_file(context, NULL, 0, NULL);
 
 	/* If this was determined to be a batch invocation (not interactive)
 	 * but no -ccommand or -fscript flags were given, then assume "-cdata"
@@ -855,18 +855,18 @@ int main(int argc, char **argv)
 	 */
 	if (!interactive && !initcmd)
 	{
-		args = jx_config_get("batch", "table");
+		args = edj_config_get("batch", "table");
 		if (args && (!strcmp(args->text, "grid") || !strcmp(args->text, "sh") || !strcmp(args->text, "csv")))
-			initcmd = jx_cmd_parse_string("select");
+			initcmd = edj_cmd_parse_string("select");
 		else
-			initcmd = jx_cmd_parse_string("data");
+			initcmd = edj_cmd_parse_string("data");
 	}
 
 	/* If batch mode and no filenames were named on the command line,
 	 * then assume "-", unless stdin is a tty.
 	 */
 	if (!interactive && !anyfiles && !isatty(0))
-		jx_context_file(context, "-", 1, NULL);
+		edj_context_file(context, "-", 1, NULL);
 
 	/* Run any -Fscript scripts now, if interactive.  (For batch mode,
 	 * we'll run them later, separately for each data file.)
@@ -874,10 +874,10 @@ int main(int argc, char **argv)
 	if (interactive) {
 		run(autocmd, &context);
 	}
-	jx_cmd_free(autocmd);
+	edj_cmd_free(autocmd);
 
 	/* Start on the first file */
-	jx_context_file(context, NULL, 0, NULL);
+	edj_context_file(context, NULL, 0, NULL);
 
 	/* Do either the batch or interactive thing */
 	if (interactive)
@@ -893,19 +893,19 @@ CleanExit:
 		 * file was modified.  Switching to the previous file is enough
 		 * to trigger this even if there was no previous file.
 		 */
-		i = JX_CONTEXT_FILE_PREVIOUS;
-		jx_context_file(context, NULL, 0, &i);
+		i = EDJ_CONTEXT_FILE_PREVIOUS;
+		edj_context_file(context, NULL, 0, &i);
 	}
 
 	/* Free the context stack */
 	while (context)
-		context = jx_context_free(context);
+		context = edj_context_free(context);
 
 	/* Free the initialization commands (from -ccmd and -fffile) */
-	jx_cmd_free(initcmd);
+	edj_cmd_free(initcmd);
 
 	/* Revert to normal text colors */
-	jx_user_printf(NULL, "normal", "");
+	edj_user_printf(NULL, "normal", "");
 
 	/* Return the success/fail status */
 	return exitcode;

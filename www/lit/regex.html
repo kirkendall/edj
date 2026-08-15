@@ -2,15 +2,15 @@
 <html>
   <head>
     <title>Regular expressions</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx - Regular expressions">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj - Regular expressions">
     <meta name="keywords" content="regex">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
     <h1>Regular expressions</h1>
     Regular expressions are a common way to describe complex text patterns.
-    jx uses them with the
+    edj uses them with the
     <a target="_PARENT" href="../index.html?op=like">LIKE</a> operator, and the
     <a target="_PARENT" href="../index.html?f=match">match()</a>,
     <a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a>,
@@ -92,7 +92,7 @@
           Also, the <a target="_PARENT" href="../index.html?f=replace">replace()</a> function can access the
           text that matched each subexpression and use it when constructing
           replacement text.
-      <li>Normally jx uses POSIX "basic" regular expressions, but appending an
+      <li>Normally edj uses POSIX "basic" regular expressions, but appending an
           "e" flag makes it use "extended" regular expression syntax.
           The main difference is that metacharacters that require a backslash
           for "basic" regular expressions do not require them for "extended"
@@ -131,7 +131,7 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>Since jx deals strictly with JSON data,
+        <li>Since edj deals strictly with JSON data,
             and regular expressions aren't a valid JSON data type,
             I had to get clever.
             Regular expressions are handled like <tt>null</tt> except they

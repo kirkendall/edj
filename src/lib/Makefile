@@ -1,6 +1,6 @@
 LIB=	../../lib
 INCLUDE=../../include
-HDRS=	$(INCLUDE)/jx.h $(INCLUDE)/version.h
+HDRS=	$(INCLUDE)/edj.h $(INCLUDE)/version.h
 LIBS=	-ldl
 LIBSRC=	by.c blob.c calc.c calcfunc.c calcparse.c common.c compare.c config.c \
 	context.c copy.c cmd.c datetime.c debug.c defer.c diff.c equal.c \
@@ -16,18 +16,18 @@ STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH
 #CC=gcc -g -pg
 #CC=gcc -g -O
 CC=gcc -g -fpic -Wall
-CFLAGS=-Wall -DJX_DEBUG_MEMORY -I$(INCLUDE)
+CFLAGS=-Wall -DEDJ_DEBUG_MEMORY -I$(INCLUDE)
 
-all: $(LIB)/libjx.so $(LIB)/libjx.a
+all: $(LIB)/libedj.so $(LIB)/libedj.a
 
 $(LIBOBJ): $(HDRS)
 
-$(LIB)/libjx.so: $(LIBOBJ) plugin.o
-	$(CC) $(LIBOBJ) plugin.o $(LIBS) -shared -o $(LIB)/libjx.so
+$(LIB)/libedj.so: $(LIBOBJ) plugin.o
+	$(CC) $(LIBOBJ) plugin.o $(LIBS) -shared -o $(LIB)/libedj.so
 
-$(LIB)/libjx.a: $(LIBOBJ) pluginstatic.o
-	$(RM) $(LIB)/libjx.a
-	ar q $(LIB)/libjx.a $(LIBOBJ) pluginstatic.o
+$(LIB)/libedj.a: $(LIBOBJ) pluginstatic.o
+	$(RM) $(LIB)/libedj.a
+	ar q $(LIB)/libedj.a $(LIBOBJ) pluginstatic.o
 
 pluginstatic.o: plugin.c
 	$(CC) $(CFLAGS) $(STATIC) -c plugin.c -o pluginstatic.o
@@ -36,8 +36,8 @@ clean:
 	$(RM) $(LIBOBJ)
 	$(RM) plugin.o
 	$(RM) pluginstatic.o
-	$(RM) $(LIB)/libjx.so
-	$(RM) $(LIB)/libjx.a
+	$(RM) $(LIB)/libedj.so
+	$(RM) $(LIB)/libedj.a
 
 tags: $(LIBSRC)
 	ctags $(LIBSRC)

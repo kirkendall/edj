@@ -2,9 +2,9 @@ LIB=	../../lib
 
 all:
 	for i in */.; do make -C $$i -e; done
-	$(RM) $(LIB)/jxplugins.a
-	ar q $(LIB)/libjxplugins.a */*.o 
+	$(RM) $(LIB)/edjplugins.a
+	ar q $(LIB)/libedjplugins.a */*.o 
 
 clean:
 	for i in */.; do make -C $$i -e clean; done
-	$(RM) $(LIB)/jxplugins.a
+	$(RM) $(LIB)/edjplugins.a

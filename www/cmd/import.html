@@ -2,17 +2,17 @@
 <html>
   <head>
     <title>import</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx import - Load jx code from another file">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj import - Load edj code from another file">
     <meta name="keywords" content="command, command reference, import">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>import - Load jx code from another file</h1>
+    <h1>import - Load edj code from another file</h1>
     <dl>
       <dt>import <var>filename</var>
       <dd>
-      Load jx code from another file.
+      Load edj code from another file.
       This can be used to split large scripts into multiple files, so you
       load one script and it uses <tt>import</tt> to load the rest.
       This can also be handy when running interactively if you decide that
@@ -26,19 +26,19 @@
       the bug, and then use <tt>import</tt> to reload the corrected version.
       <p>
       If the filename you give doesn't include a filename extension, then
-      ".jx" will be assumed.
+      ".edj" will be assumed.
       <p>
       The directory is assumed to be the same as the script file containing
       the <tt>import</tt> command, or the current directory as a fallback.
-      In other words, if "scripts/fetchcustomers.jx" contains
-      "<tt>import&nbsp;common</tt>", then it'll load "scripts/common.jx".
+      In other words, if "scripts/fetchcustomers.edj" contains
+      "<tt>import&nbsp;common</tt>", then it'll load "scripts/common.edj".
     </dl>
     <details open>
       <summary>Examples</summary>
 
       <div class="example">
-	<kbd>import stats.jx</kbd>
-        This reads any variables or functions from stats.jx, so they're
+	<kbd>import stats.edj</kbd>
+        This reads any variables or functions from stats.edj, so they're
         available for your script or interactive session.
       </div>
 
@@ -52,11 +52,11 @@
             programmers to find, but are significant differences.
             <ul>
               <li>JavaScript can't load from files, only from HTTP/HTTPS URLs.
-                  jx can only load from files.
+                  edj can only load from files.
 	      <li>JavaScript has extra keywords to control which parts of the
-	          external script get loaded.  jx just loads everything.
+	          external script get loaded.  edj just loads everything.
 	      <li>JavaScript requires quotes around the external script's name.
-	          jx doesn't, partly for convenience and partly to make
+	          edj doesn't, partly for convenience and partly to make
 	          <tt>import</tt> more closely resemble the
 	          <a target="_PARENT" href="../index.html?cmd=file">file</a>
 	          command for loading data files.
@@ -69,10 +69,10 @@
 	    which loads plugins.
 	    Plugins can be implemented as either
 	    a binary file containing native code, or
-	    a jx script, or a mixture of the two.
+	    an edj script, or a mixture of the two.
 	    Since both <tt>import</tt> and
 	    <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
-	    can load jx scripts, there is a bit of overlap.
+	    can load edj scripts, there is a bit of overlap.
 	    The <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
 	    command is more powerful, but it looks for plugins to load in
 	    separate directories.

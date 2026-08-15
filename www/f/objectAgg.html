@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>objectAgg</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx objectAgg - Collect key/value pairs into a single new object">
-    <meta name="keywords" content="array, object, aggregate, jx, function reference, objectAgg">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj objectAgg - Collect key/value pairs into a single new object">
+    <meta name="keywords" content="array, object, aggregate, edj, function reference, objectAgg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -68,6 +68,20 @@
         a new object which is accumulated across the group; I.e., it ends up
         containing one member for each name, with the score as that member's value.
       </div>
+
+      <div class="example">
+        <kbd>record.keysValues() # value != "" #^ objectAgg(key,value)</kbd>
+        This removes any members from <tt>record</tt> that have the value "".
+        First we use
+        <a target="_PARENT" href="../index.html?f=keysValues">keysValues()</a>
+        to split <tt>record</tt> into a series of {name,value} objects.
+        Then we filter them via <tt>#value!=""</tt> to remove "".
+        Finally, use use <tt>#^objectAgg(key,value)</tt> to combine the
+        {key,value} pairs back into a single object.
+        Note that we use the
+        <a target="_PARENT" href="../index.html?op=each">#^</a> with
+        <tt>objectAgg()</tt> because we only want one copy of the returned
+        object, not a whole array.
 
     </details>
 

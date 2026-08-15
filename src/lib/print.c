@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This type is used only in this file to store a private list of the
  * registers table formats.
@@ -11,37 +11,37 @@
 typedef struct jctablefmt_s {
 	struct jctablefmt_s *other;
 	char *name;
-	void (*fn)(jx_t *json, jxformat_t *format);
+	void (*fn)(edj_t *json, edjformat_t *format);
 } jctablefmt_t;
 
 /* This flag is used to terminate processing, generally in response to a
  * <Ctrl-C> being pressed while running in interactive mode.
  */
-int jx_interrupt;
+int edj_interrupt;
 
-/* Print a jx_t tree as JSON text.  "format" controls the format.  */
-static void jcprint(jx_t *json, int indent, jxformat_t *format)
+/* Print an edj_t tree as JSON text.  "format" controls the format.  */
+static void jcprint(edj_t *json, int indent, edjformat_t *format)
 {
-	jx_t	*scan;
+	edj_t	*scan;
 	char	*str;
 
 	/* output the indent */
 	if (indent > 0 && (format->pretty || format->elem))
-		jx_user_printf(format, "result", "%*s", indent, "");
+		edj_user_printf(format, "result", "%*s", indent, "");
 	else
-		jx_user_printf(format, "result", ""); /* just to set color */
+		edj_user_printf(format, "result", ""); /* just to set color */
 
 	/* If this is a key, then output the key and switch to its value */
 	scan = json;
-	if (json->type == JX_KEY)
+	if (json->type == EDJ_KEY)
 	{
-                jx_user_ch('"');
+                edj_user_ch('"');
                 for (str = json->text; *str; str++) {
 			switch (*str) {
 			case '"':
 			case '\\':
-				jx_user_ch('\\');
-				jx_user_ch(*str);
+				edj_user_ch('\\');
+				edj_user_ch(*str);
 				break;
 			case '\'':
 				/* For "sh" format, the entire output is
@@ -51,132 +51,132 @@ static void jcprint(jx_t *json, int indent, jxformat_t *format)
 				 * backslash-', and start a new quote.
 				 */
 				if (format->sh) {
-					jx_user_ch('\'');
-					jx_user_ch('\\');
-					jx_user_ch('\'');
+					edj_user_ch('\'');
+					edj_user_ch('\\');
+					edj_user_ch('\'');
 				}
-				jx_user_ch('\'');
+				edj_user_ch('\'');
 				break;
 			case '\n':
-				jx_user_ch('\\');
-				jx_user_ch('n');
+				edj_user_ch('\\');
+				edj_user_ch('n');
 				break;
 			default:
-				jx_user_ch(*str);
+				edj_user_ch(*str);
 			}
 		}
-                jx_user_ch('"');
-                jx_user_ch(':');
+                edj_user_ch('"');
+                edj_user_ch(':');
 		scan = json->first;
 	}
 
 	switch (scan->type)
 	{
-	  case JX_OBJECT:
-                jx_user_ch('{');
+	  case EDJ_OBJECT:
+                edj_user_ch('{');
 		if (format->pretty || format->elem) {
-                        jx_user_ch('\n');
+                        edj_user_ch('\n');
                         for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, indent + format->tab, format);
 			}
                         if (indent > 0)
-                                jx_user_printf(format, "result", "%*s", indent, "");
+                                edj_user_printf(format, "result", "%*s", indent, "");
                 } else {
                         for (scan = scan->first; scan; scan = scan->next) { /* object */
                                 jcprint(scan, 0, format);
 			}
                 }
-                jx_user_ch('}');
+                edj_user_ch('}');
 		break;
 
-	  case JX_ARRAY:
-		jx_user_ch('[');
+	  case EDJ_ARRAY:
+		edj_user_ch('[');
 		if (format->pretty || format->elem) {
-			jxformat_t byelem;
-			jx_user_ch('\n');
+			edjformat_t byelem;
+			edj_user_ch('\n');
 			byelem = *format;
 			if (format->elem) {
 				byelem.tab = 0;
 				byelem.pretty = 0;
 				byelem.elem = 0;
 			}
-                        for (scan = jx_first(scan); scan && !jx_interrupt; scan = jx_next(scan)) {
+                        for (scan = edj_first(scan); scan && !edj_interrupt; scan = edj_next(scan)) {
                                 if (format->elem && indent + format->tab > 0)
-					jx_user_printf(format, "result", "%*c", indent + format->tab, ' ');
+					edj_user_printf(format, "result", "%*c", indent + format->tab, ' ');
                                 jcprint(scan, indent + format->tab, &byelem);
 				if (format->elem)
-					jx_user_ch('\n');
+					edj_user_ch('\n');
 			}
 
 			/* If we didn't finish scanning a deferred array, then
 			 * we may need to do extra cleanup.
 			 */
-			jx_break(scan);
+			edj_break(scan);
                         if (indent > 0)
-                                jx_user_printf(format, "result", "%*s", indent, "");
+                                edj_user_printf(format, "result", "%*s", indent, "");
                 } else {
-                        for (scan = jx_first(scan); scan && !jx_interrupt; scan = jx_next(scan)) {
+                        for (scan = edj_first(scan); scan && !edj_interrupt; scan = edj_next(scan)) {
                                 jcprint(scan, indent + format->tab, format);
 			}
 		}
 		if (scan)
-			jx_break(scan);
-		jx_user_ch(']');
+			edj_break(scan);
+		edj_user_ch(']');
 		break;
 
-	  case JX_STRING:
-		str = jx_serialize(scan, format);
-		jx_user_printf(format, "result", "%s", str);
+	  case EDJ_STRING:
+		str = edj_serialize(scan, format);
+		edj_user_printf(format, "result", "%s", str);
 		free(str);
 		break;
 
-	  case JX_NUMBER:
+	  case EDJ_NUMBER:
 		/* could be binary int or double, or it could be text */
 		if (scan->text[0] == '\0' && scan->text[1] == 'i')
-			jx_user_printf(format, "result", "%d", JX_INT(scan));
+			edj_user_printf(format, "result", "%d", EDJ_INT(scan));
 		else if (scan->text[0] == '\0' && scan->text[1] == 'd')
-			jx_user_printf(format, "result", "%.*g", format->digits, JX_DOUBLE(scan));
+			edj_user_printf(format, "result", "%.*g", format->digits, EDJ_DOUBLE(scan));
 		else
-			jx_user_printf(format, "result", "%s", scan->text);
+			edj_user_printf(format, "result", "%s", scan->text);
 		break;
 
-	  case JX_BOOLEAN:
-		jx_user_printf(format, "result", "%s", scan->text);
+	  case EDJ_BOOLEAN:
+		edj_user_printf(format, "result", "%s", scan->text);
 		break;
 
-	  case JX_NULL:
-		jx_user_printf(format, "result", "null");
+	  case EDJ_NULL:
+		edj_user_printf(format, "result", "null");
 		break;
 
 	  default:
 	  	; /* shouldn't happen */
 	}
 
-	if (!jx_is_last(json))
-		jx_user_ch(',');
+	if (!edj_is_last(json))
+		edj_user_ch(',');
 	if (format->pretty || format->elem)
-		jx_user_ch('\n');
+		edj_user_ch('\n');
 }
 
 /* Output each row of a table as a line containing a series of name=value pairs */
-static void jcsh(jx_t *json, jxformat_t *format){
-	jx_t	*row;
-	jx_t	*col;
+static void jcsh(edj_t *json, edjformat_t *format){
+	edj_t	*row;
+	edj_t	*col;
 	char	*s, *t, *frees;
 
-	for (row = jx_first(json); row && !jx_interrupt; row = jx_next(row)) {
+	for (row = edj_first(json); row && !edj_interrupt; row = edj_next(row)) {
 		for (col = row->first; col; col = col->next) { /* object */
 			/* Output the prefix, name, and an = */
-			jx_user_printf(format, "result", "%s%s=", format->prefix, col->text);
+			edj_user_printf(format, "result", "%s%s=", format->prefix, col->text);
 
 			/* Get the value */
 			frees = NULL;
-			if (col->first->type == JX_STRING)
+			if (col->first->type == EDJ_STRING)
 				s = col->first->text;
-			else if (jx_is_null(col->first))
+			else if (edj_is_null(col->first))
 				s = format->null;
 			else
-				s = frees = jx_serialize(col->first, format);
+				s = frees = edj_serialize(col->first, format);
 
 			/* Does it need quotes? */
 			for (t = s; *t; t++)
@@ -185,7 +185,7 @@ static void jcsh(jx_t *json, jxformat_t *format){
 
 			/* Output it, maybe with quotes */
 			if (*t)
-				jx_user_ch('\'');
+				edj_user_ch('\'');
 			for (; *s; s++) {
 				if ((unsigned char)*s < ' ' || *s == '\177')
 					; /* omit all control characters */
@@ -193,21 +193,21 @@ static void jcsh(jx_t *json, jxformat_t *format){
 					/* To output a ' we must end quoting,
 					 * output \' and start new quoting.
 					 */
-					jx_user_ch('\'');
-					jx_user_ch('\\');
-					jx_user_ch('\'');
-					jx_user_ch('\'');
+					edj_user_ch('\'');
+					edj_user_ch('\\');
+					edj_user_ch('\'');
+					edj_user_ch('\'');
 				} else if ((*s & 0x80) != 0 && format->ascii) {
 					char buf[13], *c;
-					s = (char *)jx_mbs_ascii(s, buf);
+					s = (char *)edj_mbs_ascii(s, buf);
 					s--; /* because for-loop does s++ */
 					for (c = buf; *c; c++)
-						jx_user_ch(*c);
+						edj_user_ch(*c);
 				} else
-					jx_user_ch(*s);
+					edj_user_ch(*s);
 			}
 			if (*t)
-				jx_user_ch('\'');
+				edj_user_ch('\'');
 
 			/* If supposed to free it, do that */
 			if (frees)
@@ -215,16 +215,16 @@ static void jcsh(jx_t *json, jxformat_t *format){
 
 			/* If not the last, then output a space */
 			if (col->next) /* object */
-				jx_user_ch(' ');
+				edj_user_ch(' ');
 		}
-		jx_user_ch('\n');
+		edj_user_ch('\n');
 	}
 
 	/* If we stopped before the end of a deferred array, there could be
 	 * extra cleanup.
 	 */
 	if (row)
-		jx_break(row);
+		edj_break(row);
 }
 
 
@@ -233,20 +233,20 @@ static void jcsh(jx_t *json, jxformat_t *format){
  * function misbehaves if the cursor doesn't start at the begining of a line.
  * Dependence on this variable isn't threadsafe, but neither is readline().
  */
-int jx_print_incomplete_line;
+int edj_print_incomplete_line;
 
 /* This stores the list of possible table formats, other than JSON */
 static jctablefmt_t tablesh = {NULL, "sh", jcsh};
-static jctablefmt_t tablegrid = {&tablesh, "grid", jx_grid};
+static jctablefmt_t tablegrid = {&tablesh, "grid", edj_grid};
 static jctablefmt_t *tablefmts = &tablegrid;
 
-void jx_print_table_hook(char *name, void (*fn)(jx_t *json, jxformat_t *format)) {
+void edj_print_table_hook(char *name, void (*fn)(edj_t *json, edjformat_t *format)) {
 	jctablefmt_t *t;
-	jx_t	*list;
+	edj_t	*list;
 
 	/* Scan to see if this format is already in the list */
 	for (t = tablefmts; t; t = t->other) {
-		if (!jx_mbs_casecmp(name, t->name)) {
+		if (!edj_mbs_casecmp(name, t->name)) {
 			/* Yes, we know it.  Just change the function pointer */
 			t->fn = fn;
 			return;
@@ -261,19 +261,19 @@ void jx_print_table_hook(char *name, void (*fn)(jx_t *json, jxformat_t *format))
 	tablefmts = t;
 
 	/* Also add it to the list of preferred values for config "table". */
-	list = jx_by_expr(jx_config, "interactive.\"table-list\"", NULL, NULL, NULL);/* undeferred */
-	jx_append(list, jx_string(name, -1));
-	list = jx_by_expr(jx_config, "batch.\"table-list\"", NULL, NULL, NULL);/* undeferred */
-	jx_append(list, jx_string(name, -1));
+	list = edj_by_expr(edj_config, "interactive.\"table-list\"", NULL, NULL, NULL);/* undeferred */
+	edj_append(list, edj_string(name, -1));
+	list = edj_by_expr(edj_config, "batch.\"table-list\"", NULL, NULL, NULL);/* undeferred */
+	edj_append(list, edj_string(name, -1));
 }
 
-/* Print a jx_t tree as JSON text.  "format" is a combination of values from
- * the JX_FORMAT_XXXX macros, most importantly JX_FORMAT_INDENT(n).
+/* Print an edj_t tree as JSON text.  "format" is a combination of values from
+ * the EDJ_FORMAT_XXXX macros, most importantly EDJ_FORMAT_INDENT(n).
  * Returns 1 if the output did NOT end with a newline, or 0 if it did.
  */
-void jx_print(jx_t *json, jxformat_t *format)
+void edj_print(edj_t *json, edjformat_t *format)
 {
-	jxformat_t tweaked;
+	edjformat_t tweaked;
 	jctablefmt_t *t;
 
 	/* If NULL pointer then don't print anything (not even "null") */
@@ -282,29 +282,29 @@ void jx_print(jx_t *json, jxformat_t *format)
 
 	/* Create a tweakable copy of the format */
 	if (!format)
-		format = &jx_format_default;
+		format = &edj_format_default;
 	tweaked = *format;
 	if (tweaked.fp == NULL)
 		tweaked.fp = stdout;
 
 	/* Maybe output error messages embedded in "null" */
-	if (tweaked.errors && json->type == JX_NULL && *json->text) {
-		jx_user_printf(&tweaked, "error", "%s\n", json->text);
+	if (tweaked.errors && json->type == EDJ_NULL && *json->text) {
+		edj_user_printf(&tweaked, "error", "%s\n", json->text);
 		/* ... but continue to output "null" too */
 	}
 
 	/* Maybe output strings unadorned (and without adding a newline) */
-	if (tweaked.string && json->type == JX_STRING) {
+	if (tweaked.string && json->type == EDJ_STRING) {
 		size_t len;
-		jx_user_printf(&tweaked, "normal", "%s", json->text);
+		edj_user_printf(&tweaked, "normal", "%s", json->text);
 		len = strlen(json->text);
 		if (tweaked.fp == stdout && len > 0)
-			jx_print_incomplete_line = (len > 0 && json->text[len - 1] != '\n');
+			edj_print_incomplete_line = (len > 0 && json->text[len - 1] != '\n');
 		return;
 	}
 
 	/* Maybe treat short like compact */
-	if (tweaked.oneline > 0 && jx_is_short(json, tweaked.oneline))
+	if (tweaked.oneline > 0 && edj_is_short(json, tweaked.oneline))
 	        tweaked.oneline = tweaked.pretty = 0;
 
 	/* If quoting for the shell, disable pretty */
@@ -312,11 +312,11 @@ void jx_print(jx_t *json, jxformat_t *format)
 	        tweaked.oneline = tweaked.pretty = 0;
 
 	/* Table output? */
-	if (jx_is_table(json)){
+	if (edj_is_table(json)){
 		/* Scan for this format */
 		for (t = tablefmts; t; t = t->other) {
 			/* If not the one we want, keep looking */
-			if (jx_mbs_casecmp(t->name, tweaked.table))
+			if (edj_mbs_casecmp(t->name, tweaked.table))
 				continue;
 
 			/* Use this method to format the table */
@@ -324,23 +324,23 @@ void jx_print(jx_t *json, jxformat_t *format)
 
 			/* Table output always ends with a newline */
 			if (tweaked.fp == stdout)
-				jx_print_incomplete_line = 0;
+				edj_print_incomplete_line = 0;
 			return;
 		}
 	}
 
 	/* Output it as JSON, possibly "pretty" */
 	if (tweaked.sh)
-		jx_user_printf(&tweaked, "result", "'"); /* set color too */
+		edj_user_printf(&tweaked, "result", "'"); /* set color too */
 	jcprint(json, 0, &tweaked);
 	if (tweaked.sh)
-		jx_user_printf(&tweaked, "result", "'"); /* set color too */
+		edj_user_printf(&tweaked, "result", "'"); /* set color too */
 
 	/* "Pretty" mode always ends with a newline, but for non-"pretty"
 	 * we want to add a newline now.
 	 */
 	if (!tweaked.pretty)
-		jx_user_printf(&tweaked, "normal", "\n");
+		edj_user_printf(&tweaked, "normal", "\n");
 	if (tweaked.fp == stdout)
-		jx_print_incomplete_line = 0;
+		edj_print_incomplete_line = 0;
 }

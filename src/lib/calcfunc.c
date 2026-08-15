@@ -10,21 +10,21 @@
 #define _XOPEN_SOURCE
 #define __USE_XOPEN
 #include <wchar.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This file mostly implements the built-in functions.  It also defines
- * the jx_calc_function() function for adding user-defined functions.
+ * the edj_calc_function() function for adding user-defined functions.
  *
- * The jx_calc_parse() function converts argument lists into array generators
- * so the built-in functions are always passed a JX_ARRAY of the arguments.
+ * The edj_calc_parse() function converts argument lists into array generators
+ * so the built-in functions are always passed a EDJ_ARRAY of the arguments.
  * For function calls of the form expr.func(args), expr is moved to become
  * the first argument, so it looks like func(expr, args).
  *
- * The jx_calc() function handles automatically frees the argument list.
- * Your function should allocate new a new jx_t tree and return that;
+ * The edj_calc() function handles automatically frees the argument list.
+ * Your function should allocate new a new edj_t tree and return that;
  * it should not attempt to reuse parts of the argument list.  As a special
  * case, if your function is going to return "null" then you can have it
- * return C's NULL pointer instead of a jx_t.
+ * return C's NULL pointer instead of an edj_t.
  *
  * Aggregate functions are divided into two parts: an aggregator function
  * and a final function.  Memory for storing aggregated results (e.g.,
@@ -34,234 +34,238 @@
 
 /* Several aggregate functions use these to store results */
 typedef struct { int count; double val; } agdata_t;
-typedef struct { jx_t *json; char *sval; int count; double dval; } agmaxdata_t;
+typedef struct { edj_t *json; char *sval; int count; double dval; } agmaxdata_t;
 typedef struct { char *ag; size_t size;} agjoindata_t;
 
 /* Forward declarations of the built-in non-aggregate functions */
-static jx_t *jfn_toUpperCase(jx_t *args, void *agdata);
-static jx_t *jfn_toLowerCase(jx_t *args, void *agdata);
-static jx_t *jfn_toMixedCase(jx_t *args, void *agdata);
-static jx_t *jfn_simpleKey(jx_t *args, void *agdata);
-static jx_t *jfn_substr(jx_t *args, void *agdata);
-static jx_t *jfn_hex(jx_t *args, void *agdata);
-static jx_t *jfn_toString(jx_t *args, void *agdata);
-static jx_t *jfn_isString(jx_t *args, void *agdata);
-static jx_t *jfn_isArray(jx_t *args, void *agdata);
-static jx_t *jfn_isTable(jx_t *args, void *agdata);
-static jx_t *jfn_isObject(jx_t *args, void *agdata);
-static jx_t *jfn_isNumber(jx_t *args, void *agdata);
-static jx_t *jfn_isInteger(jx_t *args, void *agdata);
-static jx_t *jfn_isNaN(jx_t *args, void *agdata);
-static jx_t *jfn_isDate(jx_t *args, void *agdata);
-static jx_t *jfn_isTime(jx_t *args, void *agdata);
-static jx_t *jfn_isDateTime(jx_t *args, void *agdata);
-static jx_t *jfn_isPeriod(jx_t *args, void *agdata);
-static jx_t *jfn_typeOf(jx_t *args, void *agdata);
-static jx_t *jfn_deferTypeOf(jx_t *args, void *agdata);
-static jx_t *jfn_blob(jx_t *args, void *agdata);
-static jx_t *jfn_sizeOf(jx_t *args, void *agdata);
-static jx_t *jfn_widthOf(jx_t *args, void *agdata);
-static jx_t *jfn_heightOf(jx_t *args, void *agdata);
-static jx_t *jfn_levenshtein(jx_t *args, void *agdata);
-static jx_t *jfn_keys(jx_t *args, void *agdata);
-static jx_t *jfn_trim(jx_t *args, void *agdata);
-static jx_t *jfn_trimStart(jx_t *args, void *agdata);
-static jx_t *jfn_trimEnd(jx_t *args, void *agdata);
-static jx_t *jfn_concat(jx_t *args, void *agdata);
-static jx_t *jfn_orderBy(jx_t *args, void *agdata);
-static jx_t *jfn_groupBy(jx_t *args, void *agdata);
-static jx_t *jfn_flat(jx_t *args, void *agdata);
-static jx_t *jfn_slice(jx_t *args, void *agdata);
-static jx_t *jfn_repeat(jx_t *args, void *agdata);
-static jx_t *jfn_toFixed(jx_t *args, void *agdata);
-static jx_t *jfn_distinct(jx_t *args, void *agdata);
-static jx_t *jfn_unroll(jx_t *args, void *agdata);
-static jx_t *jfn_nameBits(jx_t *args, void *agdata);
-static jx_t *jfn_keysValues(jx_t *args, void *agdata);
-static jx_t *jfn_charAt(jx_t *args, void *agdata);
-static jx_t *jfn_charCodeAt(jx_t *args, void *agdata);
-static jx_t *jfn_fromCharCode(jx_t *args, void *agdata);
-static jx_t *jfn_replace(jx_t *args, void *agdata);
-static jx_t *jfn_replaceAll(jx_t *args, void *agdata);
-static jx_t *jfn_match(jx_t *args, void *agdata);
-static jx_t *jfn_matchAll(jx_t *args, void *agdata);
-static jx_t *jfn_includes(jx_t *args, void *agdata);
-static jx_t *jfn_indexOf(jx_t *args, void *agdata);
-static jx_t *jfn_lastIndexOf(jx_t *args, void *agdata);
-static jx_t *jfn_startsWith(jx_t *args, void *agdata);
-static jx_t *jfn_endsWith(jx_t *args, void *agdata);
-static jx_t *jfn_split(jx_t *args, void *agdata);
-static jx_t *jfn_getenv(jx_t *args, void *agdata);
-static jx_t *jfn_stringify(jx_t *args, void *agdata);
-static jx_t *jfn_parse(jx_t *args, void *agdata);
-static jx_t *jfn_parseInt(jx_t *args, void *agdata);
-static jx_t *jfn_parseFloat(jx_t *args, void *agdata);
-static jx_t *jfn_find(jx_t *args, void *agdata);
-static jx_t *jfn_grep(jx_t *args, void *agdata);
-static jx_t *jfn_hash(jx_t *args, void *agdata);
-static jx_t *jfn_diff(jx_t *args, void *agdata);
-static jx_t *jfn_common(jx_t *args, void *agdata);
-static jx_t *jfn_date(jx_t *args, void *agdata);
-static jx_t *jfn_time(jx_t *args, void *agdata);
-static jx_t *jfn_dateTime(jx_t *args, void *agdata);
-static jx_t *jfn_timeZone(jx_t *args, void *agdata);
-static jx_t *jfn_period(jx_t *args, void *agdata);
-static jx_t *jfn_money(jx_t *args, void *agdata);
-static jx_t *jfn_abs(jx_t *args, void *agdata);
-static jx_t *jfn_random(jx_t *args, void *agdata);
-static jx_t *jfn_sign(jx_t *args, void *agdata);
-static jx_t *jfn_wrap(jx_t *args, void *agdata);
-static jx_t *jfn_gap(jx_t *args, void *agdata);
-static jx_t *jfn_sleep(jx_t *args, void *agdata);
-static jx_t *jfn_writeJSON(jx_t *args, void *agdata);
+static edj_t *jfn_toUpperCase(edj_t *args, void *agdata);
+static edj_t *jfn_toLowerCase(edj_t *args, void *agdata);
+static edj_t *jfn_toMixedCase(edj_t *args, void *agdata);
+static edj_t *jfn_simpleKey(edj_t *args, void *agdata);
+static edj_t *jfn_substr(edj_t *args, void *agdata);
+static edj_t *jfn_hex(edj_t *args, void *agdata);
+static edj_t *jfn_toString(edj_t *args, void *agdata);
+static edj_t *jfn_isString(edj_t *args, void *agdata);
+static edj_t *jfn_isArray(edj_t *args, void *agdata);
+static edj_t *jfn_isTable(edj_t *args, void *agdata);
+static edj_t *jfn_isObject(edj_t *args, void *agdata);
+static edj_t *jfn_isNumber(edj_t *args, void *agdata);
+static edj_t *jfn_isInteger(edj_t *args, void *agdata);
+static edj_t *jfn_isNaN(edj_t *args, void *agdata);
+static edj_t *jfn_isDate(edj_t *args, void *agdata);
+static edj_t *jfn_isTime(edj_t *args, void *agdata);
+static edj_t *jfn_isDateTime(edj_t *args, void *agdata);
+static edj_t *jfn_isPeriod(edj_t *args, void *agdata);
+static edj_t *jfn_typeOf(edj_t *args, void *agdata);
+static edj_t *jfn_deferTypeOf(edj_t *args, void *agdata);
+static edj_t *jfn_blob(edj_t *args, void *agdata);
+static edj_t *jfn_sizeOf(edj_t *args, void *agdata);
+static edj_t *jfn_widthOf(edj_t *args, void *agdata);
+static edj_t *jfn_heightOf(edj_t *args, void *agdata);
+static edj_t *jfn_levenshtein(edj_t *args, void *agdata);
+static edj_t *jfn_keys(edj_t *args, void *agdata);
+static edj_t *jfn_trim(edj_t *args, void *agdata);
+static edj_t *jfn_trimStart(edj_t *args, void *agdata);
+static edj_t *jfn_trimEnd(edj_t *args, void *agdata);
+static edj_t *jfn_padStart(edj_t *args, void *agdata);
+static edj_t *jfn_padEnd(edj_t *args, void *agdata);
+static edj_t *jfn_concat(edj_t *args, void *agdata);
+static edj_t *jfn_orderBy(edj_t *args, void *agdata);
+static edj_t *jfn_groupBy(edj_t *args, void *agdata);
+static edj_t *jfn_flat(edj_t *args, void *agdata);
+static edj_t *jfn_slice(edj_t *args, void *agdata);
+static edj_t *jfn_repeat(edj_t *args, void *agdata);
+static edj_t *jfn_toFixed(edj_t *args, void *agdata);
+static edj_t *jfn_distinct(edj_t *args, void *agdata);
+static edj_t *jfn_unroll(edj_t *args, void *agdata);
+static edj_t *jfn_nameBits(edj_t *args, void *agdata);
+static edj_t *jfn_keysValues(edj_t *args, void *agdata);
+static edj_t *jfn_charAt(edj_t *args, void *agdata);
+static edj_t *jfn_charCodeAt(edj_t *args, void *agdata);
+static edj_t *jfn_fromCharCode(edj_t *args, void *agdata);
+static edj_t *jfn_replace(edj_t *args, void *agdata);
+static edj_t *jfn_replaceAll(edj_t *args, void *agdata);
+static edj_t *jfn_match(edj_t *args, void *agdata);
+static edj_t *jfn_matchAll(edj_t *args, void *agdata);
+static edj_t *jfn_includes(edj_t *args, void *agdata);
+static edj_t *jfn_indexOf(edj_t *args, void *agdata);
+static edj_t *jfn_lastIndexOf(edj_t *args, void *agdata);
+static edj_t *jfn_startsWith(edj_t *args, void *agdata);
+static edj_t *jfn_endsWith(edj_t *args, void *agdata);
+static edj_t *jfn_split(edj_t *args, void *agdata);
+static edj_t *jfn_getenv(edj_t *args, void *agdata);
+static edj_t *jfn_stringify(edj_t *args, void *agdata);
+static edj_t *jfn_parse(edj_t *args, void *agdata);
+static edj_t *jfn_parseInt(edj_t *args, void *agdata);
+static edj_t *jfn_parseFloat(edj_t *args, void *agdata);
+static edj_t *jfn_find(edj_t *args, void *agdata);
+static edj_t *jfn_grep(edj_t *args, void *agdata);
+static edj_t *jfn_hash(edj_t *args, void *agdata);
+static edj_t *jfn_diff(edj_t *args, void *agdata);
+static edj_t *jfn_common(edj_t *args, void *agdata);
+static edj_t *jfn_date(edj_t *args, void *agdata);
+static edj_t *jfn_time(edj_t *args, void *agdata);
+static edj_t *jfn_dateTime(edj_t *args, void *agdata);
+static edj_t *jfn_timeZone(edj_t *args, void *agdata);
+static edj_t *jfn_period(edj_t *args, void *agdata);
+static edj_t *jfn_money(edj_t *args, void *agdata);
+static edj_t *jfn_abs(edj_t *args, void *agdata);
+static edj_t *jfn_random(edj_t *args, void *agdata);
+static edj_t *jfn_sign(edj_t *args, void *agdata);
+static edj_t *jfn_wrap(edj_t *args, void *agdata);
+static edj_t *jfn_gap(edj_t *args, void *agdata);
+static edj_t *jfn_sleep(edj_t *args, void *agdata);
+static edj_t *jfn_writeJSON(edj_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
-static jx_t *jfn_count(jx_t *args, void *agdata);
-static void    jag_count(jx_t *args, void *agdata);
-static jx_t *jfn_rowNumber(jx_t *args, void *agdata);
-static void    jag_rowNumber(jx_t *args, void *agdata);
-static jx_t *jfn_min(jx_t *args, void *agdata);
-static void    jag_min(jx_t *args, void *agdata);
-static jx_t *jfn_max(jx_t *args, void *agdata);
-static void    jag_max(jx_t *args, void *agdata);
-static jx_t *jfn_avg(jx_t *args, void *agdata);
-static void    jag_avg(jx_t *args, void *agdata);
-static jx_t *jfn_sum(jx_t *args, void *agdata);
-static void    jag_sum(jx_t *args, void *agdata);
-static jx_t *jfn_product(jx_t *args, void *agdata);
-static void    jag_product(jx_t *args, void *agdata);
-static jx_t *jfn_any(jx_t *args, void *agdata);
-static void    jag_any(jx_t *args, void *agdata);
-static jx_t *jfn_all(jx_t *args, void *agdata);
-static void    jag_all(jx_t *args, void *agdata);
-static jx_t *jfn_explain(jx_t *args, void *agdata);
-static void    jag_explain(jx_t *args, void *agdata);
-static jx_t *jfn_writeArray(jx_t *args, void *agdata);
-static void    jag_writeArray(jx_t *args, void *agdata);
-static jx_t *jfn_arrayAgg(jx_t *args, void *agdata);
-static void    jag_arrayAgg(jx_t *args, void *agdata);
-static jx_t *jfn_objectAgg(jx_t *args, void *agdata);
-static void    jag_objectAgg(jx_t *args, void *agdata);
-static jx_t *jfn_join(jx_t *args, void *agdata);
-static void    jag_join(jx_t *args, void *agdata);
+static edj_t *jfn_count(edj_t *args, void *agdata);
+static void    jag_count(edj_t *args, void *agdata);
+static edj_t *jfn_rowNumber(edj_t *args, void *agdata);
+static void    jag_rowNumber(edj_t *args, void *agdata);
+static edj_t *jfn_min(edj_t *args, void *agdata);
+static void    jag_min(edj_t *args, void *agdata);
+static edj_t *jfn_max(edj_t *args, void *agdata);
+static void    jag_max(edj_t *args, void *agdata);
+static edj_t *jfn_avg(edj_t *args, void *agdata);
+static void    jag_avg(edj_t *args, void *agdata);
+static edj_t *jfn_sum(edj_t *args, void *agdata);
+static void    jag_sum(edj_t *args, void *agdata);
+static edj_t *jfn_product(edj_t *args, void *agdata);
+static void    jag_product(edj_t *args, void *agdata);
+static edj_t *jfn_any(edj_t *args, void *agdata);
+static void    jag_any(edj_t *args, void *agdata);
+static edj_t *jfn_all(edj_t *args, void *agdata);
+static void    jag_all(edj_t *args, void *agdata);
+static edj_t *jfn_explain(edj_t *args, void *agdata);
+static void    jag_explain(edj_t *args, void *agdata);
+static edj_t *jfn_writeArray(edj_t *args, void *agdata);
+static void    jag_writeArray(edj_t *args, void *agdata);
+static edj_t *jfn_arrayAgg(edj_t *args, void *agdata);
+static void    jag_arrayAgg(edj_t *args, void *agdata);
+static edj_t *jfn_objectAgg(edj_t *args, void *agdata);
+static void    jag_objectAgg(edj_t *args, void *agdata);
+static edj_t *jfn_join(edj_t *args, void *agdata);
+static void    jag_join(edj_t *args, void *agdata);
 
 /* A linked list of the built-in functions */
-static jxfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str:string", "string",	jfn_toUpperCase};
-static jxfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str:string", "string",	jfn_toLowerCase};
-static jxfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str:string, exceptions?:string[]",	"string",	jfn_toMixedCase};
-static jxfunc_t simpleKey_jf = {&toMixedCase_jf,    "simpleKey",    "str:string",	"string",	jfn_simpleKey};
-static jxfunc_t substr_jf      = {&simpleKey_jf,    "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
-static jxfunc_t hex_jf         = {&substr_jf,      "hex",         "val:string|number, length?:number", "string",	jfn_hex};
-static jxfunc_t toString_jf    = {&hex_jf,         "toString",    "val:any", "string",		jfn_toString};
-static jxfunc_t String_jf      = {&toString_jf,    "String",      "val:any", "string",		jfn_toString};
-static jxfunc_t isString_jf    = {&String_jf,      "isString",    "val:any", "boolean",		jfn_isString};
-static jxfunc_t isArray_jf     = {&isString_jf,    "isArray",     "val:any", "boolean",		jfn_isArray};
-static jxfunc_t isTable_jf     = {&isArray_jf,     "isTable",     "val:any", "boolean",		jfn_isTable};
-static jxfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "val:any", "boolean",		jfn_isObject};
-static jxfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "val:any", "boolean",		jfn_isNumber};
-static jxfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "val:any", "boolean",		jfn_isInteger};
-static jxfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "val:any", "boolean",		jfn_isNaN};
-static jxfunc_t isDate_jf      = {&isNaN_jf,       "isDate",      "val:any", "boolean",		jfn_isDate};
-static jxfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "val:any", "boolean",		jfn_isTime};
-static jxfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "val:any", "boolean",		jfn_isDateTime};
-static jxfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "val:any", "boolean",		jfn_isPeriod};
-static jxfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "val:any, prevtype:string|true", "string",	jfn_typeOf};
-static jxfunc_t deferTypeOf_jf = {&typeOf_jf,      "deferTypeOf", "val:any", "string",	jfn_deferTypeOf};
-static jxfunc_t blob_jf 	 = {&deferTypeOf_jf, "blob", 	    "data:string|array, convout?:number, convin?:number", "string|array",	jfn_blob};
-static jxfunc_t sizeOf_jf      = {&blob_jf,	     "sizeOf",      "val:any", "number",		jfn_sizeOf};
-static jxfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str:string", "number",		jfn_widthOf};
-static jxfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str:string", "number",		jfn_heightOf};
-static jxfunc_t levenshtein_jf = {&heightOf_jf,	   "levenshtein", "s1:string, s2:string, ignorecase?:boolean=false", "number",	jfn_levenshtein};
-static jxfunc_t keys_jf        = {&levenshtein_jf, "keys",        "obj:object", "string[]",		jfn_keys};
-static jxfunc_t trim_jf        = {&keys_jf,        "trim",        "str:string", "string",		jfn_trim};
-static jxfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str:string", "string",		jfn_trimStart};
-static jxfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str:string", "string",		jfn_trimEnd};
-static jxfunc_t concat_jf      = {&trimEnd_jf,     "concat",      "item:array|string, ...more", "array|string",	jfn_concat};
-static jxfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     "tbl:table, columns:string|string[]", "table",	jfn_orderBy};
-static jxfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     "tbl:table, columns:string|string[]", "array",	jfn_groupBy};
-static jxfunc_t flat_jf        = {&groupBy_jf,     "flat",        "arr:array, depth?:number",	"array",	jfn_flat};
-static jxfunc_t slice_jf       = {&flat_jf,        "slice",       "val:array|string, start:number, end?:number", "array|string", jfn_slice};
-static jxfunc_t repeat_jf      = {&slice_jf,       "repeat",      "str:string, count:number", "string",	jfn_repeat};
-static jxfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     "num:number, precision:number", "string",	jfn_toFixed};
-static jxfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    "arr:array, strict?:true, columns?:string[]", "array",	jfn_distinct};
-static jxfunc_t unroll_jf      = {&distinct_jf,    "unroll",      "tbl:table, nestlist:string|string[]", "table",	jfn_unroll};
-static jxfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    "num:number, names:array, delim?:string", "object|string", jfn_nameBits};
-static jxfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  "val:object|table", "table",		jfn_keysValues};
-static jxfunc_t charAt_jf      = {&keysValues_jf,  "charAt",      "str:string, pos?:number", "string",	jfn_charAt};
-static jxfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str:string, pos?:number|number[]", "number|number[]",	jfn_charCodeAt};
-static jxfunc_t codePointAt_jf  = {&charCodeAt_jf, "codePointAt", "str:string, pos?:number|number[]", "number|number[]",	jfn_charCodeAt};
-static jxfunc_t fromCharCode_jf= {&codePointAt_jf,  "fromCharCode","what:number|string|array, ...", "string",	jfn_fromCharCode};
-static jxfunc_t fromCodePoint_jf= {&fromCharCode_jf,  "fromCodePoint","what:number|string|array, ...", "string",	jfn_fromCharCode};
-static jxfunc_t replace_jf     = {&fromCodePoint_jf,"replace",     "str:string, find:string|regex, replace:string", "string",	jfn_replace};
-static jxfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str:string, find:string|regex, replace:string", "string",	jfn_replaceAll};
-static jxfunc_t match_jf       = {&replaceAll_jf,  "match",       "str:string, find:string|regex", "array|null",	jfn_match};
-static jxfunc_t matchAll_jf    = {&match_jf,       "matchAll"  ,  "str:string, find:string|regex", "array|null",	jfn_matchAll};
-static jxfunc_t includes_jf    = {&matchAll_jf,    "includes",    "subj:string|array, find:string|regex, ignorecase?:true", "boolean",	jfn_includes};
-static jxfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_indexOf};
-static jxfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_lastIndexOf};
-static jxfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_startsWith};
-static jxfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_endsWith};
-static jxfunc_t split_jf       = {&endsWith_jf,    "split",       "str:string, delim?:string|regex, limit?:number", "string[]",	jfn_split};
-static jxfunc_t getenv_jf      = {&split_jf,       "getenv",      "str:string", "string:null",		jfn_getenv};
-static jxfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data:any", "string",		jfn_stringify};
-static jxfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", "any",		jfn_parse};
-static jxfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", "number",		jfn_parseInt};
-static jxfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
-static jxfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
-static jxfunc_t grep_jf	       = {&find_jf,        "grep", 	  "haystack?:table, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_grep};
-static jxfunc_t hash_jf        = {&grep_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
-static jxfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new?:array|object, style?:number=config.diffstyle", "table", jfn_diff};
-static jxfunc_t common_jf      = {&diff_jf,        "common", 	  "columns: object, style?:number", "table", jfn_common};
-static jxfunc_t date_jf        = {&common_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
-static jxfunc_t time_jf        = {&date_jf,        "time",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_time};
-static jxfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
-static jxfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, action?:string|number|true, ...", "null",	jfn_timeZone};
-static jxfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_period};
-static jxfunc_t money_jf       = {&period_jf,      "money",       "in:number|string, format?:string=\"%n\"", "string|number",	jfn_money};
-static jxfunc_t abs_jf         = {&money_jf,       "abs",         "val:number", "number", jfn_abs};
-static jxfunc_t random_jf      = {&abs_jf,         "random",      "intbound?:number", "number", jfn_random};
-static jxfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
-static jxfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
-static jxfunc_t gap_jf        = {&wrap_jf,        "gap",        "arr:number[]|date[]|time[]|datetime[], mingap?:number|period", "table", jfn_gap};
-static jxfunc_t sleep_jf       = {&gap_jf,        "sleep",       "seconds:number|period", "number", jfn_sleep};
-static jxfunc_t writeJSON_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
+static edjfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str:string", "string",	jfn_toUpperCase};
+static edjfunc_t toLowerCase_jf = {&toUpperCase_jf, "toLowerCase", "str:string", "string",	jfn_toLowerCase};
+static edjfunc_t toMixedCase_jf = {&toLowerCase_jf, "toMixedCase", "str:string, exceptions?:string[]",	"string",	jfn_toMixedCase};
+static edjfunc_t simpleKey_jf = {&toMixedCase_jf,    "simpleKey",    "str:string",	"string",	jfn_simpleKey};
+static edjfunc_t substr_jf      = {&simpleKey_jf,    "substr",      "str:string, start:number, length?:number",	"string", jfn_substr};
+static edjfunc_t hex_jf         = {&substr_jf,      "hex",         "val:string|number, length?:number", "string",	jfn_hex};
+static edjfunc_t toString_jf    = {&hex_jf,         "toString",    "val:any", "string",		jfn_toString};
+static edjfunc_t String_jf      = {&toString_jf,    "String",      "val:any", "string",		jfn_toString};
+static edjfunc_t isString_jf    = {&String_jf,      "isString",    "val:any", "boolean",		jfn_isString};
+static edjfunc_t isArray_jf     = {&isString_jf,    "isArray",     "val:any", "boolean",		jfn_isArray};
+static edjfunc_t isTable_jf     = {&isArray_jf,     "isTable",     "val:any", "boolean",		jfn_isTable};
+static edjfunc_t isObject_jf    = {&isTable_jf,     "isObject",    "val:any", "boolean",		jfn_isObject};
+static edjfunc_t isNumber_jf    = {&isObject_jf,    "isNumber",    "val:any", "boolean",		jfn_isNumber};
+static edjfunc_t isInteger_jf   = {&isNumber_jf,    "isInteger",   "val:any", "boolean",		jfn_isInteger};
+static edjfunc_t isNaN_jf       = {&isInteger_jf,   "isNaN",       "val:any", "boolean",		jfn_isNaN};
+static edjfunc_t isDate_jf      = {&isNaN_jf,       "isDate",      "val:any", "boolean",		jfn_isDate};
+static edjfunc_t isTime_jf      = {&isDate_jf,      "isTime",      "val:any", "boolean",		jfn_isTime};
+static edjfunc_t isDateTime_jf  = {&isTime_jf,      "isDateTime",  "val:any", "boolean",		jfn_isDateTime};
+static edjfunc_t isPeriod_jf    = {&isDateTime_jf,  "isPeriod",    "val:any", "boolean",		jfn_isPeriod};
+static edjfunc_t typeOf_jf      = {&isPeriod_jf,    "typeOf",      "val:any, prevtype:string|true", "string",	jfn_typeOf};
+static edjfunc_t deferTypeOf_jf = {&typeOf_jf,      "deferTypeOf", "val:any", "string",	jfn_deferTypeOf};
+static edjfunc_t blob_jf        = {&deferTypeOf_jf, "blob", 	  "data:string|array, convout?:number, convin?:number", "string|array",	jfn_blob};
+static edjfunc_t sizeOf_jf      = {&blob_jf,	   "sizeOf",      "val:any", "number",		jfn_sizeOf};
+static edjfunc_t widthOf_jf     = {&sizeOf_jf,      "widthOf",     "str:string", "number",		jfn_widthOf};
+static edjfunc_t heightOf_jf    = {&widthOf_jf,     "heightOf",    "str:string", "number",		jfn_heightOf};
+static edjfunc_t levenshtein_jf = {&heightOf_jf,	   "levenshtein", "s1:string, s2:string, ignorecase?:boolean=false", "number",	jfn_levenshtein};
+static edjfunc_t keys_jf        = {&levenshtein_jf, "keys",        "obj:object", "string[]",		jfn_keys};
+static edjfunc_t trim_jf        = {&keys_jf,        "trim",        "str:string", "string",		jfn_trim};
+static edjfunc_t trimStart_jf   = {&trim_jf,        "trimStart",   "str:string", "string",		jfn_trimStart};
+static edjfunc_t trimEnd_jf     = {&trimStart_jf,   "trimEnd",     "str:string", "string",		jfn_trimEnd};
+static edjfunc_t padStart_jf    = {&trimEnd_jf,     "padStart",    "str:string, len:number, pad?:string=\" \"", "string",		jfn_padStart};
+static edjfunc_t padEnd_jf      = {&padStart_jf,     "padEnd",     "str:string, len:number, pad?:string=\" \"", "string",		jfn_padEnd};
+static edjfunc_t concat_jf      = {&padEnd_jf,       "concat",     "item:array|string, ...more", "array|string",	jfn_concat};
+static edjfunc_t orderBy_jf     = {&concat_jf,      "orderBy",     "tbl:table, columns:string|string[]", "table",	jfn_orderBy};
+static edjfunc_t groupBy_jf     = {&orderBy_jf,     "groupBy",     "tbl:table, columns:string|string[]", "array",	jfn_groupBy};
+static edjfunc_t flat_jf        = {&groupBy_jf,     "flat",        "arr:array, depth?:number",	"array",	jfn_flat};
+static edjfunc_t slice_jf       = {&flat_jf,        "slice",       "val:array|string, start:number, end?:number", "array|string", jfn_slice};
+static edjfunc_t repeat_jf      = {&slice_jf,       "repeat",      "str:string, count:number", "string",	jfn_repeat};
+static edjfunc_t toFixed_jf     = {&repeat_jf,      "toFixed",     "num:number, precision:number", "string",	jfn_toFixed};
+static edjfunc_t distinct_jf    = {&toFixed_jf,     "distinct",    "arr:array, strict?:true, columns?:string[]", "array",	jfn_distinct};
+static edjfunc_t unroll_jf      = {&distinct_jf,    "unroll",      "tbl:table, nestlist:string|string[]", "table",	jfn_unroll};
+static edjfunc_t nameBits_jf    = {&unroll_jf,      "nameBits",    "num:number, names:array, delim?:string", "object|string", jfn_nameBits};
+static edjfunc_t keysValues_jf  = {&nameBits_jf,    "keysValues",  "val:object|table", "table",		jfn_keysValues};
+static edjfunc_t charAt_jf      = {&keysValues_jf,  "charAt",      "str:string, pos?:number", "string",	jfn_charAt};
+static edjfunc_t charCodeAt_jf  = {&charAt_jf,      "charCodeAt",  "str:string, pos?:number|number[]", "number|number[]",	jfn_charCodeAt};
+static edjfunc_t codePointAt_jf  = {&charCodeAt_jf, "codePointAt", "str:string, pos?:number|number[]", "number|number[]",	jfn_charCodeAt};
+static edjfunc_t fromCharCode_jf= {&codePointAt_jf, "fromCharCode","what:number|string|array, ...", "string",	jfn_fromCharCode};
+static edjfunc_t fromCodePoint_jf= {&fromCharCode_jf,"fromCodePoint","what:number|string|array, ...", "string",	jfn_fromCharCode};
+static edjfunc_t replace_jf     = {&fromCodePoint_jf,"replace",    "str:string, find:string|regex, replace:string", "string",	jfn_replace};
+static edjfunc_t replaceAll_jf  = {&replace_jf,     "replaceAll",  "str:string, find:string|regex, replace:string", "string",	jfn_replaceAll};
+static edjfunc_t match_jf       = {&replaceAll_jf,  "match",       "str:string, find:string|regex", "array|null",	jfn_match};
+static edjfunc_t matchAll_jf    = {&match_jf,       "matchAll"  ,  "str:string, find:string|regex", "array|null",	jfn_matchAll};
+static edjfunc_t includes_jf    = {&matchAll_jf,    "includes",    "subj:string|array, find:string|regex, ignorecase?:true", "boolean",	jfn_includes};
+static edjfunc_t indexOf_jf     = {&includes_jf,    "indexOf",     "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_indexOf};
+static edjfunc_t lastIndexOf_jf = {&indexOf_jf,     "lastIndexOf", "subj:string|array, find:string|regex, ignorecase?:true", "number",	jfn_lastIndexOf};
+static edjfunc_t startsWith_jf  = {&lastIndexOf_jf, "startsWith",  "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_startsWith};
+static edjfunc_t endsWith_jf    = {&startsWith_jf,  "endsWith",    "subj:string, srch:string, ignorecase?:true", "boolean",	jfn_endsWith};
+static edjfunc_t split_jf       = {&endsWith_jf,    "split",       "str:string, delim?:string|regex, limit?:number", "string[]",	jfn_split};
+static edjfunc_t getenv_jf      = {&split_jf,       "getenv",      "str:string", "string:null",		jfn_getenv};
+static edjfunc_t stringify_jf   = {&getenv_jf,      "stringify",   "data:any", "string",		jfn_stringify};
+static edjfunc_t parse_jf       = {&stringify_jf,   "parse",       "str:string", "any",		jfn_parse};
+static edjfunc_t parseInt_jf    = {&parse_jf,       "parseInt",    "str:string", "number",		jfn_parseInt};
+static edjfunc_t parseFloat_jf  = {&parseInt_jf,    "parseFloat",  "str:string", "number",		jfn_parseFloat};
+static edjfunc_t find_jf	       = {&parseFloat_jf,  "find", 	  "haystack?:array|object, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_find};
+static edjfunc_t grep_jf	       = {&find_jf,        "grep", 	  "haystack?:table, needle:string|regex|number, key?:string, ignorecase?:true", "table",	jfn_grep};
+static edjfunc_t hash_jf        = {&grep_jf,        "hash", 	  "data:any, seed?:number", "number",	jfn_hash};
+static edjfunc_t diff_jf        = {&hash_jf,        "diff", 	  "old:array|object, new?:array|object, style?:number=config.diffstyle", "table", jfn_diff};
+static edjfunc_t common_jf      = {&diff_jf,        "common", 	  "columns: object, style?:number", "table", jfn_common};
+static edjfunc_t date_jf        = {&common_jf,	   "date",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_date};
+static edjfunc_t time_jf        = {&date_jf,        "time",        "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_time};
+static edjfunc_t dateTime_jf    = {&time_jf,        "dateTime",    "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_dateTime};
+static edjfunc_t timeZone_jf    = {&dateTime_jf,    "timeZone",    "when:string|object|number, action?:string|number|true, ...", "null",	jfn_timeZone};
+static edjfunc_t period_jf      = {&timeZone_jf,    "period",      "when:string|object|number, action?:string|number|true, ...", "string|object|number",	jfn_period};
+static edjfunc_t money_jf       = {&period_jf,      "money",       "in:number|string, format?:string=\"%n\"", "string|number",	jfn_money};
+static edjfunc_t abs_jf         = {&money_jf,       "abs",         "val:number", "number", jfn_abs};
+static edjfunc_t random_jf      = {&abs_jf,         "random",      "intbound?:number", "number", jfn_random};
+static edjfunc_t sign_jf        = {&random_jf,      "sign",        "val:number", "number", jfn_sign};
+static edjfunc_t wrap_jf        = {&sign_jf,        "wrap",        "text:string, width?:number", "number", jfn_wrap};
+static edjfunc_t gap_jf         = {&wrap_jf,        "gap",         "arr:number[]|date[]|time[]|datetime[], mingap?:number|period", "table", jfn_gap};
+static edjfunc_t sleep_jf       = {&gap_jf,         "sleep",       "seconds:number|period", "number", jfn_sleep};
+static edjfunc_t writeJSON_jf   = {&sleep_jf,       "writeJSON",   "data:any, filename:string", "null", jfn_writeJSON};
 
-static jxfunc_t count_jf       = {&writeJSON_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
-static jxfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
-static jxfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), JXFUNC_JXFREE | JXFUNC_FREE};
-static jxfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:any", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), JXFUNC_JXFREE | JXFUNC_FREE};
-static jxfunc_t avg_jf         = {&max_jf,         "avg",         "num:number", "number",		jfn_avg,   jag_avg, sizeof(agdata_t)};
-static jxfunc_t sum_jf         = {&avg_jf,         "sum",         "num:number", "number",		jfn_sum,   jag_sum, sizeof(agdata_t)};
-static jxfunc_t product_jf     = {&sum_jf,         "product",     "num:number", "number",		jfn_product,jag_product, sizeof(agdata_t)};
-static jxfunc_t any_jf         = {&product_jf,     "any",         "bool:boolean", "boolean",		jfn_any,   jag_any, sizeof(int)};
-static jxfunc_t all_jf         = {&any_jf,         "all",         "bool:boolean", "boolean",		jfn_all,   jag_all, sizeof(int)};
-static jxfunc_t explain_jf     = {&all_jf,         "explain",     "tbl:table, depth:?number", "table",		jfn_explain,jag_explain, sizeof(jx_t *), JXFUNC_JXFREE};
-static jxfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:any, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
-static jxfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "data:any", "array",		jfn_arrayAgg,jag_arrayAgg, sizeof(jx_t *), JXFUNC_JXFREE};
-static jxfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string, value:any", "object",	jfn_objectAgg,jag_objectAgg, sizeof(jx_t *), JXFUNC_JXFREE};
-static jxfunc_t join_jf        = {&objectAgg_jf,   "join",        "str:string, delim?:string", "string",	jfn_join,  jag_join, sizeof(agjoindata_t),	JXFUNC_FREE};
-static jxfunc_t *funclist      = &join_jf;
+static edjfunc_t count_jf       = {&writeJSON_jf,   "count",       "val:any|*", "number",	jfn_count, jag_count, sizeof(long)};
+static edjfunc_t rowNumber_jf   = {&count_jf,       "rowNumber",   "format:string", "number|string",		jfn_rowNumber, jag_rowNumber, sizeof(int)};
+static edjfunc_t min_jf         = {&rowNumber_jf,   "min",         "val:number|string, marker?:any", "number|string|any",	jfn_min,   jag_min, sizeof(agmaxdata_t), EDJFUNC_EDJFREE | EDJFUNC_FREE};
+static edjfunc_t max_jf         = {&min_jf,         "max",         "val:number|string, marker?:any", "number|string|any",	jfn_max,   jag_max, sizeof(agmaxdata_t), EDJFUNC_EDJFREE | EDJFUNC_FREE};
+static edjfunc_t avg_jf         = {&max_jf,         "avg",         "num:number", "number",		jfn_avg,   jag_avg, sizeof(agdata_t)};
+static edjfunc_t sum_jf         = {&avg_jf,         "sum",         "num:number", "number",		jfn_sum,   jag_sum, sizeof(agdata_t)};
+static edjfunc_t product_jf     = {&sum_jf,         "product",     "num:number", "number",		jfn_product,jag_product, sizeof(agdata_t)};
+static edjfunc_t any_jf         = {&product_jf,     "any",         "bool:boolean", "boolean",		jfn_any,   jag_any, sizeof(int)};
+static edjfunc_t all_jf         = {&any_jf,         "all",         "bool:boolean", "boolean",		jfn_all,   jag_all, sizeof(int)};
+static edjfunc_t explain_jf     = {&all_jf,         "explain",     "tbl:table, depth:?number", "table",		jfn_explain,jag_explain, sizeof(edj_t *), EDJFUNC_EDJFREE};
+static edjfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:any, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
+static edjfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "data:any", "array",		jfn_arrayAgg,jag_arrayAgg, sizeof(edj_t *), EDJFUNC_EDJFREE};
+static edjfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string, value:any", "object",	jfn_objectAgg,jag_objectAgg, sizeof(edj_t *), EDJFUNC_EDJFREE};
+static edjfunc_t join_jf        = {&objectAgg_jf,   "join",        "str:string, delim?:string", "string",	jfn_join,  jag_join, sizeof(agjoindata_t),	EDJFUNC_FREE};
+static edjfunc_t *funclist      = &join_jf;
 
 
 /* Return the start of the function list.  You can find successive functions
  * by following each function's ->other pointer.
  */
-jxfunc_t *jx_calc_function_first(void)
+edjfunc_t *edj_calc_function_first(void)
 {
 	return funclist;
 }
 
-/* Register a C function that can be called via jx_calc().  The function
+/* Register a C function that can be called via edj_calc().  The function
  * should look like...
  *
- *    jx_t *myFunction(jx_t *args, void *agdata).
+ *    edj_t *myFunction(edj_t *args, void *agdata).
  *
- * ... where "args" is a JX_ARRAY of the actual parameter values; if invoked
+ * ... where "args" is a EDJ_ARRAY of the actual parameter values; if invoked
  * as a member function then "this" is the first parameter.  Your function
- * should return newly allocated jx_t data, or NULL to represent the JSON
+ * should return newly allocated edj_t data, or NULL to represent the JSON
  * "null" symbol.  In particular, it should *NOT* attempt to reuse the
- * argument data in the response.  The jx_copy() function is your friend!
- * Upon return, jx_calc() will free the parameters immediately and the
+ * argument data in the response.  The edj_copy() function is your friend!
+ * Upon return, edj_calc() will free the parameters immediately and the
  * returned value eventually.
  *
  * The agfn and agsize parameters are only for aggregate functions.  They
@@ -272,16 +276,16 @@ jxfunc_t *jx_calc_function_first(void)
  * zeroes.  The idea is that agfn() will accumulate data, and fn() will return
  * the final result.
  */
-void jx_calc_aggregate_hook(
+void edj_calc_aggregate_hook(
 	const char    *name,
 	const char	*args,
 	const char	*type,
-	jx_t *(*fn)(jx_t *args, void *agdata),
-	void   (*agfn)(jx_t *args, void *agdata),
+	edj_t *(*fn)(edj_t *args, void *agdata),
+	void   (*agfn)(edj_t *args, void *agdata),
 	size_t  agsize,
 	int	jfoptions)
 {
-	jxfunc_t *f;
+	edjfunc_t *f;
 
 	/* Round agsize up to a multiple of 8 bytes */
 	if (agsize > 0)
@@ -299,7 +303,7 @@ void jx_calc_aggregate_hook(
 	}
 
 	/* Add it */
-	f = malloc(sizeof(jxfunc_t));
+	f = malloc(sizeof(edjfunc_t));
 	memset(f, 0, sizeof *f);
 	f->name = (char *)name;
 	f->args = (char *)args;
@@ -317,14 +321,14 @@ void jx_calc_aggregate_hook(
  * The "args" and "type" strings are the argument names and types, and the
  * return type; these are basically just comments.
  */
-void jx_calc_function_hook(
+void edj_calc_function_hook(
 	const char    *name,
 	const char	*args,
 	const char	*type,
-	jx_t *(*fn)(jx_t *args, void *agdata))
+	edj_t *(*fn)(edj_t *args, void *agdata))
 {
 	/* This is just a simplified interface to the aggregate adder */
-	jx_calc_aggregate_hook(name, args, type, fn, NULL, 0, 0);
+	edj_calc_aggregate_hook(name, args, type, fn, NULL, 0, 0);
 }
 
 /* This function is called automatically when the program terminates.  It
@@ -333,7 +337,7 @@ void jx_calc_function_hook(
  */
 static void free_user_functions()
 {
-	jxfunc_t	*scan, *lag, *other;
+	edjfunc_t	*scan, *lag, *other;
 
 	/* For each function in the list... */
 	for (scan = funclist, lag = NULL; scan; scan = other) {
@@ -352,8 +356,8 @@ static void free_user_functions()
 
 		/* Free its resources */
 		free(scan->name);
-		jx_cmd_free(scan->user);
-		jx_free(scan->userparams);
+		edj_cmd_free(scan->user);
+		edj_free(scan->userparams);
 		if (scan->args)
 			free(scan->args);
 		if (scan->returntype)
@@ -362,21 +366,21 @@ static void free_user_functions()
 	}
 }
 
-/* Define or redefine a user function -- one that's defined in jx's
+/* Define or redefine a user function -- one that's defined in edj's
  * command syntax instead of C code.  Returns 0 normally, or 1 if the
  * function name matches a built-in function (and hence can't be refined).
  *
  * The name, paramstr, and returntype arguments are expected to be
  * dynamically-allocated strings.  Use strdup() if necessary.
  */
-int jx_calc_function_user(
+int edj_calc_function_user(
 	char *name,
-	jx_t *params,
+	edj_t *params,
 	char *paramstr,
 	char *returntype,
-	jxcmd_t *body)
+	edjcmd_t *body)
 {
-	jxfunc_t *fn;
+	edjfunc_t *fn;
 	static int first = 1;
 
 	/* If first, then arrange for all user-defined functions to be freed
@@ -388,11 +392,11 @@ int jx_calc_function_user(
 	}
 
 	/* Look for an existing function to redefine */
-	fn = jx_calc_function_by_name(name);
+	fn = edj_calc_function_by_name(name);
 	if (!fn) {
-		/* Allocate a new jxfunc_t and link it into the table */
-		fn = malloc(sizeof(jxfunc_t));
-		memset(fn, 0, sizeof(jxfunc_t));
+		/* Allocate a new edjfunc_t and link it into the table */
+		fn = malloc(sizeof(edjfunc_t));
+		memset(fn, 0, sizeof(edjfunc_t));
 		fn->other = funclist;
 		funclist = fn;
 	} else if (fn->fn) {
@@ -401,7 +405,7 @@ int jx_calc_function_user(
 	} else {
 		/* Redefining, so discard the old details */
 		free(fn->name);
-		jx_free(fn->userparams);
+		edj_free(fn->userparams);
 		if (fn->args) {
 			free(fn->args);
 			fn->args = NULL;
@@ -410,10 +414,10 @@ int jx_calc_function_user(
 			free(fn->returntype);
 			fn->returntype = NULL;
 		}
-		jx_cmd_free(fn->user);
+		edj_cmd_free(fn->user);
 	}
 
-	/* Store the new info in the jxfunc_t */
+	/* Store the new info in the edjfunc_t */
 	fn->name = name;
 	fn->userparams = params;
 	fn->args = paramstr;
@@ -425,9 +429,9 @@ int jx_calc_function_user(
 }
 
 /* Look up a function by name, and return its info */
-jxfunc_t *jx_calc_function_by_name(const char *name)
+edjfunc_t *edj_calc_function_by_name(const char *name)
 {
-	jxfunc_t *scan;
+	edjfunc_t *scan;
 
 	/* Try case-sensitive */
 	for (scan = funclist; scan; scan = scan->other) {
@@ -437,14 +441,14 @@ jxfunc_t *jx_calc_function_by_name(const char *name)
 
 	/* Try case-insensitive */
 	for (scan = funclist; scan; scan = scan->other) {
-		if (!jx_mbs_casecmp(name, scan->name))
+		if (!edj_mbs_casecmp(name, scan->name))
 			return scan;
 	}
 
 	/* Try abbreviation, if the name is more than 1 letter long */
-	if (jx_mbs_len(name) > 1) {
+	if (edj_mbs_len(name) > 1) {
 		for (scan = funclist; scan; scan = scan->other) {
-			if (!jx_mbs_abbrcmp(name, scan->name))
+			if (!edj_mbs_abbrcmp(name, scan->name))
 				return scan;
 		}
 	}
@@ -453,73 +457,73 @@ jxfunc_t *jx_calc_function_by_name(const char *name)
 }
 
 /***************************************************************************
- * Everything below this is C functions that implement jx functions.       *
+ * Everything below this is C functions that implement edj functions.       *
  * We'll start with the non-aggregate functions.  These are jfn_xxxx() C   *
  * functions.  They're passed an agdata parameter but they ignore it.      *
  * The aggregate functions are defined later in this file.                 *
  ***************************************************************************/
 
 /* toUpperCase(str) returns an uppercase version of str */
-static jx_t *jfn_toUpperCase(jx_t *args, void *agdata)
+static edj_t *jfn_toUpperCase(edj_t *args, void *agdata)
 {
-	jx_t  *tmp;
+	edj_t  *tmp;
 
 	/* If null, return a copy of it */
-	if (jx_is_null(args->first))
-		return jx_copy(args->first);
+	if (edj_is_null(args->first))
+		return edj_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
-	if (args->first->type == JX_STRING)
-		tmp = jx_string(args->first->text, -1);
+	if (args->first->type == EDJ_STRING)
+		tmp = edj_string(args->first->text, -1);
 	else
 		tmp = jfn_toString(args, agdata);
 
 	/* Convert to uppercase */
-	jx_mbs_toupper(tmp->text);
+	edj_mbs_toupper(tmp->text);
 
 	/* Return it */
 	return tmp;
 }
 
 /* toLowerCase(str) returns a lowercase version of str */
-static jx_t *jfn_toLowerCase(jx_t *args, void *agdata)
+static edj_t *jfn_toLowerCase(edj_t *args, void *agdata)
 {
-	jx_t  *tmp;
+	edj_t  *tmp;
 
 	/* If null, return a copy of it */
-	if (jx_is_null(args->first))
-		return jx_copy(args->first);
+	if (edj_is_null(args->first))
+		return edj_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
-	if (args->first->type == JX_STRING)
-		tmp = jx_string(args->first->text, -1);
+	if (args->first->type == EDJ_STRING)
+		tmp = edj_string(args->first->text, -1);
 	else
 		tmp = jfn_toString(args, agdata);
 
 	/* Convert to uppercase */
-	jx_mbs_tolower(tmp->text);
+	edj_mbs_tolower(tmp->text);
 
 	/* Return it */
 	return tmp;
 }
 
 /* to MixedCase(str, exceptions */
-static jx_t *jfn_toMixedCase(jx_t *args, void *agdata)
+static edj_t *jfn_toMixedCase(edj_t *args, void *agdata)
 {
-	jx_t	*tmp;
+	edj_t	*tmp;
 
 	/* If null, return a copy of it */
-	if (jx_is_null(args->first))
-		return jx_copy(args->first);
+	if (edj_is_null(args->first))
+		return edj_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
-	if (args->first->type == JX_STRING)
-		tmp = jx_string(args->first->text, -1);
+	if (args->first->type == EDJ_STRING)
+		tmp = edj_string(args->first->text, -1);
 	else
 		tmp = jfn_toString(args, agdata);
 
 	/* Convert to mixedcase */
-	jx_mbs_tomixed(tmp->text, args->first->next); /* undeferred */
+	edj_mbs_tomixed(tmp->text, args->first->next); /* undeferred */
 
 	/* Return it */
 	return tmp;
@@ -527,25 +531,25 @@ static jx_t *jfn_toMixedCase(jx_t *args, void *agdata)
 }
 
 /* simpleKey(str) returns a simplified version of str.  This gives scripts
- * a way to access the function that jx uses for doing case-insensitive
+ * a way to access the function that edj uses for doing case-insensitive
  * member lookups.
  */
-static jx_t *jfn_simpleKey(jx_t *args, void *agdata)
+static edj_t *jfn_simpleKey(edj_t *args, void *agdata)
 {
-	jx_t  *tmp;
+	edj_t  *tmp;
 
 	/* If null, return a copy of it */
-	if (jx_is_null(args->first))
-		return jx_copy(args->first);
+	if (edj_is_null(args->first))
+		return edj_copy(args->first);
 
 	/* If string, make a copy.  If not a string then use toString on it. */
-	if (args->first->type == JX_STRING)
-		tmp = jx_string(args->first->text, -1);
+	if (args->first->type == EDJ_STRING)
+		tmp = edj_string(args->first->text, -1);
 	else
 		tmp = jfn_toString(args, agdata);
 
 	/* Simplify it.  Note that we do this in-place. */
-	jx_mbs_simple_key(tmp->text, tmp->text);
+	edj_mbs_simple_key(tmp->text, tmp->text);
 
 	/* Return it */
 	return tmp;
@@ -553,24 +557,24 @@ static jx_t *jfn_simpleKey(jx_t *args, void *agdata)
 
 
 /* substr(str, start, len) returns a substring */
-static jx_t *jfn_substr(jx_t *args, void *agdata)
+static edj_t *jfn_substr(edj_t *args, void *agdata)
 {
 	const char    *str;
 	int	istart;
 	size_t  len, start, limit;
 
 	/* If not a string or no other parameters, just return null */
-	if (args->first->type != JX_STRING || !args->first->next) /* undeferred */
-		return jx_error_null(NULL, "substrStr:substr() requires a string");
+	if (args->first->type != EDJ_STRING || !args->first->next) /* undeferred */
+		return edj_error_null(NULL, "substrStr:substr() requires a string");
 	str = args->first->text;
 
 	/* Get the length of the string.  We'll need that to adjust bounds */
-	len = jx_mbs_len(str);
+	len = edj_mbs_len(str);
 
 	/* Get the starting position */
-	if (args->first->next->type != JX_NUMBER) /* undeferred */
-		return jx_error_null(NULL, "substrPos:substr() position must be a number");
-	istart = jx_int(args->first->next); /* undeferred */
+	if (args->first->next->type != EDJ_NUMBER) /* undeferred */
+		return edj_error_null(NULL, "substrPos:substr() position must be a number");
+	istart = edj_int(args->first->next); /* undeferred */
 	if (istart < 0 && istart + len >= 0)
 		start = len + istart;
 	else if (istart < 0 || istart > len)
@@ -581,36 +585,36 @@ static jx_t *jfn_substr(jx_t *args, void *agdata)
 	/* Get the length limit */
 	if (!args->first->next->next) /* undeferred */
 		limit = len - start; /* all the way to the end */
-	else if (args->first->next->next->type != JX_NUMBER) /* undeferred */
-		return jx_error_null(NULL, "substrLen:substr() length must be a number");
+	else if (args->first->next->next->type != EDJ_NUMBER) /* undeferred */
+		return edj_error_null(NULL, "substrLen:substr() length must be a number");
 	else {
-		limit = jx_int(args->first->next->next); /* undeferred */
+		limit = edj_int(args->first->next->next); /* undeferred */
 		if (start + limit > len)
 			limit = len - start;
 	}
 
 	/* Find the substring.  This isn't trivial with multibyte chars */
-	str = jx_mbs_substr(str, start, &limit);
+	str = edj_mbs_substr(str, start, &limit);
 
-	/* Copy the substring into a new jx_t */
-	return jx_string(str, limit);
+	/* Copy the substring into a new edj_t */
+	return edj_string(str, limit);
 }
 
 /* hex(arg) converts strings into a series of hex digits, or numbers into hex
  * optionally padded with leading 0's.
  */
-static jx_t *jfn_hex(jx_t *args, void *agdata)
+static edj_t *jfn_hex(edj_t *args, void *agdata)
 {
-	jx_t  *result;
+	edj_t  *result;
 	char    *str;
 	int     len;
 	size_t	size;
 	long    n;
 
-	if (args->first->type == JX_STRING) {
+	if (args->first->type == EDJ_STRING) {
 		/* Allocate a big enough string */
 		str = args->first->text;
-		result = jx_string("", strlen(str) * 2);
+		result = edj_string("", strlen(str) * 2);
 
 		/* Convert each byte of the string to hex */
 		for (len = 0; str[len]; len++)
@@ -618,19 +622,19 @@ static jx_t *jfn_hex(jx_t *args, void *agdata)
 
 		/* Return that */
 		return result;
-	} else if (args->first->type == JX_NUMBER) {
+	} else if (args->first->type == EDJ_NUMBER) {
 		/* Get the args, including length */
-		n = jx_int(args->first);
+		n = edj_int(args->first);
 		len = 0;
-		if (args->first->next && args->first->next->type == JX_NUMBER) /* undeferred */
-			len = jx_int(args->first->next); /* undeferred */
+		if (args->first->next && args->first->next->type == EDJ_NUMBER) /* undeferred */
+			len = edj_int(args->first->next); /* undeferred */
 		if (len < 0)
 			len = 0;
 
 		/* Allocate the return buffer -- probably bigger than we need,
 		 * but not by much.*/
 		size = len ? len : n < 0xffffffffff ? 12 : 2 + sizeof(n) * 2;
-		result = jx_string("", size);
+		result = edj_string("", size);
 
 		/* Fill it */
 		if (len == 0)
@@ -640,160 +644,160 @@ static jx_t *jfn_hex(jx_t *args, void *agdata)
 
 		return result;
 	}
-	return jx_error_null(NULL, "hex:%s() only works on numbers or strings", "hex");
+	return edj_error_null(NULL, "hex:%s() only works on numbers or strings", "hex");
 }
 
 /* toString(arg) converts arg to a string */
-static jx_t *jfn_toString(jx_t *args, void *agdata)
+static edj_t *jfn_toString(edj_t *args, void *agdata)
 {
 	char    *tmpstr;
-	jx_t  *tmp;
+	edj_t  *tmp;
 
 	/* If already a string, return a copy of it as-is */
-	if (args->first->type == JX_STRING)
-		return jx_copy(args->first);
+	if (args->first->type == EDJ_STRING)
+		return edj_copy(args->first);
 
 	/* If boolean or non-binary number, convert its text to a string. */
-	if (args->first->type == JX_BOOLEAN
-	 || (args->first->type == JX_NUMBER && args->first->text[0] != '\0'))
-		return jx_string(args->first->text, -1);
+	if (args->first->type == EDJ_BOOLEAN
+	 || (args->first->type == EDJ_NUMBER && args->first->text[0] != '\0'))
+		return edj_string(args->first->text, -1);
 
 	/* If null, return "null" */
-	if (args->first->type == JX_NULL)
-		return jx_string("null", 4);
+	if (args->first->type == EDJ_NULL)
+		return edj_string("null", 4);
 
-	/* For anything else, use jx_serialize() */
-	tmpstr = jx_serialize(args->first, 0);
-	tmp = jx_string(tmpstr, -1);
+	/* For anything else, use edj_serialize() */
+	tmpstr = edj_serialize(args->first, 0);
+	tmp = edj_string(tmpstr, -1);
 	free(tmpstr);
 	return tmp;
 }
 
-static jx_t *jfn_isString(jx_t *args, void *agdata)
+static edj_t *jfn_isString(edj_t *args, void *agdata)
 {
-	return jx_boolean(args->first->type == JX_STRING);
+	return edj_boolean(args->first->type == EDJ_STRING);
 }
 
-static jx_t *jfn_isObject(jx_t *args, void *agdata)
+static edj_t *jfn_isObject(edj_t *args, void *agdata)
 {
-	return jx_boolean(args->first->type == JX_OBJECT);
+	return edj_boolean(args->first->type == EDJ_OBJECT);
 }
 
-static jx_t *jfn_isArray(jx_t *args, void *agdata)
+static edj_t *jfn_isArray(edj_t *args, void *agdata)
 {
-	return jx_boolean(args->first->type == JX_ARRAY);
+	return edj_boolean(args->first->type == EDJ_ARRAY);
 }
 
-static jx_t *jfn_isTable(jx_t *args, void *agdata)
+static edj_t *jfn_isTable(edj_t *args, void *agdata)
 {
-	return jx_boolean(jx_is_table(args->first));
+	return edj_boolean(edj_is_table(args->first));
 }
 
-static jx_t *jfn_isNumber(jx_t *args, void *agdata)
+static edj_t *jfn_isNumber(edj_t *args, void *agdata)
 {
-	return jx_boolean(args->first->type == JX_NUMBER);
+	return edj_boolean(args->first->type == EDJ_NUMBER);
 }
 
-static jx_t *jfn_isInteger(jx_t *args, void *agdata)
+static edj_t *jfn_isInteger(edj_t *args, void *agdata)
 {
 	double d;
 
-	if (args->first->type != JX_NUMBER)
-		return jx_boolean(0);
+	if (args->first->type != EDJ_NUMBER)
+		return edj_boolean(0);
 	if (args->first->text[0] == '\0' && args->first->text[1] == 'i')
-		return jx_boolean(1);
-	d = jx_double(args->first);
-	return jx_boolean(d == (int)d);
+		return edj_boolean(1);
+	d = edj_double(args->first);
+	return edj_boolean(d == (int)d);
 }
 
-static jx_t *jfn_isNaN(jx_t *args, void *agdata)
+static edj_t *jfn_isNaN(edj_t *args, void *agdata)
 {
-	return jx_boolean(args->first->type != JX_NUMBER);
+	return edj_boolean(args->first->type != EDJ_NUMBER);
 }
 
-static jx_t *jfn_isDate(jx_t *args, void *agdata)
+static edj_t *jfn_isDate(edj_t *args, void *agdata)
 {
-	return jx_boolean(jx_is_date(args->first));
+	return edj_boolean(edj_is_date(args->first));
 }
 
-static jx_t *jfn_isTime(jx_t *args, void *agdata)
+static edj_t *jfn_isTime(edj_t *args, void *agdata)
 {
-	return jx_boolean(jx_is_time(args->first));
+	return edj_boolean(edj_is_time(args->first));
 }
 
-static jx_t *jfn_isDateTime(jx_t *args, void *agdata)
+static edj_t *jfn_isDateTime(edj_t *args, void *agdata)
 {
-	return jx_boolean(jx_is_datetime(args->first));
+	return edj_boolean(edj_is_datetime(args->first));
 }
 
-static jx_t *jfn_isPeriod(jx_t *args, void *agdata)
+static edj_t *jfn_isPeriod(edj_t *args, void *agdata)
 {
-	return jx_boolean(jx_is_period(args->first));
+	return edj_boolean(edj_is_period(args->first));
 }
 
 /* typeOf(data) returns a string identifying the data's type */
-static jx_t *jfn_typeOf(jx_t *args, void *agdata)
+static edj_t *jfn_typeOf(edj_t *args, void *agdata)
 {
 	char	*type, *mixed;
-	if (!args->first->next || (args->first->next->type == JX_BOOLEAN && *args->first->next->text == 'f')) /* undeferred */
-		type = jx_typeof(args->first, 0);
+	if (!args->first->next || (args->first->next->type == EDJ_BOOLEAN && *args->first->next->text == 'f')) /* undeferred */
+		type = edj_typeof(args->first, 0);
 	else {
-		type = jx_typeof(args->first, 1);
-		if (args->first->next->type == JX_STRING) { /* undeferred */
-			mixed = jx_mix_types(args->first->next->text, type); /* undeferred */
+		type = edj_typeof(args->first, 1);
+		if (args->first->next->type == EDJ_STRING) { /* undeferred */
+			mixed = edj_mix_types(args->first->next->text, type); /* undeferred */
 			if (mixed)
 				type = mixed;
 		}
 	}
-	return jx_string(type, -1);
+	return edj_string(type, -1);
 }
 
 /* deferTypeOf(array) returns a string identifying the type of deferring that
  * an array is using.  This usually indicates the source of the array (file,
  * blob, elipsis, etc.)  Returns NULL if not a deferred array.
  */
-static jx_t *jfn_deferTypeOf(jx_t *args, void *agdata)
+static edj_t *jfn_deferTypeOf(edj_t *args, void *agdata)
 {
-	jxdef_t *def;
+	edjdef_t *def;
 
 	/* If not a deferred array, return null */
-	if (!jx_is_deferred_array(args->first))
-		return jx_null();
+	if (!edj_is_deferred_array(args->first))
+		return edj_null();
 
-	/* The type is stored in the JX_DEFER node */
-	def = (jxdef_t *)args->first->first;
-	return jx_string(def->fns->desc, -1);
+	/* The type is stored in the EDJ_DEFER node */
+	def = (edjdef_t *)args->first->first;
+	return edj_string(def->fns->desc, -1);
 }
 
 
-/* Estimate the memory usage of a jx_t datum */
-static jx_t *jfn_sizeOf(jx_t *args, void *agdata)
+/* Estimate the memory usage of an edj_t datum */
+static edj_t *jfn_sizeOf(edj_t *args, void *agdata)
 {
-	return jx_from_int(jx_sizeof(args->first));
+	return edj_from_int(edj_sizeof(args->first));
 }
 
 /* Estimate the width of a string.  Some characters may be wider than others,
  * even in a fixed-pitch font.
  */
-static jx_t *jfn_widthOf(jx_t *args, void *agdata)
+static edj_t *jfn_widthOf(edj_t *args, void *agdata)
 {
 	char *numstr;
 	int  width;
 
 	switch (args->first->type) {
-	case JX_NUMBER:
+	case EDJ_NUMBER:
 		/* Is the number in binary format? */
 		if (args->text[0] == 0) {
 			/* Convert from binary to string, and check that */
-			numstr = jx_serialize(args, NULL);
+			numstr = edj_serialize(args, NULL);
 			width = strlen(numstr); /* number width is easy */
 			free(numstr);
-			return jx_from_int(width);
+			return edj_from_int(width);
 		}
 		/* else number is in text form so fall through... */
-	case JX_STRING:
-	case JX_BOOLEAN:
-		return jx_from_int(jx_mbs_width(jx_text(args->first)));
+	case EDJ_STRING:
+	case EDJ_BOOLEAN:
+		return edj_from_int(edj_mbs_width(edj_text(args->first)));
 	default:
 		return NULL;
 	}
@@ -802,72 +806,72 @@ static jx_t *jfn_widthOf(jx_t *args, void *agdata)
 /* Return the height of a string.  This is 1 plus the number of newlines,
  * except that if the string ends with a newline then that one doesn't count.
  */
-static jx_t *jfn_heightOf(jx_t *args, void *agdata)
+static edj_t *jfn_heightOf(edj_t *args, void *agdata)
 {
 	switch (args->first->type) {
-	case JX_NULL:
-	case JX_BOOLEAN:
-	case JX_NUMBER:
-	case JX_OBJECT:
-	case JX_ARRAY:
-		return jx_from_int(1);
+	case EDJ_NULL:
+	case EDJ_BOOLEAN:
+	case EDJ_NUMBER:
+	case EDJ_OBJECT:
+	case EDJ_ARRAY:
+		return edj_from_int(1);
 
-	case JX_STRING:
-		return jx_from_int(jx_mbs_height(args->first->text));
+	case EDJ_STRING:
+		return edj_from_int(edj_mbs_height(args->first->text));
 
-	case JX_BADTOKEN:
-	case JX_NEWLINE:
-	case JX_ENDOBJECT:
-	case JX_ENDARRAY:
-	case JX_DEFER:
-	case JX_KEY:
+	case EDJ_BADTOKEN:
+	case EDJ_NEWLINE:
+	case EDJ_ENDOBJECT:
+	case EDJ_ENDARRAY:
+	case EDJ_DEFER:
+	case EDJ_KEY:
 		/* can't happen */
 		abort();
 	}
-	return jx_null(); /* to keep the compiler happy */
+	return edj_null(); /* to keep the compiler happy */
 }
 
 /* Return the Levenshtein edit distance between two strings */
-static jx_t *jfn_levenshtein(jx_t *args, void *agdata)
+static edj_t *jfn_levenshtein(edj_t *args, void *agdata)
 {
 	/* Check arguments */
-	if (args->first->type != JX_STRING
+	if (args->first->type != EDJ_STRING
 	 || !args->first->next
-	 || args->first->next->type != JX_STRING
+	 || args->first->next->type != EDJ_STRING
 	 || (args->first->next->next &&
-		(args->first->next->next->type != JX_BOOLEAN || args->first->next->next->next)))
-		return jx_error_null(NULL, "lev:The %s() function takes two strings and optionally a boolean", "levenshtein");
+		(args->first->next->next->type != EDJ_BOOLEAN || args->first->next->next->next)))
+		return edj_error_null(NULL, "lev:The %s() function takes two strings and optionally a boolean", "levenshtein");
 
 	/* Do it */
-	return jx_from_int(jx_mbs_levenshtein(args->first->text, args->first->next->text, jx_is_true(args->first->next->next)));
+	return edj_from_int(edj_mbs_levenshtein(args->first->text, args->first->next->text, edj_is_true(args->first->next->next)));
 }
 
 /* keys(obj) returns an array of key names, as strings */
-static jx_t *jfn_keys(jx_t *args, void *agdata)
+static edj_t *jfn_keys(edj_t *args, void *agdata)
 {
-	jx_t *result = jx_array();
-	jx_t *scan;
+	edj_t *result = edj_array();
+	edj_t *scan;
 
 	/* This only really works on objects */
-	if (args->first->type == JX_OBJECT) {
+	if (args->first->type == EDJ_OBJECT) {
 		/* For each member... */
 		for (scan = args->first->first; scan; scan = scan->next) { /* undeferred */
-			assert(scan->type == JX_KEY);
+			assert(scan->type == EDJ_KEY);
 			/* Append its name to the result as a string */
-			jx_append(result, jx_string(scan->text, -1));
+			edj_append(result, edj_string(scan->text, -1));
 		}
 	}
 	return result;
 }
 
-static jx_t *help_trim(jx_t *args, int start, int end, char *name)
+static edj_t *help_trim(edj_t *args, int start, int end, char *name)
 {
 	char	*substr;
 	size_t	len;
 
 	/* This only works on non-strings */
-	if (args->first->type != JX_STRING)
-		return jx_error_null(NULL, "trim:The %s function only works on strings", name);
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "trim:The %s function only works on strings", name);
 
 	/* Get the string to trim */
 	substr = args->first->text;
@@ -884,80 +888,157 @@ static jx_t *help_trim(jx_t *args, int start, int end, char *name)
 			len--;
 
 	/* Return the trimmed substring */
-	return jx_string(substr, len);
+	return edj_string(substr, len);
 }
 
-/* trim(obj) returns a string with leading and trailing spaces removed */
-static jx_t *jfn_trim(jx_t *args, void *agdata)
+/* trim(str) returns a string with leading and trailing spaces removed */
+static edj_t *jfn_trim(edj_t *args, void *agdata)
 {
 	return help_trim(args, 1, 1, "trim");
 }
 
-/* trimStart(obj) returns a string with leading spaces removed */
-static jx_t *jfn_trimStart(jx_t *args, void *agdata)
+/* trimStart(str) returns a string with leading spaces removed */
+static edj_t *jfn_trimStart(edj_t *args, void *agdata)
 {
 	return help_trim(args, 1, 0, "trimStart");
 }
 
-/* trimEnd(obj) returns a string with trailing spaces removed */
-static jx_t *jfn_trimEnd(jx_t *args, void *agdata)
+/* trimEnd(str) returns a string with trailing spaces removed */
+static edj_t *jfn_trimEnd(edj_t *args, void *agdata)
 {
 	return help_trim(args, 0, 1, "trimEnd");
 }
 
+/* This implements most of the logic for padStart() and padEnd() */
+static edj_t *help_pad(edj_t *args, int side, const char *name)
+{
+	const char *str;	/* the string to pad */
+	int	length;		/* desired length of the output string */
+	const char *padstr;	/* The padding to use */
+	size_t	len, padlen;
+	char	*buf;
+	edj_t	*result;
+
+	/* Check args */
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "padSubject:The %s() function can only pad strings", name);
+	str = args->first->text;
+	if (!args->first->next || args->first->next->type != EDJ_NUMBER)
+		return edj_error_null(NULL, "padLength:The %s() function's width must be a number", name);
+	length = edj_int(args->first->next);
+	if (args->first->next->next && args->first->next->next->type != EDJ_STRING)
+		return edj_error_null(NULL, "padLength:The %s() function' pad must be a string", name);
+	else if (args->first->next->next)
+		padstr = args->first->next->next->text;
+	else
+		padstr = " ";
+
+	/* Get the current length of the string.  If long enough, return it
+	 * unchanged.
+	 */
+	len = edj_mbs_len(str);
+	if (length <= len || !*padstr)
+		return edj_copy(args->first);
+
+	/* Otherwise we need to copy it into a buffer.  Since UTF-8 characters
+	 * never take more than 4 bytes per character, we can allocate allocate
+	 * a buffer big enough for any padded string.
+	 */
+	buf = malloc(length * 4 + 1);
+	*buf = '\0';
+	length -= len;
+
+	/* Generate the padding.  Also copy the subject string into the buf
+	 * either before or after the padding.
+	 */
+	if (side)
+		strcpy(buf, str);
+	padlen = edj_mbs_len(padstr);
+	while (length >= padlen) {
+		strcat(buf, padstr);
+		length -= padlen;
+	}
+	if (length > 0) {
+		size_t limit = length;
+		edj_mbs_substr(padstr, 0, &limit);
+		strncat(buf, padstr, limit);
+	}
+	if (!side)
+		strcat(buf, str);
+
+	/* Convert it to an edj_t string.  Clean up and return it */
+	result = edj_string(buf, -1);
+	free(buf);
+	return result;
+}
+
+/* padStart(str,len,pad) pads a the start of a string */
+static edj_t *jfn_padStart(edj_t *args, void *agdata)
+{
+	return help_pad(args, 0, "padStart");
+}
+
+/* padEnd(str,len,pad) pads a the end of a string */
+static edj_t *jfn_padEnd(edj_t *args, void *agdata)
+{
+	return help_pad(args, 1, "padEnd");
+}
+
+
+
 /* Combine multiple arrays to form one long array, or multiple strings to
  * form one long string.
  */
-static jx_t *jfn_concat(jx_t *args, void *agdata)
+static edj_t *jfn_concat(edj_t *args, void *agdata)
 {
-	jx_t  *scan, *elem;
-	jx_t  *result;
+	edj_t  *scan, *elem;
+	edj_t  *result;
 	size_t	len;
 	char	*build;
 
 	/* Are we doing arrays or strings? */
-	if (args->first->type == JX_ARRAY) {
+	if (args->first->type == EDJ_ARRAY) {
 		/* Arrays -- make sure everything is an array */
 		for (scan = args->first->next; scan; scan = scan->next) { /* undeferred */
-			if (scan->type != JX_ARRAY && scan->type != JX_NULL)
+			if (scan->type != EDJ_ARRAY && scan->type != EDJ_NULL)
 				goto BadMix;
 		}
 
 		/* Start with an empty array */
-		result = jx_array();
+		result = edj_array();
 
 		/* Append the elements of all arrays */
 		for (scan = args->first; scan; scan = scan->next) { /* undeferred */
-			if (scan->type == JX_NULL)
+			if (scan->type == EDJ_NULL)
 				continue;
-			for (elem = jx_first(scan); elem; elem = jx_next(elem))
-				jx_append(result, jx_copy(elem));
+			for (elem = edj_first(scan); elem; elem = edj_next(elem))
+				edj_append(result, edj_copy(elem));
 		}
 	} else {
 		/* Strings -- Can't handle objects/arrays but other types okay.
 		 * Also, count the length of the combined string, in bytes.
 		 */
 		for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
-			if (scan->type == JX_ARRAY || scan->type == JX_OBJECT)
+			if (scan->type == EDJ_ARRAY || scan->type == EDJ_OBJECT)
 				goto BadMix;
-			if (scan->type == JX_STRING || scan->type == JX_BOOLEAN || (scan->type == JX_NUMBER && *scan->text))
+			if (scan->type == EDJ_STRING || scan->type == EDJ_BOOLEAN || (scan->type == EDJ_NUMBER && *scan->text))
 				len += strlen(scan->text);
-			else if (scan->type == JX_NUMBER)
+			else if (scan->type == EDJ_NUMBER)
 				len += 20; /* just a guess */
 		}
 
 		/* Allocate a result string with enough space */
-		result = jx_string("", len);
+		result = edj_string("", len);
 
 		/* Append all of the strings together */
 		for (build = result->text, scan = args->first; scan; scan = scan->next) { /* undeferred */
-			if (scan->type == JX_NULL)
+			if (scan->type == EDJ_NULL)
 				continue;
-			else if (scan->type == JX_NUMBER && !*scan->text) {
+			else if (scan->type == EDJ_NUMBER && !*scan->text) {
 				if (scan->text[1] == 'i')
-					snprintf(build, len, "%i", JX_INT(scan));
+					snprintf(build, len, "%i", EDJ_INT(scan));
 				else
-					snprintf(build, len, "%.*g", jx_format_default.digits, JX_DOUBLE(scan));
+					snprintf(build, len, "%.*g", edj_format_default.digits, EDJ_DOUBLE(scan));
 			} else
 				strcpy(build, scan->text);
 			build += strlen(build);
@@ -968,19 +1049,19 @@ static jx_t *jfn_concat(jx_t *args, void *agdata)
 	return result;
 
 BadMix:
-	return jx_error_null(NULL, "concat:%s() works on arrays or strings, not a mixture", "concat");
+	return edj_error_null(NULL, "concat:%s() works on arrays or strings, not a mixture", "concat");
 }
 
 /* orderBy(arr, sortlist) - Sort an array of objects */
-jx_t *jfn_orderBy(jx_t *args, void *agdata)
+edj_t *jfn_orderBy(edj_t *args, void *agdata)
 {
-	jx_t *result, *order;
-	jx_t arraybuf;
+	edj_t *result, *order;
+	edj_t arraybuf;
 
 	/* Extract "order" from args */
 	order = args->first->next; /* undeferred */
-	if (order && order->type == JX_STRING) {
-		arraybuf.type = JX_ARRAY;
+	if (order && order->type == EDJ_STRING) {
+		arraybuf.type = EDJ_ARRAY;
 		arraybuf.first = order;
 		order = &arraybuf;
 	}
@@ -988,54 +1069,54 @@ jx_t *jfn_orderBy(jx_t *args, void *agdata)
 	/* First arg must be a table (array of objects).  Second arg must be
 	 * an array of fields and "true" for descending
 	 */
-	if (!jx_is_table(args->first) || !order || order->type != JX_ARRAY || !order->first)
-		return jx_error_null(NULL, "orderBy:%s() requires a table and an array of keys", "orderBy");
+	if (!edj_is_table(args->first) || !order || order->type != EDJ_ARRAY || !order->first)
+		return edj_error_null(NULL, "orderBy:%s() requires a table and an array of keys", "orderBy");
 
 	/* Sort a copy of the table */
-	result = jx_copy(args->first);
-	jx_sort(result, order, 0);
+	result = edj_copy(args->first);
+	edj_sort(result, order, 0);
 	return result;
 }
 
 /* groupBy(arr, sortlist) - group table elements via row members */
-jx_t *jfn_groupBy(jx_t *args, void *agdata)
+edj_t *jfn_groupBy(edj_t *args, void *agdata)
 {
-	jx_t *result;
+	edj_t *result;
 
 	/* Must be at least 2 args.  First must be a table (array of objects).
 	 * Second must be array, hopefully of strings
 	 */
-	if (!jx_is_table(args->first)
+	if (!edj_is_table(args->first)
 	 || !args->first->next /* undeferred */
-	 || (args->first->next->type != JX_ARRAY && args->first->next->type != JX_STRING)) /* undeferred */
+	 || (args->first->next->type != EDJ_ARRAY && args->first->next->type != EDJ_STRING)) /* undeferred */
 		return NULL;
-	result = jx_copy(args->first);
-	jx_sort(result, args->first->next, 1); /* undeferred */
+	result = edj_copy(args->first);
+	edj_sort(result, args->first->next, 1); /* undeferred */
 
 	/* If a third arg is given, then append an empty object to trigger a
 	 * totals line when the @ ot @@ operator is used.
 	 */
 	if (result
-	 && result->type == JX_ARRAY
+	 && result->type == EDJ_ARRAY
 	 && args->first->next->next) { /* undeferred */
-		jx_t *totals = jx_object();
-		if (args->first->next->next->type == JX_STRING) { /* undeferred */
+		edj_t *totals = edj_object();
+		if (args->first->next->next->type == EDJ_STRING) { /* undeferred */
 			/* find the first field name */
-			jx_t *name = args->first->next; /* undeferred */
+			edj_t *name = args->first->next; /* undeferred */
 			char *text, *dot;
-			if (name->type == JX_ARRAY)
+			if (name->type == EDJ_ARRAY)
 				name = name->first;
-			while (name && name->type != JX_STRING)
+			while (name && name->type != EDJ_STRING)
 				name = name->next; /* undeferred */
 			dot = name ? strrchr(name->text, '.') : NULL;
 			text = dot ? dot + 1 : name->text;
 			if (name)
-				jx_append(totals, jx_key(text, jx_copy(args->first->next->next))); /* undeferred */
-			jx_append(result, totals);
-		} else if (jx_is_true(args->first->next->next)) /* undeferred */
-			jx_append(result, totals);
+				edj_append(totals, edj_key(text, edj_copy(args->first->next->next))); /* undeferred */
+			edj_append(result, totals);
+		} else if (edj_is_true(args->first->next->next)) /* undeferred */
+			edj_append(result, totals);
 		else
-			jx_free(totals);
+			edj_free(totals);
 	}
 
 	/* Return the result */
@@ -1043,49 +1124,49 @@ jx_t *jfn_groupBy(jx_t *args, void *agdata)
 }
 
 /* flat(arr, depth) - ungroup array elements */
-jx_t *jfn_flat(jx_t *args, void *agdata)
+edj_t *jfn_flat(edj_t *args, void *agdata)
 {
 	int	depth;
-	if (args->first->next && args->first->next->type == JX_NUMBER) /* undeferred */
-		depth = jx_int(args->first->next); /* undeferred */
+	if (args->first->next && args->first->next->type == EDJ_NUMBER) /* undeferred */
+		depth = edj_int(args->first->next); /* undeferred */
 	else
 		depth = -1;
-	return jx_array_flat(args->first, depth);
+	return edj_array_flat(args->first, depth);
 }
 
 /* slice(arr/str, start, end) - return part of an array or string */
-jx_t *jfn_slice(jx_t *args, void *agdata)
+edj_t *jfn_slice(edj_t *args, void *agdata)
 {
 	int	start, end;
 	size_t	srclength;
-	jx_t	*result, *scan;
+	edj_t	*result, *scan;
 	const char	*str, *strend;
 
 	/* If first param isn't an array or string, then return null */
-	if (args->first->type == JX_ARRAY)
-		srclength = jx_length(args->first);
-	else if (args->first->type == JX_STRING)
-		srclength = jx_mbs_len(args->first->text);
+	if (args->first->type == EDJ_ARRAY)
+		srclength = edj_length(args->first);
+	else if (args->first->type == EDJ_STRING)
+		srclength = edj_mbs_len(args->first->text);
 	else
 		return NULL;
 
 	/* Get the start and end parameters */
-	if (!args->first->next || args->first->next->type != JX_NUMBER) { /* undeferred */
+	if (!args->first->next || args->first->next->type != EDJ_NUMBER) { /* undeferred */
 		/* No endpoints, why bother? */
 		start = 0, end = srclength; /* the whole array/string */
 	} else {
 		/* We at least have a start */
-		start = jx_int(args->first->next); /* undeferred */
+		start = edj_int(args->first->next); /* undeferred */
 		if (start < 0)
 			start += srclength;
 		if (start < 0)
 			start = 0;
 
 		/* Do we also have an end? */
-		if (!args->first->next->next || args->first->next->next->type != JX_NUMBER) { /* undeferred */
+		if (!args->first->next->next || args->first->next->next->type != EDJ_NUMBER) { /* undeferred */
 			end = srclength;
 		} else {
-			end = jx_int(args->first->next->next); /* undeferred */
+			end = edj_int(args->first->next->next); /* undeferred */
 			if (end < 0)
 				end += srclength;
 			if (end < start)
@@ -1094,42 +1175,42 @@ jx_t *jfn_slice(jx_t *args, void *agdata)
 	}
 
 	/* Now that we have the endpoints, do it! */
-	if (args->first->type == JX_ARRAY) {
+	if (args->first->type == EDJ_ARRAY) {
 		/* Copy the slice to a new array */
-		result = jx_array();
-		for (scan = jx_by_index(args->first, start); scan && start < end; start++, scan = jx_next(scan)) { /* undeferred */
-			jx_append(result, jx_copy(scan));
+		result = edj_array();
+		for (scan = edj_by_index(args->first, start); scan && start < end; start++, scan = edj_next(scan)) { /* undeferred */
+			edj_append(result, edj_copy(scan));
 		}
-		jx_break(scan);
-	} else { /* JX_STRING */
-		str = jx_mbs_substr(args->first->text, start, NULL);
-		strend = jx_mbs_substr(args->first->text, end, NULL);
-		result = jx_string(str, strend - str);
+		edj_break(scan);
+	} else { /* EDJ_STRING */
+		str = edj_mbs_substr(args->first->text, start, NULL);
+		strend = edj_mbs_substr(args->first->text, end, NULL);
+		result = edj_string(str, strend - str);
 	}
 
 	return result;
 }
 
 /* repeat(str, qty) Concatenate qty copies of str */
-static jx_t *jfn_repeat(jx_t *args, void *agdata)
+static edj_t *jfn_repeat(edj_t *args, void *agdata)
 {
 	int	len;
 	int	count;
-	jx_t	*result;
+	edj_t	*result;
 	char	*end;
 
 	/* Requires a string and a number */
-	if (args->first->type != JX_STRING || !args->first->next || args->first->next->type != JX_NUMBER) /* undeferred */
+	if (args->first->type != EDJ_STRING || !args->first->next || args->first->next->type != EDJ_NUMBER) /* undeferred */
 		return NULL;
 
 	/* Get the quantity */
-	count = jx_int(args->first->next); /* undeferred */
+	count = edj_int(args->first->next); /* undeferred */
 	if (count < 0)
 		return NULL;
 
 	/* Allocate the result, with room for the repeated text */
 	len = (int)strlen(args->first->text);
-	result = jx_string("", count * len);
+	result = edj_string("", count * len);
 
 	/* Copy qty copies of the string into it */
 	for (end = result->text; count > 0; end += len, count--) {
@@ -1142,54 +1223,54 @@ static jx_t *jfn_repeat(jx_t *args, void *agdata)
 }
 
 /* toFixed(num, digits) Format a number with the given digits after the decimal */
-static jx_t *jfn_toFixed(jx_t *args, void *agdata)
+static edj_t *jfn_toFixed(edj_t *args, void *agdata)
 {
 	double	num;
 	int	digits;
 	char	buf[100];
 
 	/* Requires two numbers */
-	if (args->first->type != JX_NUMBER || !args->first->next || args->first->next->type != JX_NUMBER) /* undeferred */
+	if (args->first->type != EDJ_NUMBER || !args->first->next || args->first->next->type != EDJ_NUMBER) /* undeferred */
 		return NULL;
 
-	num = jx_double(args->first);
-	digits = jx_int(args->first->next); /* undeferred */
+	num = edj_double(args->first);
+	digits = edj_int(args->first->next); /* undeferred */
 	snprintf(buf, sizeof buf, "%.*f", digits, num);
-	return jx_string(buf, -1);
+	return edj_string(buf, -1);
 }
 
 /* Eliminate duplicates from an array */
-static jx_t *jfn_distinct(jx_t *args, void *agdata)
+static edj_t *jfn_distinct(edj_t *args, void *agdata)
 {
 	int	bestrict = 0;
-	jx_t	*fieldlist = NULL;
-	jx_t	pretendArray;
-	jx_t	*result, *scan, *prev;
+	edj_t	*fieldlist = NULL;
+	edj_t	pretendArray;
+	edj_t	*result, *scan, *prev;
 
 	/* If not an array, or empty, return it unchanged */
-	if (args->first->type != JX_ARRAY || !args->first->first)
-		return jx_copy(args->first);
+	if (args->first->type != EDJ_ARRAY || !args->first->first)
+		return edj_copy(args->first);
 
 	/* Check for a "strict" flag or field list as the second parameter */
 	fieldlist = args->first->next; /* undeferred */
 	if (fieldlist) {
-		if (fieldlist->type == JX_BOOLEAN && jx_is_true(fieldlist)) {
+		if (fieldlist->type == EDJ_BOOLEAN && edj_is_true(fieldlist)) {
 			bestrict = 1;
 			fieldlist = fieldlist->next; /* undeferred */
 		}
-		if (fieldlist && fieldlist->type == JX_STRING) {
+		if (fieldlist && fieldlist->type == EDJ_STRING) {
 			/* Fieldlist is supposed to be an array of strings.
 			 * If we're given a single string instead of an array,
 			 * then treat it like an array.
 			 */
-			pretendArray.type = JX_ARRAY;
+			pretendArray.type = EDJ_ARRAY;
 			pretendArray.first = fieldlist;
 			fieldlist = &pretendArray;
 		}
 	}
 
 	/* Start building a new array with unique items. */
-	result = jx_array();
+	result = edj_array();
 
 	/* Separate methods for strict vs. non-strict */
 	if (bestrict) {
@@ -1198,27 +1279,27 @@ static jx_t *jfn_distinct(jx_t *args, void *agdata)
 		 */
 
 		/* First element is always added */
-		scan = jx_first(args->first);
-		prev = jx_copy(scan);
-		jx_append(result, prev);
+		scan = edj_first(args->first);
+		prev = edj_copy(scan);
+		edj_append(result, prev);
 
 		/* For each element after the first... */
-		for (scan = jx_next(scan); scan; scan = jx_next(scan)) {
+		for (scan = edj_next(scan); scan; scan = edj_next(scan)) {
 			/* Check for a match anywhere in the result so far */
-			for (prev = jx_first(result); prev; prev = jx_next(prev)) {
-				if (fieldlist && prev->type == JX_OBJECT && scan->type == JX_OBJECT) {
-					if (jx_compare(prev, scan, fieldlist) == 0)
+			for (prev = edj_first(result); prev; prev = edj_next(prev)) {
+				if (fieldlist && prev->type == EDJ_OBJECT && scan->type == EDJ_OBJECT) {
+					if (edj_compare(prev, scan, fieldlist) == 0)
 						break;
 				} else {
-					if (jx_equal(prev, scan))
+					if (edj_equal(prev, scan))
 						break;
 				}
 			}
-			jx_break(prev);
+			edj_break(prev);
 
 			/* If nothing already in the list matched, add it */
 			if (!prev)
-				jx_append(result, jx_copy(scan));
+				edj_append(result, edj_copy(scan));
 		}
 	} else {
 		/* Non-strict!  We just compare each prospective element
@@ -1226,24 +1307,24 @@ static jx_t *jfn_distinct(jx_t *args, void *agdata)
 		 */
 
 		/* First element is always added */
-		scan = jx_first(args->first);
-		prev = jx_copy(scan);
-		jx_append(result, prev);
+		scan = edj_first(args->first);
+		prev = edj_copy(scan);
+		edj_append(result, prev);
 
 		/* for each element after the first... */
-		for (scan = jx_next(scan); scan; scan = jx_next(scan)) {
+		for (scan = edj_next(scan); scan; scan = edj_next(scan)) {
 			/* If it matches the previous item, skip */
-			if (fieldlist && prev->type == JX_OBJECT && scan->type == JX_OBJECT) {
-				if (jx_compare(prev, scan, fieldlist) == 0)
+			if (fieldlist && prev->type == EDJ_OBJECT && scan->type == EDJ_OBJECT) {
+				if (edj_compare(prev, scan, fieldlist) == 0)
 					continue;
 			} else {
-				if (jx_equal(prev, scan))
+				if (edj_equal(prev, scan))
 					continue;
 			}
 
 			/* New, so add it */
-			prev = jx_copy(scan);
-			jx_append(result, prev);
+			prev = edj_copy(scan);
+			edj_append(result, prev);
 		}
 	}
 
@@ -1252,31 +1333,31 @@ static jx_t *jfn_distinct(jx_t *args, void *agdata)
 }
 
 /* Unroll nested tables */
-jx_t *jfn_unroll(jx_t *args, void *agdata)
+edj_t *jfn_unroll(edj_t *args, void *agdata)
 {
-	return jx_unroll(args->first, args->first->next); /* undeferred */
+	return edj_unroll(args->first, args->first->next); /* undeferred */
 }
 
-jx_t *jfn_nameBits(jx_t *args, void *agdata)
+edj_t *jfn_nameBits(edj_t *args, void *agdata)
 {
 	int	inbits;
 	int	pos, nbits;
-	jx_t	*result;
-	jx_t	*names;
+	edj_t	*result;
+	edj_t	*names;
 	char	*delim;
 
 	/* Check the args */
-	if (args->first->type != JX_NUMBER
+	if (args->first->type != EDJ_NUMBER
 	 || !args->first->next /* undeferred */
-	 || args->first->next->type != JX_ARRAY) /* undeferred */
+	 || args->first->next->type != EDJ_ARRAY) /* undeferred */
 		return NULL;
 
 	/* Extract arguments */
-	inbits = jx_int(args->first);
+	inbits = edj_int(args->first);
 	names = args->first->next; /* undeferred */
 	delim = NULL;
 	if (args->first->next->next /* undeferred */
-	 && args->first->next->next->type == JX_STRING) /* undeferred */
+	 && args->first->next->next->type == EDJ_STRING) /* undeferred */
 		delim = args->first->next->next->text; /* undeferred */
 
 	/* If the bits value is negative, use all-1's */
@@ -1284,20 +1365,20 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 		inbits = ~0;
 
 	/* Start with an empty object */
-	result = jx_object();
+	result = edj_object();
 
 	/* Scan the bits... */
-	for (pos = 0, names = jx_first(names); names; pos += nbits, names = jx_next(names)) {
+	for (pos = 0, names = edj_first(names); names; pos += nbits, names = edj_next(names)) {
 		/* Single bit? */
-		if (names->type == JX_STRING) {
+		if (names->type == EDJ_STRING) {
 			nbits = 1;
 			if (inbits & (1 << pos))
-				jx_append(result, jx_key(names->text, jx_from_int(1 << pos)));
-		} else if (names->type == JX_ARRAY && names->first) {
+				edj_append(result, edj_key(names->text, edj_from_int(1 << pos)));
+		} else if (names->type == EDJ_ARRAY && names->first) {
 			/* Figure out which bits we need for this array */
-			int length = jx_length(names);
+			int length = edj_length(names);
 			int mask, i;
-			jx_t *elem;
+			edj_t *elem;
 			for (nbits = 1; length > (1 << nbits); nbits++) {
 			}
 			mask = (1 << nbits) - 1;
@@ -1311,10 +1392,10 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 			 * is just a placeholder.  But for strings, add a
 			 * member to the result.
 			 */
-			elem = jx_by_index(names, i);
-			if (elem && elem->type == JX_STRING)
-				jx_append(result, jx_key(elem->text, jx_from_int(inbits & (mask << pos))));
-			jx_break(elem);
+			elem = edj_by_index(names, i);
+			if (elem && elem->type == EDJ_STRING)
+				edj_append(result, edj_key(elem->text, edj_from_int(inbits & (mask << pos))));
+			edj_break(elem);
 		} else /* basically a placeholder for a "do not care" bit */ {
 			nbits = 1;
 		}
@@ -1327,7 +1408,7 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 		/* Count the lengths of the names and delimiters */
 		size_t	len = 0;
 		size_t	delimlen = strlen(delim);
-		jx_t	*member, *str;
+		edj_t	*member, *str;
 		for (member = result->first; member; member = member->next) { /* object */
 			len += strlen(member->text);
 			if (member->next) /* object */
@@ -1335,7 +1416,7 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 		}
 
 		/* Collect the names in a string */
-		str = jx_string("", len);
+		str = edj_string("", len);
 		for (member = result->first; member; member = member->next) { /* object */
 			strcat(str->text, member->text);
 			if (member->next) /* object */
@@ -1343,7 +1424,7 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 		}
 
 		/* Use the string as the result, instead of the object */
-		jx_free(result);
+		edj_free(result);
 		result = str;
 	}
 
@@ -1351,19 +1432,19 @@ jx_t *jfn_nameBits(jx_t *args, void *agdata)
 }
 
 /* Return an array of {key,value} objects, from a given object */
-static jx_t *keysValuesHelper(jx_t *obj)
+static edj_t *keysValuesHelper(edj_t *obj)
 {
-	jx_t	*array, *scan, *pair;
+	edj_t	*array, *scan, *pair;
 
 	/* Start with an empty array */
-	array = jx_array();
+	array = edj_array();
 
 	/* Add a {name,value} pair for each member of obj */
 	for (scan = obj->first; scan; scan = scan->next) { /* object */
-		pair = jx_object();
-		jx_append(pair, jx_key("key", jx_string(scan->text, -1)));
-		jx_append(pair, jx_key("value", jx_copy(scan->first)));
-		jx_append(array, pair);
+		pair = edj_object();
+		edj_append(pair, edj_key("key", edj_string(scan->text, -1)));
+		edj_append(pair, edj_key("value", edj_copy(scan->first)));
+		edj_append(array, pair);
 	}
 
 	/* Return the array */
@@ -1374,73 +1455,73 @@ static jx_t *keysValuesHelper(jx_t *obj)
  * table instead of an object, then output a grouped array of {name,value}
  * objects.
  */
-static jx_t *jfn_keysValues(jx_t *args, void *agdata)
+static edj_t *jfn_keysValues(edj_t *args, void *agdata)
 {
-	jx_t	*scan, *result;
+	edj_t	*scan, *result;
 
-	if (args->first->type == JX_OBJECT) {
+	if (args->first->type == EDJ_OBJECT) {
 		/* Single object is easy */
 		return keysValuesHelper(args->first);
-	} else if (jx_is_table(args->first)) {
+	} else if (edj_is_table(args->first)) {
 		/* For a table, we want to return a grouped array -- that is,
 		 * an array of arrays, where each embedded array represents a
 		 * single row from the argument table.
 		 */
-		result = jx_array();
+		result = edj_array();
 		for (scan = args->first->first; scan; scan = scan->next) /* undeferred */
-			jx_append(result, keysValuesHelper(scan));
+			edj_append(result, keysValuesHelper(scan));
 		return result;
 	}
 	return NULL;
 }
 
 /* Return a single-character substring */
-static jx_t *jfn_charAt(jx_t *args, void *agdata)
+static edj_t *jfn_charAt(edj_t *args, void *agdata)
 {
 	const char	*pos;
 	size_t	size;
 
 	/* The first argument must be a non-empty string */
-	if (args->first->type != JX_STRING || !args->first->text)
+	if (args->first->type != EDJ_STRING || !args->first->text)
 		return NULL;
 
 	/* Single number?  No subscript given? */
-	if (!args->first->next || args->first->next->type == JX_NUMBER) { /* undeferred */
+	if (!args->first->next || args->first->next->type == EDJ_NUMBER) { /* undeferred */
 		/* Get the position of the character */
 		size = 1;
 		if (args->first->next) /* undeferred */
-			pos = jx_mbs_substr(args->first->text, jx_int(args->first->next), &size); /* undeferred */
+			pos = edj_mbs_substr(args->first->text, edj_int(args->first->next), &size); /* undeferred */
 		else /* no character offset given, so use first character */
-			pos = jx_mbs_substr(args->first->text, 0, &size);
+			pos = edj_mbs_substr(args->first->text, 0, &size);
 
 		/* If end of string, return null */
 		if (!*pos)
 			return NULL;
 
 		/* Return it as a string */
-		return jx_string(pos, size);
+		return edj_string(pos, size);
 	}
 
 	return NULL;
 }
 
 /* Return the character at a given index, as a number. */
-static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
+static edj_t *jfn_charCodeAt(edj_t *args, void *agdata)
 {
 	const char	*pos;
 	wchar_t	wc;
-	jx_t	*scan, *result;
+	edj_t	*scan, *result;
 	int	in;
 
 	/* The first argument must be a string */
-	if (args->first->type != JX_STRING)
+	if (args->first->type != EDJ_STRING)
 		return NULL;
 
 	/* Single number?  No subscript given? */
-	if (!args->first->next || args->first->next->type == JX_NUMBER) { /* undeferred */
+	if (!args->first->next || args->first->next->type == EDJ_NUMBER) { /* undeferred */
 		/* Get the position of the character */
 		if (args->first->next) /* undeferred */
-			pos = jx_mbs_substr(args->first->text, jx_int(args->first->next), NULL); /* undeferred */
+			pos = edj_mbs_substr(args->first->text, edj_int(args->first->next), NULL); /* undeferred */
 		else /* no character offset given, so use first character */
 			pos = args->first->text;
 
@@ -1450,19 +1531,19 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
 			wc = 0;
 
 		/* Return it as an integer */
-		return jx_from_int((int)wc);
+		return edj_from_int((int)wc);
 	}
 
 	/* Array? */
-	if (args->first->next->type == JX_ARRAY) {
+	if (args->first->next->type == EDJ_ARRAY) {
 		/* Start with an empty array */
-		result = jx_array();
+		result = edj_array();
 
 		/* Scan the arg2 array for numbers. */
-		for (scan = jx_first(args->first->next); scan; scan = jx_next(scan)) { /* undeferred */
-			if (scan->type == JX_NUMBER) {
+		for (scan = edj_first(args->first->next); scan; scan = edj_next(scan)) { /* undeferred */
+			if (scan->type == EDJ_NUMBER) {
 				/* Find the position of the character */
-				pos = jx_mbs_substr(args->first->text, jx_int(scan), NULL);
+				pos = edj_mbs_substr(args->first->text, edj_int(scan), NULL);
 
 				/* Convert the character from UTF-8 to wchar_t */
 				(void)mbtowc(&wc, pos, MB_CUR_MAX);
@@ -1470,7 +1551,7 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
 					wc = 0;
 
 				/* Add it to the array */
-				jx_append(result, jx_from_int((int)wc));
+				edj_append(result, edj_from_int((int)wc));
 			}
 		}
 
@@ -1479,9 +1560,9 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
 	}
 
 	/* Boolean "true"? */
-	if (args->first->next->type == JX_BOOLEAN && jx_is_true(args->first->next)) {
+	if (args->first->next->type == EDJ_BOOLEAN && edj_is_true(args->first->next)) {
 		/* Start with an empty array */
-		result = jx_array();
+		result = edj_array();
 
 		/* For each character... */
 		for (pos = args->first->text; *pos; pos += in) {
@@ -1493,7 +1574,7 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
 				wc = 0;
 
 			/* Add it to the array */
-			jx_append(result, jx_from_int((int)wc));
+			edj_append(result, edj_from_int((int)wc));
 		}
 
 		/* Return the result */
@@ -1504,63 +1585,63 @@ static jx_t *jfn_charCodeAt(jx_t *args, void *agdata)
 	return NULL;
 }
 
-/* This helper function returns a number like jx_int() except that if the
- * number is 0 then it returns 0xffff.  This is handy because jxcalc uses
+/* This helper function returns a number like edj_int() except that if the
+ * number is 0 then it returns 0xffff.  This is handy because edjcalc uses
  * U+ffff to represent the 0 byte.
  */
-static int fromCharCodeGetWC(jx_t *scan)
+static int fromCharCodeGetWC(edj_t *scan)
 {
-	int c = jx_int(scan);
+	int c = edj_int(scan);
 	if (c == 0)
 		return 0xffff;
 	return c;
 }
 
 /* Return a string generated from character codepoints. */
-static jx_t *jfn_fromCharCode(jx_t *args, void *agdata)
+static edj_t *jfn_fromCharCode(edj_t *args, void *agdata)
 {
 	size_t len;
-	jx_t	*scan, *elem;
+	edj_t	*scan, *elem;
 	char	dummy[MB_CUR_MAX];
 	int	in;
-	jx_t	*result;
+	edj_t	*result;
 	char	*s;
 
 	/* Count the length.  Note that some codepoints require multiple bytes */
 	for (len = 0, scan = args->first; scan; scan = scan->next) { /* undeferred */
-		if (scan->type == JX_NUMBER) {
+		if (scan->type == EDJ_NUMBER) {
 			in = wctomb(dummy, fromCharCodeGetWC(scan));
 			if (in > 0)
 				len += in;
-		} else if (scan->type == JX_ARRAY) {
-			for (elem = jx_first(scan); elem; elem = jx_next(elem)) {
+		} else if (scan->type == EDJ_ARRAY) {
+			for (elem = edj_first(scan); elem; elem = edj_next(elem)) {
 				in = wctomb(dummy, fromCharCodeGetWC(elem));
 				if (in > 0)
 					len += in;
 			}
-		} else if (scan->type == JX_STRING) {
+		} else if (scan->type == EDJ_STRING) {
 			len += strlen(scan->text);
 		}
 	}
 
-	/* Allocate a big enough JX_STRING.  Note that "len" does not need
-	 * to allow for the '\0' that jx_string() adds after the string.
+	/* Allocate a big enough EDJ_STRING.  Note that "len" does not need
+	 * to allow for the '\0' that edj_string() adds after the string.
 	 */
-	result = jx_string("", len);
+	result = edj_string("", len);
 
 	/* Loop through the args again, building the result */
 	for (s = result->text, scan = args->first; scan; scan = scan->next) { /* undeferred */
-		if (scan->type == JX_NUMBER) {
+		if (scan->type == EDJ_NUMBER) {
 			in = wctomb(s, fromCharCodeGetWC(scan));
 			if (in > 0)
 				s += in;
-		} else if (scan->type == JX_ARRAY) {
-			for (elem = jx_first(scan); elem; elem = jx_next(elem)) {
+		} else if (scan->type == EDJ_ARRAY) {
+			for (elem = edj_first(scan); elem; elem = edj_next(elem)) {
 				in = wctomb(s, fromCharCodeGetWC(elem));
 				if (in > 0)
 					s += in;
 			}
-		} else if (scan->type == JX_STRING) {
+		} else if (scan->type == EDJ_STRING) {
 			strcpy(s, scan->text);
 			s += strlen(scan->text);
 		}
@@ -1590,7 +1671,7 @@ static char *addstr(char *buf, size_t *refsize, size_t used, const char *str, si
 	return buf;
 }
 
-static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
+static edj_t *help_replace(edj_t *args, regex_t *preg, int globally)
 {
 	const char	*subject, *search, *replace;
 	size_t		searchlen;
@@ -1600,21 +1681,21 @@ static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
 	size_t		bufsize, used;
 	regmatch_t	matches[10];
 	int		m, scan, chunk, in;
-	jx_t		*result;
+	edj_t		*result;
 
 	/* Check parameters */
-	if (args->first->type != JX_STRING
+	if (args->first->type != EDJ_STRING
 	 || args->first->next == NULL /* undeferred */
-	 || (!preg && args->first->next->type != JX_STRING) /* undeferred */
+	 || (!preg && args->first->next->type != EDJ_STRING) /* undeferred */
 	 || args->first->next->next == NULL /* undeferred */
-	 || args->first->next->next->type != JX_STRING) /* undeferred */
+	 || args->first->next->next->type != EDJ_STRING) /* undeferred */
 		return NULL;
 
 	/* Copy parameter strings into variables */
 	subject = args->first->text;
 	search = (preg ? NULL : args->first->next->text); /* undeferred */
 	replace = args->first->next->next->text; /* undeferred */
-	ignorecase = jx_is_true(args->first->next->next->next); /* undeferred */
+	ignorecase = edj_is_true(args->first->next->next->next); /* undeferred */
 
 	/* Start building a replacement string */
 	bufsize = 128;
@@ -1691,7 +1772,7 @@ static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
 		/* STRING VERSION */
 
 		/* For each match...  */
-		while ((found = jx_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
+		while ((found = edj_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
 			/* Add any text from the subject string before the match */
 			if (found != subject) {
 				buf = addstr(buf, &bufsize, used, subject, (size_t)(found - subject));
@@ -1722,8 +1803,8 @@ static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
 		buf = addstr(buf, &bufsize, used, subject, -1);
 	}
 
-	/* Copy the string into a jx_t, and return it */
-	result = jx_string(buf, -1);
+	/* Copy the string into an edj_t, and return it */
+	result = edj_string(buf, -1);
 
 	/* Clean up */
 	free(buf);
@@ -1732,10 +1813,10 @@ static jx_t *help_replace(jx_t *args, regex_t *preg, int globally)
 }
 
 /* Replace the first instance of a substring or regular expression */
-static jx_t *jfn_replace(jx_t *args, void *agdata)
+static edj_t *jfn_replace(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
-	jxcalc_t *regex = recon->regex;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
+	edjcalc_t *regex = recon->regex;
 	if (regex)
 		return help_replace(args, regex->u.regex.preg, regex->u.regex.global);
 	else
@@ -1743,17 +1824,17 @@ static jx_t *jfn_replace(jx_t *args, void *agdata)
 }
 
 /* Replace all instances of a substring or regular expression */
-static jx_t *jfn_replaceAll(jx_t *args, void *agdata)
+static edj_t *jfn_replaceAll(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
-	jxcalc_t *regex = recon->regex;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
+	edjcalc_t *regex = recon->regex;
 	if (regex)
 		return help_replace(args, regex->u.regex.preg, 1);
 	else
 		return help_replace(args, NULL, 10);
 }
 
-static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
+static edj_t *help_match(edj_t *args, regex_t *preg, int globally)
 {
 	const char	*subject, *search;
 	size_t		searchlen;
@@ -1761,21 +1842,21 @@ static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
 	const char	*found;
 	regmatch_t	matches[10];
 	int		in;
-	jx_t		*result;
+	edj_t		*result;
 
 	/* Check parameters */
-	if (args->first->type != JX_STRING
+	if (args->first->type != EDJ_STRING
 	 || args->first->next == NULL /* undeferred */
-	 || (!preg && args->first->next->type != JX_STRING)) /* undeferred */
+	 || (!preg && args->first->next->type != EDJ_STRING)) /* undeferred */
 		return NULL;
 
 	/* Copy parameter strings into variables */
 	subject = args->first->text;
 	search = (preg ? NULL : args->first->next->text); /* undeferred */
-	ignorecase = jx_is_true(args->first->next->next); /* undeferred */
+	ignorecase = edj_is_true(args->first->next->next); /* undeferred */
 
 	/* Start building the result array */
-	result = jx_array();
+	result = edj_array();
 
 	/* Find the first/next match */
 	if (preg) {
@@ -1783,7 +1864,7 @@ static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
 
 		/* For each match... */
 		while (0 == regexec(preg, subject, 10, matches, 0)) {
-			jx_append(result, jx_string(subject + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so));
+			edj_append(result, edj_string(subject + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so));
 
 			/* Move past this match */
 			subject += matches[0].rm_eo;
@@ -1806,8 +1887,8 @@ static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
 		/* STRING VERSION */
 
 		/* For each match...  */
-		while ((found = jx_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
-			jx_append(result, jx_string(found, searchlen));
+		while ((found = edj_mbs_str(subject, search, NULL, &searchlen, 0, ignorecase)) != NULL) {
+			edj_append(result, edj_string(found, searchlen));
 
 			/* Move past the match. */
 			subject = found + searchlen;
@@ -1826,18 +1907,18 @@ static jx_t *help_match(jx_t *args, regex_t *preg, int globally)
 
 	/* If no matches found, return null */
 	if (!result->first) {
-		jx_free(result);
-		result = jx_null();
+		edj_free(result);
+		result = edj_null();
 	}
 
 	return result;
 }
 
 /* Replace the first instance of a substring or regular expression */
-static jx_t *jfn_match(jx_t *args, void *agdata)
+static edj_t *jfn_match(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
-	jxcalc_t *regex = recon->regex;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
+	edjcalc_t *regex = recon->regex;
 	if (regex)
 		return help_match(args, regex->u.regex.preg, regex->u.regex.global);
 	else
@@ -1845,10 +1926,10 @@ static jx_t *jfn_match(jx_t *args, void *agdata)
 }
 
 /* Replace all instances of a substring or regular expression */
-static jx_t *jfn_matchAll(jx_t *args, void *agdata)
+static edj_t *jfn_matchAll(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
-	jxcalc_t *regex = recon->regex;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
+	edjcalc_t *regex = recon->regex;
 	if (regex)
 		return help_match(args, regex->u.regex.preg, 1);
 	else
@@ -1859,23 +1940,23 @@ static jx_t *jfn_matchAll(jx_t *args, void *agdata)
  * These three are similar enough to benefit from common code.  Returns -2 or
  * -3 on bad parameters, -1 if not found, or an index number otherwise.
  */
-int help_indexOf(jx_t *args, int last)
+int help_indexOf(edj_t *args, int last)
 {
 	int	ignorecase;
 
 	/* We need at least 2 arguments.  Third may be ignorecase flag */
 	if (!args->first->next) /* undeferred */
 		return -2;
-	ignorecase = jx_is_true(args->first->next->next); /* undeferred */
-	if (ignorecase && args->first->next->type != JX_STRING) /* undeferred */
+	ignorecase = edj_is_true(args->first->next->next); /* undeferred */
+	if (ignorecase && args->first->next->type != EDJ_STRING) /* undeferred */
 		return -3;
 
 	/* Array version?  String version? */
-	if (args->first->type == JX_ARRAY) {
+	if (args->first->type == EDJ_ARRAY) {
 		/* Array version! */
-		jx_t	*haystack = args->first;
-		jx_t	*needle = args->first->next;; /* undeferred */
-		jx_t	*scan;
+		edj_t	*haystack = args->first;
+		edj_t	*needle = args->first->next;; /* undeferred */
+		edj_t	*scan;
 		int	i, found;
 
 		if (last) {
@@ -1883,14 +1964,14 @@ int help_indexOf(jx_t *args, int last)
 			 * most recent match.
 			 */
 			found = -1;
-			for (i = 0, scan = jx_first(haystack); scan; i++, scan = jx_next(scan)) {
+			for (i = 0, scan = edj_first(haystack); scan; i++, scan = edj_next(scan)) {
 				if (ignorecase) {
 					/* Case-insensitive search for a string */
-					if (scan->type == JX_STRING && jx_mbs_casecmp(scan->text, needle->text) == 0)
+					if (scan->type == EDJ_STRING && edj_mbs_casecmp(scan->text, needle->text) == 0)
 						found = i;
 				} else {
 					/* Search for anything, case-sensitive */
-					if (jx_equal(scan, needle))
+					if (edj_equal(scan, needle))
 						found = i;
 				}
 			}
@@ -1900,31 +1981,31 @@ int help_indexOf(jx_t *args, int last)
 				return found;
 		} else {
 			/* Scan the array forward.  Much better! */
-			for (i = 0, scan = jx_first(haystack); scan; i++, scan = jx_next(scan)) {
+			for (i = 0, scan = edj_first(haystack); scan; i++, scan = edj_next(scan)) {
 
 				if (ignorecase) {
 					/* Case-insensitive search for a string */
-					if (scan->type == JX_STRING && jx_mbs_casecmp(scan->text, needle->text) == 0) {
-						jx_break(scan);
+					if (scan->type == EDJ_STRING && edj_mbs_casecmp(scan->text, needle->text) == 0) {
+						edj_break(scan);
 						return i;
 					}
 				} else {
 					/* Search for anything, case-sensitive */
-					if (jx_equal(scan, needle)) {
-						jx_break(scan);
+					if (edj_equal(scan, needle)) {
+						edj_break(scan);
 						return i;
 					}
 				}
 			}
 		}
-	} else if (args->first->type == JX_STRING) {
+	} else if (args->first->type == EDJ_STRING) {
 		/* String version! */
 
 		char *haystack = args->first->text;
 		char *needle = args->first->next->text; /* undeferred */
 		size_t	position;
 
-		if (jx_mbs_str(haystack, needle, &position, NULL, last, ignorecase))
+		if (edj_mbs_str(haystack, needle, &position, NULL, last, ignorecase))
 			return (int)position;
 
 	} else {
@@ -1937,150 +2018,150 @@ int help_indexOf(jx_t *args, int last)
 }
 
 /* Return a boolean indicator of whether array or string contains target */
-static jx_t *jfn_includes(jx_t *args, void *agdata)
+static edj_t *jfn_includes(edj_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 0);
 	if (i == -2)
-		return jx_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "includes");
+		return edj_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "includes");
 	if (i == -3)
-		return jx_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "includes");
-	return jx_boolean(i >= 0);
+		return edj_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "includes");
+	return edj_boolean(i >= 0);
 }
 
 /* Return a number indicating the position of the first match within an array
  * or string, or -1 if no match is found.
  */
-static jx_t *jfn_indexOf(jx_t *args, void *agdata)
+static edj_t *jfn_indexOf(edj_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 0);
 	if (i == -2)
-		return jx_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "indexOf");
+		return edj_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "indexOf");
 	if (i == -3)
-		return jx_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "indexOf");
-	return jx_from_int(i);
+		return edj_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "indexOf");
+	return edj_from_int(i);
 }
 
 /* Return a number indicating the position of the last match within an array
  * or string, or -1 if no match is found.
  */
-static jx_t *jfn_lastIndexOf(jx_t *args, void *agdata)
+static edj_t *jfn_lastIndexOf(edj_t *args, void *agdata)
 {
 	int	i = help_indexOf(args, 1);
 	if (i == -2)
-		return jx_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "lastIndexOf");
+		return edj_error_null(NULL, "srch:The %s function requires an array or string, and something to search for", "lastIndexOf");
 	if (i == -3)
-		return jx_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "lastIndexOf");
-	return jx_from_int(i);
+		return edj_error_null(NULL, "srchIC:The %s function's ignorecase flag only works when searching for a string", "lastIndexOf");
+	return edj_from_int(i);
 }
 
 /* Return a boolean indicator of whether a string begins with a target */
-static jx_t *jfn_startsWith(jx_t *args, void *agdata)
+static edj_t *jfn_startsWith(edj_t *args, void *agdata)
 {
 	size_t	len;
 	char	*haystack, *needle;
 
 	/* Requires two strings */
-	if (args->first->type != JX_STRING
+	if (args->first->type != EDJ_STRING
 	 || !args->first->next /* undeferred */
-	 || args->first->next->type != JX_STRING) { /* undeferred */
-		return jx_error_null(NULL, "startsEndsWith:The %s function requires two strings", "startsWith");
+	 || args->first->next->type != EDJ_STRING) { /* undeferred */
+		return edj_error_null(NULL, "startsEndsWith:The %s function requires two strings", "startsWith");
 	}
 	haystack = args->first->text;
 	needle = args->first->next->text; /* undeferred */
 
 	/* Compare the leading part of the first string to the second */
-	if (jx_is_true(args->first->next->next)) { /* undeferred */
+	if (edj_is_true(args->first->next->next)) { /* undeferred */
 		/* Case-insensitive version */
-		len = jx_mbs_len(needle);
-		return jx_boolean(jx_mbs_ncasecmp(haystack, needle, len) == 0);
+		len = edj_mbs_len(needle);
+		return edj_boolean(edj_mbs_ncasecmp(haystack, needle, len) == 0);
 	} else {
 		/* Case-sensitive version */
 		len = strlen(needle);
-		return jx_boolean(strncmp(haystack, needle, len) == 0);
+		return edj_boolean(strncmp(haystack, needle, len) == 0);
 	}
 }
 
 /* Return a boolean indicator of whether a string ends with a target */
-static jx_t *jfn_endsWith(jx_t *args, void *agdata)
+static edj_t *jfn_endsWith(edj_t *args, void *agdata)
 {
 	size_t	haylen, len;
 	const char	*haystack, *needle;
 
 	/* Requires two strings */
-	if (args->first->type != JX_STRING
+	if (args->first->type != EDJ_STRING
 	 || !args->first->next /* undeferred */
-	 || args->first->next->type != JX_STRING) { /* undeferred */
-		return jx_error_null(NULL, "startsEndsWith:The %s function requires two strings", "endsWith");
+	 || args->first->next->type != EDJ_STRING) { /* undeferred */
+		return edj_error_null(NULL, "startsEndsWith:The %s function requires two strings", "endsWith");
 	}
 	haystack = args->first->text;
 	needle = args->first->next->text; /* undeferred */
 
 	/* Compare the leading part of the first string to the second */
-	if (jx_is_true(args->first->next->next)) { /* undeferred */
+	if (edj_is_true(args->first->next->next)) { /* undeferred */
 		/* Case-insensitive version */
-		haylen = jx_mbs_len(haystack);
-		len = jx_mbs_len(needle);
+		haylen = edj_mbs_len(haystack);
+		len = edj_mbs_len(needle);
 		if (len > haylen)
-			return jx_boolean(0);
-		haystack = jx_mbs_substr(haystack, haylen - len, NULL);
-		return jx_boolean(jx_mbs_casecmp(haystack, needle) == 0);
+			return edj_boolean(0);
+		haystack = edj_mbs_substr(haystack, haylen - len, NULL);
+		return edj_boolean(edj_mbs_casecmp(haystack, needle) == 0);
 	} else {
 		/* Case-sensitive version */
 		haylen = strlen(haystack);
 		len = strlen(needle);
 		if (len > haylen)
-			return jx_boolean(0);
+			return edj_boolean(0);
 		haystack += haylen - len;
-		return jx_boolean(strcmp(haystack, needle) == 0);
+		return edj_boolean(strcmp(haystack, needle) == 0);
 	}
 }
 
 
 /* Split a string into an array of substrings */
-static jx_t *jfn_split(jx_t *args, void *agdata)
+static edj_t *jfn_split(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
 	char	*str, *next;
-	jx_t	*djson;		/* delimiter, as a jx_t */
-	char	*delim;		/* delimiter if djson is a JX_STRING */
+	edj_t	*djson;		/* delimiter, as an edj_t */
+	char	*delim;		/* delimiter if djson is a EDJ_STRING */
 	size_t	delimlen;
 	regex_t *regex;
 	regmatch_t matches[10];
 	int	nelems, limit, all, regexmatch;
-	jx_t	*result;
+	edj_t	*result;
 	wchar_t	wc;	/* found multibyte char */
 	int	len;	/* length in bytes of a multibyte char */
 	int	i;
 
 	/* Check parameters */
-	if (args->first->type != JX_STRING)
-		return jx_error_null(NULL, "splitStr:%s() requires a string as its first parameter", "split");
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "splitStr:%s() requires a string as its first parameter", "split");
 	str = args->first->text;
 	djson = args->first->next; /* undeferred */
-	if (!djson || (jx_is_null(djson) && (!recon->regex || !(recon->regex->u.regex.preg)))) {
+	if (!djson || (edj_is_null(djson) && (!recon->regex || !(recon->regex->u.regex.preg)))) {
 		/* If no delimiter (not even a regex) then return the string
 		 * as the only member of an array.
 		 */
-		result = jx_array();
-		jx_append(result, jx_string(args->first->text, -1));
+		result = edj_array();
+		edj_append(result, edj_string(args->first->text, -1));
 		return result;
 	}
 	regex = NULL;
 	delim = NULL;
-	if (jx_is_null(djson) && agdata && ((jxcalc_t *)agdata)->u.regex.preg)
+	if (edj_is_null(djson) && agdata && ((edjcalc_t *)agdata)->u.regex.preg)
 		regex = recon->regex->u.regex.preg;
 	else {
-		if (djson->type != JX_STRING)
-			return jx_error_null(NULL, "splitDelim:%s() delimiter must be a string or regex", "split");
+		if (djson->type != EDJ_STRING)
+			return edj_error_null(NULL, "splitDelim:%s() delimiter must be a string or regex", "split");
 		delim = djson->text;
 		delimlen = strlen(delim); /* yes, byte length not char count */
 	}
 	if (!djson->next) /* undeferred */
 		limit = 0;
-	else if (djson->next->type != JX_NUMBER) /* undeferred */
-		return jx_error_null(NULL, "splitLimit:%s() third parameter should be a number", "split");
+	else if (djson->next->type != EDJ_NUMBER) /* undeferred */
+		return edj_error_null(NULL, "splitLimit:%s() third parameter should be a number", "split");
 	else
-		limit = jx_int(djson->next); /* undeferred */
+		limit = edj_int(djson->next); /* undeferred */
 	all = 0;
 	if (limit < 0) {
 		all = 1;
@@ -2096,7 +2177,7 @@ static jx_t *jfn_split(jx_t *args, void *agdata)
 	 */
 
 	/* Start the result array */
-	result = jx_array();
+	result = edj_array();
 
 	/* Append substrings to the array until we hit limit.  If the last
 	 * response element is intended to include all remaining text, then
@@ -2155,7 +2236,7 @@ static jx_t *jfn_split(jx_t *args, void *agdata)
 		 */
 
 		/* Add the next segment to the array */
-		jx_append(result, jx_string(str, len));
+		edj_append(result, edj_string(str, len));
 		nelems++;
 
 		/* If we're using regexp, there may be subexpressions too */
@@ -2163,7 +2244,7 @@ static jx_t *jfn_split(jx_t *args, void *agdata)
 			char *tail = next;
 			for (i = 1; (limit == 0 || nelems < limit - all) && i <= 9; i++) {
 				if (matches[i].rm_so >= 0) {
-					jx_append(result, jx_string(str + matches[i].rm_so, matches[i].rm_eo - matches[i].rm_so));
+					edj_append(result, edj_string(str + matches[i].rm_so, matches[i].rm_eo - matches[i].rm_so));
 					nelems++;
 					tail = &str[matches[i].rm_eo];
 				}
@@ -2188,7 +2269,7 @@ static jx_t *jfn_split(jx_t *args, void *agdata)
 	 * into one final element.
 	 */
 	if (all && nelems >= limit - all)
-		jx_append(result, jx_string(str, -1));
+		edj_append(result, edj_string(str, -1));
 
 	/* Return it! */
 	return result;
@@ -2197,71 +2278,71 @@ static jx_t *jfn_split(jx_t *args, void *agdata)
 
 
 /* Fetch an environment variable */
-static jx_t *jfn_getenv(jx_t *args, void *agdata)
+static edj_t *jfn_getenv(edj_t *args, void *agdata)
 {
 	char	*value;
 
 	/* If not given a string parameter, then fail */
-	if (!args->first || args->first->type != JX_STRING || args->first->next) /* undeferred */
-		return jx_error_null(NULL, "string:%s() expects a string parameter", "getenv");
+	if (!args->first || args->first->type != EDJ_STRING || args->first->next) /* undeferred */
+		return edj_error_null(NULL, "string:%s() expects a string parameter", "getenv");
 
 	/* Fetch the value of the environment variable.  If no such variable
 	 * exists, then get NULL.
 	 */
 	value = getenv(args->first->text);
 	if (!value)
-		return jx_null();
-	return jx_string(value, -1);
+		return edj_null();
+	return edj_string(value, -1);
 }
 
 /* Convert data to a JSON string */
-static jx_t *jfn_stringify(jx_t *args, void *agdata)
+static edj_t *jfn_stringify(edj_t *args, void *agdata)
 {
 	char	*str;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* If there are two args and the first is an empty object, then skip it
 	 * on the assumption that it is the JSON object. Convert the second
 	 * argument instead.
 	 */
-	jx_t *data = args->first;
-	if (data->next && data->type == JX_OBJECT) /* undeferred */
+	edj_t *data = args->first;
+	if (data->next && data->type == EDJ_OBJECT) /* undeferred */
 		data = data->next; /* undeferred */
 
 	/* Convert to string */
-	str = jx_serialize(data, NULL);
+	str = edj_serialize(data, NULL);
 
-	/* Stuff the string into a jx_t and return it */
-	result = jx_string(str, -1);
+	/* Stuff the string into an edj_t and return it */
+	result = edj_string(str, -1);
 	free(str);
 	return result;
 }
 
 /* Convert JSON string to data */
-static jx_t *jfn_parse(jx_t *args, void *agdata)
+static edj_t *jfn_parse(edj_t *args, void *agdata)
 {
 	/* If there are two args and the first is an empty object, then skip it
 	 * on the assumption that it is the JSON object. Convert the second
 	 * argument instead.
 	 */
-	jx_t *data = args->first;
-	if (data->next && data->type == JX_OBJECT) /* undeferred */
+	edj_t *data = args->first;
+	if (data->next && data->type == EDJ_OBJECT) /* undeferred */
 		data = data->next; /* undeferred */
 
 	/* We can only parse strings */
-	if (data->type != JX_STRING)
-		return jx_error_null(NULL, "string:%s() only works on strings", "parse");
+	if (data->type != EDJ_STRING)
+		return edj_error_null(NULL, "string:%s() only works on strings", "parse");
 
 	/* Parse it */
-	return jx_parse_string(data->text);
+	return edj_parse_string(data->text);
 }
 
 /* Convert a string to an integer */
-static jx_t *jfn_parseInt(jx_t *args, void *agdata)
+static edj_t *jfn_parseInt(edj_t *args, void *agdata)
 {
 	int	value;
-	if (args->first->type == JX_STRING
-	 || (args->first->type == JX_NUMBER && args->first->text[0])) {
+	if (args->first->type == EDJ_STRING
+	 || (args->first->type == EDJ_NUMBER && args->first->text[0])) {
 		char	*digits = args->first->text;
 		if (*digits == '0') {
 			int	radix;
@@ -2274,68 +2355,68 @@ static jx_t *jfn_parseInt(jx_t *args, void *agdata)
 			value = (int)strtol(digits, NULL, radix);
 		} else
 			value = atoi(digits);
-	} else if (args->first->type == JX_NUMBER && args->first->text[1] == 'i')
-		value = JX_INT(args->first);
-	else if (args->first->type == JX_NUMBER /* text[1] == 'f' */)
-		value = (int)JX_DOUBLE(args->first);
+	} else if (args->first->type == EDJ_NUMBER && args->first->text[1] == 'i')
+		value = EDJ_INT(args->first);
+	else if (args->first->type == EDJ_NUMBER /* text[1] == 'f' */)
+		value = (int)EDJ_DOUBLE(args->first);
 	else
-		return jx_error_null(NULL, "string:%s() expects a string", "parseInt");
+		return edj_error_null(NULL, "string:%s() expects a string", "parseInt");
 
-	return jx_from_int(value);
+	return edj_from_int(value);
 }
 
 /* Convert a string to a floating point number */
-static jx_t *jfn_parseFloat(jx_t *args, void *agdata)
+static edj_t *jfn_parseFloat(edj_t *args, void *agdata)
 {
 	double	value;
-	if (args->first->type == JX_STRING
-	 || (args->first->type == JX_NUMBER && args->first->text[0]))
+	if (args->first->type == EDJ_STRING
+	 || (args->first->type == EDJ_NUMBER && args->first->text[0]))
 		value = atof(args->first->text);
-	else if (args->first->type == JX_NUMBER && args->first->text[1] == 'i')
-		value = (double)JX_INT(args->first);
-	else if (args->first->type == JX_NUMBER /* text[1] == 'f' */)
-		value = JX_DOUBLE(args->first);
+	else if (args->first->type == EDJ_NUMBER && args->first->text[1] == 'i')
+		value = (double)EDJ_INT(args->first);
+	else if (args->first->type == EDJ_NUMBER /* text[1] == 'f' */)
+		value = EDJ_DOUBLE(args->first);
 	else
-		return jx_error_null(NULL, "string:%s() expects a string", "parseFloat");
-	return jx_from_double(value);
+		return edj_error_null(NULL, "string:%s() expects a string", "parseFloat");
+	return edj_from_double(value);
 }
 
 
 /* This implements the shared logic for find() and grep () */
-static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultTable)
+static edj_t *find_or_grep(edj_t *args, void *agdata, int grep, char **refDefaultTable)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
 	regex_t *regex = recon->regex ? recon->regex->u.regex.preg : NULL;
-	jx_t	*haystack, *needle, *other;
+	edj_t	*haystack, *needle, *other;
 	char	*defaulttable, *needkey;
 	int	ignorecase;
 
 	/* If first parameter is an object or array, that's the haystack;
 	 * otherwise use the default table.
 	 */
-	if (args->first->type == JX_OBJECT || args->first->type == JX_ARRAY) {
+	if (args->first->type == EDJ_OBJECT || args->first->type == EDJ_ARRAY) {
 		haystack = args->first;
 		needle = args->first->next; /* undeferred */
 		defaulttable = NULL;
 	} else {
-		haystack = jx_context_default_table(recon->context, &defaulttable);
+		haystack = edj_context_default_table(recon->context, &defaulttable);
 		if (!haystack)
-			return jx_error_null(NULL, "noDefTable:No default table");
+			return edj_error_null(NULL, "noDefTable:No default table");
 		needle = args->first;
 	}
 	if (!needle)
-		return jx_error_null(NULL, "find:%s() needs to know what to search for", grep ? "grep" : "find");
+		return edj_error_null(NULL, "find:%s() needs to know what to search for", grep ? "grep" : "find");
 
 	/* Check for optional args after "needle" */
 	ignorecase = 0;
 	needkey = NULL;
 	for (other = needle->next; other; other = other->next) { /* undeferred */
-		if (other->type == JX_BOOLEAN)
-			ignorecase = jx_is_true(other);
-		else if (other->type == JX_STRING && !needkey)
+		if (other->type == EDJ_BOOLEAN)
+			ignorecase = edj_is_true(other);
+		else if (other->type == EDJ_STRING && !needkey)
 			needkey = other->text;
 		else {
-			return jx_error_null(0, "findArg:%s() was passed an unexpected extra parameter", grep ? "grep" : "find");
+			return edj_error_null(0, "findArg:%s() was passed an unexpected extra parameter", grep ? "grep" : "find");
 		}
 	}
 
@@ -2350,26 +2431,26 @@ static jx_t *find_or_grep(jx_t *args, void *agdata, int grep, char **refDefaultT
 	/* Search! */
 	if (grep) {
 		if (regex)
-			return jx_grep_regex(haystack, regex, needkey);
-		else if (jx_is_null(needle))
-			return jx_grep(haystack, NULL, 0, needkey);
+			return edj_grep_regex(haystack, regex, needkey);
+		else if (edj_is_null(needle))
+			return edj_grep(haystack, NULL, 0, needkey);
 		else
-			return jx_grep(haystack, needle, ignorecase, needkey);
+			return edj_grep(haystack, needle, ignorecase, needkey);
 	} else {
 		if (regex)
-			return jx_find_regex(haystack, regex, needkey);
-		else if (jx_is_null(needle))
-			return jx_find(haystack, NULL, 0, needkey);
+			return edj_find_regex(haystack, regex, needkey);
+		else if (edj_is_null(needle))
+			return edj_find(haystack, NULL, 0, needkey);
 		else
-			return jx_find(haystack, needle, ignorecase, needkey);
+			return edj_find(haystack, needle, ignorecase, needkey);
 	}
 
 }
 
 /* Do a deep search for a given value */
-static jx_t *jfn_find(jx_t *args, void *agdata)
+static edj_t *jfn_find(edj_t *args, void *agdata)
 {
-	jx_t	*result;
+	edj_t	*result;
 	char	*defaulttable = NULL;
 
 	result = find_or_grep(args, agdata, 0, &defaulttable);
@@ -2380,15 +2461,15 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 	 * a subscript, not a member name, so we don't need to add a "."
 	 * between them.
 	 */
-	if (result->type == JX_ARRAY && defaulttable) {
-		jx_t	*scan;
+	if (result->type == EDJ_ARRAY && defaulttable) {
+		edj_t	*scan;
 		char *buf = NULL;
 		char *expr;
 		size_t	bufsize = 0;
 		size_t	dtlen = strlen(defaulttable);
 		size_t	totlen;
-		for (scan = jx_first(result); scan; scan = jx_next(scan)) {
-			expr = jx_text_by_key(scan, "expr");
+		for (scan = edj_first(result); scan; scan = edj_next(scan)) {
+			expr = edj_text_by_key(scan, "expr");
 			assert(expr && *expr == '[');
 			totlen = dtlen + strlen(expr);
 			if (!buf || totlen + 1 > bufsize) {
@@ -2399,7 +2480,7 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 			}
 			strcpy(buf, defaulttable);
 			strcat(buf, expr);
-			jx_append(scan, jx_key("expr", jx_string(buf, -1)));
+			edj_append(scan, edj_key("expr", edj_string(buf, -1)));
 		}
 		if (buf)
 			free(buf);
@@ -2416,9 +2497,9 @@ static jx_t *jfn_find(jx_t *args, void *agdata)
 
 
 /* Find rows containing a given value. */
-static jx_t *jfn_grep(jx_t *args, void *agdata)
+static edj_t *jfn_grep(edj_t *args, void *agdata)
 {
-	jx_t	*result;
+	edj_t	*result;
 
 	result = find_or_grep(args, agdata, 1, NULL);
 
@@ -2427,70 +2508,70 @@ static jx_t *jfn_grep(jx_t *args, void *agdata)
 }
 
 
-static jx_t *jfn_hash(jx_t *args, void *agdata)
+static edj_t *jfn_hash(edj_t *args, void *agdata)
 {
 	int	hash = 0;
 
 	if (args->first->next) {
-		if (args->first->next->type != JX_NUMBER || args->first->next->next)
-			return jx_error_null(NULL, "badargs:Bad arguments passed to %s()", "hash");
-		hash = jx_int(args->first->next);
+		if (args->first->next->type != EDJ_NUMBER || args->first->next->next)
+			return edj_error_null(NULL, "badargs:Bad arguments passed to %s()", "hash");
+		hash = edj_int(args->first->next);
 	}
-	return jx_from_int(jx_hash(args->first, hash));
+	return edj_from_int(edj_hash(args->first, hash));
 }
 
-static jx_t *jfn_diff(jx_t *args, void *agdata)
+static edj_t *jfn_diff(edj_t *args, void *agdata)
 {
-	jxfuncextra_t *recon = (jxfuncextra_t *)agdata;
-	jx_t	*oldjx, *newjx;
+	edjfuncextra_t *recon = (edjfuncextra_t *)agdata;
+	edj_t	*oldjx, *newjx;
 	char	*defaulttable;
-	jxdiffstyle_t style;
+	edjdiffstyle_t style;
 
 	/* Check the arguments.  We could be passed two items to diff, or one
 	 * to diff against the default table.  We can also be passed a number
 	 * to treat as the diff style, defaulting to the "diffstyle" config
 	 * setting.
 	 */
-	style = jx_config_get_int(NULL, "diffstyle");
-	if (args->first->next && args->first->next->type != JX_NUMBER) {
+	style = edj_config_get_int(NULL, "diffstyle");
+	if (args->first->next && args->first->next->type != EDJ_NUMBER) {
 		/* Two things to diff, maybe with a style after that */
 		oldjx = args->first;
 		newjx = args->first->next;
-		if (args->first->next->next && args->first->next->next->type == JX_NUMBER)
-			style = (jxdiffstyle_t)jx_int(args->first->next->next);
+		if (args->first->next->next && args->first->next->next->type == EDJ_NUMBER)
+			style = (edjdiffstyle_t)edj_int(args->first->next->next);
 	} else {
 		/* One thing to compare to the default table */
-		oldjx = jx_context_default_table(recon->context, &defaulttable);
+		oldjx = edj_context_default_table(recon->context, &defaulttable);
 		newjx = args->first;
-		if (args->first->next && args->first->next->type == JX_NUMBER)
-			style = (jxdiffstyle_t)jx_int(args->first->next);
+		if (args->first->next && args->first->next->type == EDJ_NUMBER)
+			style = (edjdiffstyle_t)edj_int(args->first->next);
 	}
-	return jx_diff(oldjx, newjx, style);
+	return edj_diff(oldjx, newjx, style);
 }
 
-static jx_t *jfn_common(jx_t *args, void *agdata)
+static edj_t *jfn_common(edj_t *args, void *agdata)
 {
 	int	ncols;
 	const char **keys;
-	jx_t	**columns;
+	edj_t	**columns;
 	int	style;
-	jx_t	*arg, *mem;
+	edj_t	*arg, *mem;
 	const char *anon[] = {"A","B","C","D","E","F","G","H","I","J",NULL};
 	int	anonCounter;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Count columns.  They could be members of an object, or anonymous
 	 * arrays.
 	 */
-	style = jx_config_get_int("common", "style");
+	style = edj_config_get_int("common", "style");
 	for (ncols = 0, arg = args->first; arg; arg = arg->next) { /* undeferred */
-		if (arg->type == JX_NUMBER)
-			style = jx_int(arg);
-		else if (arg->type == JX_ARRAY)
+		if (arg->type == EDJ_NUMBER)
+			style = edj_int(arg);
+		else if (arg->type == EDJ_ARRAY)
 			ncols++;
-		else if (arg->type == JX_OBJECT) {
+		else if (arg->type == EDJ_OBJECT) {
 			for (mem = arg->first; mem; mem = mem->next) {
-				if (mem->first->type == JX_ARRAY)
+				if (mem->first->type == EDJ_ARRAY)
 					ncols++;
 			}
 		}
@@ -2498,23 +2579,23 @@ static jx_t *jfn_common(jx_t *args, void *agdata)
 
 	/* Collect the names and data for each column */
 	keys = calloc(ncols + 1, sizeof(char *));
-	columns = calloc(ncols + 1, sizeof(jx_t *));
+	columns = calloc(ncols + 1, sizeof(edj_t *));
 	anonCounter = 0;
 	for (ncols = 0, arg = args->first; arg; arg = arg->next) { /* undeferred */
-		if (arg->type == JX_NUMBER)
+		if (arg->type == EDJ_NUMBER)
 			; /* Already handled */
-		else if (arg->type == JX_ARRAY) {
-			if ((style & JX_COMMON_FORCE) == 0 && jx_is_table(arg))
+		else if (arg->type == EDJ_ARRAY) {
+			if ((style & EDJ_COMMON_FORCE) == 0 && edj_is_table(arg))
 				goto ShouldNotBeTable;
 			keys[ncols] = anon[anonCounter++];
 			if (keys[ncols] == NULL)
 				goto TooManyAnons;
 			columns[ncols] = arg;
 			ncols++;
-		} else if (arg->type == JX_OBJECT) {
+		} else if (arg->type == EDJ_OBJECT) {
 			for (mem = arg->first; mem; mem = mem->next) {
-				if (mem->first->type == JX_ARRAY) {
-					if ((style & JX_COMMON_FORCE) == 0 && jx_is_table(arg))
+				if (mem->first->type == EDJ_ARRAY) {
+					if ((style & EDJ_COMMON_FORCE) == 0 && edj_is_table(arg))
 						goto ShouldNotBeTable;
 					keys[ncols] = mem->text;
 					columns[ncols] = mem->first;
@@ -2526,7 +2607,7 @@ static jx_t *jfn_common(jx_t *args, void *agdata)
 	}
 
 	/* Generate the result table */
-	result = jx_common(keys, columns, style);
+	result = edj_common(keys, columns, style);
 	free(keys);
 	free(columns);
 	return result;
@@ -2534,57 +2615,57 @@ static jx_t *jfn_common(jx_t *args, void *agdata)
 ShouldNotBeTable:
 	free(keys);
 	free(columns);
-	return jx_error_null(NULL, "noTable:The %s() function doesn't like tables", "common");
+	return edj_error_null(NULL, "noTable:The %s() function doesn't like tables", "common");
 
 TooManyAnons:
 	free(keys);
 	free(columns);
-	return jx_error_null(NULL, "tooManyAnons:The %s() function can't handle that many anonymous arrays.", "common");
+	return edj_error_null(NULL, "tooManyAnons:The %s() function can't handle that many anonymous arrays.", "common");
 
 BadArgs:
 	free(keys);
 	free(columns);
-	return jx_error_null(NULL, "badArgs:The %s() accepts arrays, objects of arrays, and maybe a style number.", "common");
+	return edj_error_null(NULL, "badArgs:The %s() accepts arrays, objects of arrays, and maybe a style number.", "common");
 }
 
 
-static jx_t *jfn_blob(jx_t *args, void *agdata)
+static edj_t *jfn_blob(edj_t *args, void *agdata)
 {
-	jx_t *in = args->first;
-	jx_t *scan;
-	jxblobconv_t conv, conv2;
+	edj_t *in = args->first;
+	edj_t *scan;
+	edjblobconv_t conv, conv2;
 	int	i;
 
 	/* scan for additional arguments */
 	conv = conv2 = 0; /* impossible value */
 	for (scan = args->first->next; scan; scan = scan->next){/* undeferred */
-		if (scan->type == JX_NUMBER) {
-			i = jx_int(scan);
-			if (i >= JX_BLOB_BYTES && i <= JX_BLOB_ANY) {
+		if (scan->type == EDJ_NUMBER) {
+			i = edj_int(scan);
+			if (i >= EDJ_BLOB_BYTES && i <= EDJ_BLOB_ANY) {
 				if (conv)
-					conv2 = jx_int(scan);
+					conv2 = edj_int(scan);
 				else
-					conv = jx_int(scan);
+					conv = edj_int(scan);
 			} else
-				return jx_error_null(NULL, "blobNumber:Bad number passed to the %s() function", "blob");
+				return edj_error_null(NULL, "blobNumber:Bad number passed to the %s() function", "blob");
 		} else
-			return jx_error_null(NULL, "arg:Bad argument passed to the %s() function", "blob");
+			return edj_error_null(NULL, "arg:Bad argument passed to the %s() function", "blob");
 	}
 
-	/* conv describes the output, and defaults to JX_BLOB_BYTES unless
-	 * the input is an array, in which case it defaults to JX_BLOB_STRING.
+	/* conv describes the output, and defaults to EDJ_BLOB_BYTES unless
+	 * the input is an array, in which case it defaults to EDJ_BLOB_STRING.
 	 */
 	if (!conv)
-		conv = in->type == JX_STRING ? JX_BLOB_BYTES : JX_BLOB_STRING;
+		conv = in->type == EDJ_STRING ? EDJ_BLOB_BYTES : EDJ_BLOB_STRING;
 
 	/* conv2 describes the input.  It is ignored unless the input is a
-	 * string, and it defaults to JX_BLOB_UTF8.
+	 * string, and it defaults to EDJ_BLOB_UTF8.
 	 */
 	if (!conv2)
-		conv2 = JX_BLOB_UTF8;
+		conv2 = EDJ_BLOB_UTF8;
 
 	/* Do it.  The real guts are in blob.c */
-	return jx_blob(in, conv, conv2);
+	return edj_blob(in, conv, conv2);
 }
 
 /******************************************************************************/
@@ -2592,39 +2673,39 @@ static jx_t *jfn_blob(jx_t *args, void *agdata)
 
 
 /* Return an ISO date string */
-static jx_t *jfn_date(jx_t *args, void *agdata)
+static edj_t *jfn_date(edj_t *args, void *agdata)
 {
-	return jx_datetime_fn(args, "date");
+	return edj_datetime_fn(args, "date");
 }
 
 /* Return an ISO time string, possibly tweaking the time zone */
-static jx_t *jfn_time(jx_t *args, void *agdata)
+static edj_t *jfn_time(edj_t *args, void *agdata)
 {
-	return jx_datetime_fn(args, "time");
+	return edj_datetime_fn(args, "time");
 }
 
 /* Return an ISO dateTime string, possibly tweaking the time zone */
-static jx_t *jfn_dateTime(jx_t *args, void *agdata)
+static edj_t *jfn_dateTime(edj_t *args, void *agdata)
 {
-	return jx_datetime_fn(args, "datetime");
+	return edj_datetime_fn(args, "datetime");
 }
 
 /* Extract the time zone from an ISO time or dateTime */
-static jx_t *jfn_timeZone(jx_t *args, void *agdata)
+static edj_t *jfn_timeZone(edj_t *args, void *agdata)
 {
 	return NULL;
 }
 
 /* Convert ISO period between string and number. */
-static jx_t *jfn_period(jx_t *args, void *agdata)
+static edj_t *jfn_period(edj_t *args, void *agdata)
 {
-	return jx_datetime_fn(args, "period");
+	return edj_datetime_fn(args, "period");
 }
 
 /******************************************************************************/
 /* Locale-specific money formatting */
 
-static jx_t *jfn_money(jx_t *args, void *agdata)
+static edj_t *jfn_money(edj_t *args, void *agdata)
 {
 	char	*format, *scan;
 	double	money;
@@ -2634,15 +2715,15 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
 	size_t	decimal_len, neg_len;
 
 	/* Check arguments */
-	if (args->first->type == JX_NUMBER) {
+	if (args->first->type == EDJ_NUMBER) {
 		/* Converting a number to a string */
-		money = jx_double(args->first);
+		money = edj_double(args->first);
 		if (!args->first->next)
 			format = "%n";
-		else if (args->first->next->type == JX_STRING && !args->first->next->next)
+		else if (args->first->next->type == EDJ_STRING && !args->first->next->next)
 			format = args->first->next->text;
 		else
-			return jx_error_null(NULL, "moneyArgs:The only extra argument is an optional format string");
+			return edj_error_null(NULL, "moneyArgs:The only extra argument is an optional format string");
 
 		/* Make sure the format has only a single % conversion specifier */
 		for (scan = format, nconv = 0; *scan; scan++) {
@@ -2654,18 +2735,18 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
 			}
 		}
 		if (nconv != 1) {
-			return jx_error_null(NULL, "moneyFmt:The format string must have exactly one %%n or %%i conversion specifier");
+			return edj_error_null(NULL, "moneyFmt:The format string must have exactly one %%n or %%i conversion specifier");
 		}
 
 		/* Do the conversion */
 		if (strfmon(buf, sizeof buf, format, money) < 0) {
-			return jx_error_null(NULL, "moneyLen:Conversion failed due to length");
+			return edj_error_null(NULL, "moneyLen:Conversion failed due to length");
 		}
 
 		/* Return it */
-		return jx_string(buf, -1);
+		return edj_string(buf, -1);
 
-	} else if (args->first->type == JX_STRING && !args->first->next) {
+	} else if (args->first->type == EDJ_STRING && !args->first->next) {
 		/* Converting a string to a number */
 
 		/* Copy digits, sign, and decimal point to buf */
@@ -2678,7 +2759,7 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
 		for (scan = args->first->text; *scan; scan++) {
 			/* Guard against overflow */
 			if (nconv >= sizeof buf - 1)
-				return jx_error_null(NULL, "moneyUnfmt:String too long to convert");
+				return edj_error_null(NULL, "moneyUnfmt:String too long to convert");
 
 			/* Copy digits and decimal point.  Also watch for negative sign */
 			if (!strncmp(scan, lconv->mon_decimal_point, decimal_len)) {
@@ -2696,7 +2777,7 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
 		}
 		buf[nconv] = '\0';
 		if (digits == 0)
-			jx_error_null(NULL, "moneyEmpty:The string doesn't contain any digits");
+			edj_error_null(NULL, "moneyEmpty:The string doesn't contain any digits");
 
 		/* Convert to binary */
 		if (neg)
@@ -2705,12 +2786,12 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
 			money = atof(buf + 1);
 
 		/* Return it */
-		return jx_from_double(money);
+		return edj_from_double(money);
 
 	}
 
 	/* Args don't make sense */
-	return jx_error_null(NULL, "money:Bad arguments to %s()", "money");
+	return edj_error_null(NULL, "money:Bad arguments to %s()", "money");
 }
 
 /******************************************************************************/
@@ -2718,69 +2799,69 @@ static jx_t *jfn_money(jx_t *args, void *agdata)
  * argument to these may optionally be the "Math" object, which is ignored.
  */
 
-static jx_t *jfn_abs(jx_t *args, void *agdata)
+static edj_t *jfn_abs(edj_t *args, void *agdata)
 {
 	double d;
 
 	/* Get the number, skipping an optional "Math" argument */
-	jx_t	*num = args->first;
-	if (num->type == JX_OBJECT)
+	edj_t	*num = args->first;
+	if (num->type == EDJ_OBJECT)
 		num = num->next; /* undeferred */
 
 	/* Arg may be a period string */
-	if (num && jx_is_period(num)) {
-		jx_t *result = jx_string("", 40); /* enough for any period */
-		jx_period_abs(result->text, num->text);
+	if (num && edj_is_period(num)) {
+		edj_t *result = edj_string("", 40); /* enough for any period */
+		edj_period_abs(result->text, num->text);
 		return result;
 	}
 
 	/* Fail if not a number */
-	if (!num || num->type != JX_NUMBER)
-		return jx_error_null(NULL, "number:The %s() function expects a number or period", "abs");
+	if (!num || num->type != EDJ_NUMBER)
+		return edj_error_null(NULL, "number:The %s() function expects a number or period", "abs");
 
 	/* Apply the function */
-	d = jx_double(num);
+	d = edj_double(num);
 	if (d < 0)
 		d = -d;
 
 	/* Return the result */
-	return jx_from_double(d);
+	return edj_from_double(d);
 }
 
 /* Random number */
-static jx_t *jfn_random(jx_t *args, void *agdata)
+static edj_t *jfn_random(edj_t *args, void *agdata)
 {
 	/* Look for an optional limit, after an optional "Math" argument */
 	int	limit;
-	jx_t	*num = args->first;
-	if (num->type == JX_OBJECT)
+	edj_t	*num = args->first;
+	if (num->type == EDJ_OBJECT)
 		num = num->next; /* undeferred */
-	if (num && num->type == JX_NUMBER && (limit = jx_int(num)) >= 2) {
+	if (num && num->type == EDJ_NUMBER && (limit = edj_int(num)) >= 2) {
 		/* Return an int in the range [0,limit-1] */
-		return jx_from_int((int)lrand48() % limit);
+		return edj_from_int((int)lrand48() % limit);
 	} else {
 		/* Return a double in the range [0.0,1.0) */
-		return jx_from_double(drand48());
+		return edj_from_double(drand48());
 	}
 }
 
 /* Sign */
-static jx_t *jfn_sign(jx_t *args, void *agdata)
+static edj_t *jfn_sign(edj_t *args, void *agdata)
 {
 	double d;
 	int	sign;
 
 	/* Get the number, skipping an optional "Math" argument */
-	jx_t	*num = args->first;
-	if (num->type == JX_OBJECT)
+	edj_t	*num = args->first;
+	if (num->type == EDJ_OBJECT)
 		num = num->next; /* undeferred */
 
 	/* Fail if not a number */
-	if (num->type != JX_NUMBER)
-		return jx_error_null(NULL, "number:The %s() function expects a number", "sign");
+	if (num->type != EDJ_NUMBER)
+		return edj_error_null(NULL, "number:The %s() function expects a number", "sign");
 
 	/* Apply the function */
-	d = jx_double(num);
+	d = edj_double(num);
 	if (d < 0)
 		sign = -1;
 	else if (d > 0)
@@ -2789,25 +2870,25 @@ static jx_t *jfn_sign(jx_t *args, void *agdata)
 		sign = 0;
 
 	/* Return the result */
-	return jx_from_int(sign);
+	return edj_from_int(sign);
 }
 
 
-static jx_t *jfn_wrap(jx_t *args, void *agdata)
+static edj_t *jfn_wrap(edj_t *args, void *agdata)
 {
 	char	*str;
 	int	width;
 	size_t	len;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* Check args */
-	if (args->first->type != JX_STRING)
-		return jx_error_null(NULL, "wrapStr:The %s() function's first argument should be a string to wrap", "wrap");
+	if (args->first->type != EDJ_STRING)
+		return edj_error_null(NULL, "wrapStr:The %s() function's first argument should be a string to wrap", "wrap");
 	str = args->first->text;
-	if (args->first->next && args->first->next->type != JX_NUMBER) /* undeferred */
-		return jx_error_null(NULL, "wrapWidth:The %s() function's second argument should be wrap width", "wrap");
+	if (args->first->next && args->first->next->type != EDJ_NUMBER) /* undeferred */
+		return edj_error_null(NULL, "wrapWidth:The %s() function's second argument should be wrap width", "wrap");
 	if (args->first->next) /* undeferred */
-		width = jx_int(args->first->next); /* undeferred */
+		width = edj_int(args->first->next); /* undeferred */
 	else
 		width = 0;
 
@@ -2817,104 +2898,104 @@ static jx_t *jfn_wrap(jx_t *args, void *agdata)
 
 	/* Positive means word wrap, negative means character wrap */
 	if (width < 0)
-		len = jx_mbs_wrap_char(NULL, str, -width);
+		len = edj_mbs_wrap_char(NULL, str, -width);
 	else
-		len = jx_mbs_wrap_word(NULL, str, width);
-	result = jx_string("", len);
+		len = edj_mbs_wrap_word(NULL, str, width);
+	result = edj_string("", len);
 	if (width < 0)
-		(void)jx_mbs_wrap_char(result->text, str, -width);
+		(void)edj_mbs_wrap_char(result->text, str, -width);
 	else
-		(void)jx_mbs_wrap_word(result->text, str, width);
+		(void)edj_mbs_wrap_word(result->text, str, width);
 	return result;
 }
 
 /* Helper function for jfn_gap() -- this adds an entry to the result */
-static void addgap(jx_t *result, int i, jx_t *prevcopy, jx_t *scan)
+static void addgap(edj_t *result, int i, edj_t *prevcopy, edj_t *scan)
 {
-	jx_t	*row = jx_object();
-	jx_append(row, jx_key("index", jx_from_int(i)));
-	jx_append(row, jx_key("previous", prevcopy));
-	jx_append(row, jx_key("next", jx_copy(scan)));
-	jx_append(result, row);
+	edj_t	*row = edj_object();
+	edj_append(row, edj_key("index", edj_from_int(i)));
+	edj_append(row, edj_key("previous", prevcopy));
+	edj_append(row, edj_key("next", edj_copy(scan)));
+	edj_append(result, row);
 }
 
-static jx_t *jfn_gap(jx_t *args, void *agdata)
+static edj_t *jfn_gap(edj_t *args, void *agdata)
 {
-	jx_t *arr, *scan, *result, *prevcopy;
+	edj_t *arr, *scan, *result, *prevcopy;
 	time_t	mingap, scanthis, scanprev;
 	int	i;
 	enum { GAP_NUMBER, GAP_DATE, GAP_TIME, GAP_DATETIME } gaptype;
 
 	/* Get the array to scan */
 	arr = args->first;
-	if (arr->type != JX_ARRAY)
-		return jx_error_null(NULL, "gaparray:The %s() function must be passed an array", "gap");
+	if (arr->type != EDJ_ARRAY)
+		return edj_error_null(NULL, "gaparray:The %s() function must be passed an array", "gap");
 
 	/* Defend against empty array */
 	if (!arr->first)
-		return jx_array(); /* empty in, empty out */
+		return edj_array(); /* empty in, empty out */
 
 	/* Check the data type of the array elements */
-	if (arr->first->type == JX_NUMBER)
+	if (arr->first->type == EDJ_NUMBER)
 		gaptype = GAP_NUMBER;
-	else if (jx_is_date(arr->first))
+	else if (edj_is_date(arr->first))
 		gaptype = GAP_DATE;
-	else if (jx_is_time(arr->first))
+	else if (edj_is_time(arr->first))
 		gaptype = GAP_TIME;
-	else if (jx_is_datetime(arr->first))
+	else if (edj_is_datetime(arr->first))
 		gaptype = GAP_DATETIME;
 	else
-		return jx_error_null(NULL, "gaptype:The %s() function only works on arrays of numbers, dates, times, or datetimes", "gap");
-	for (scan = jx_first(arr); scan; scan = jx_next(scan)) {
-		if ((gaptype == GAP_NUMBER && scan->type != JX_NUMBER)
-		 || (gaptype == GAP_DATE && !jx_is_date(scan))
-		 || (gaptype == GAP_TIME && !jx_is_time(scan))
-		 || (gaptype == GAP_DATETIME && !jx_is_datetime(scan))) {
-			jx_break(scan);
-			return jx_error_null(NULL, "gapmix:Mixed types in the array for %s()", "gap");
+		return edj_error_null(NULL, "gaptype:The %s() function only works on arrays of numbers, dates, times, or datetimes", "gap");
+	for (scan = edj_first(arr); scan; scan = edj_next(scan)) {
+		if ((gaptype == GAP_NUMBER && scan->type != EDJ_NUMBER)
+		 || (gaptype == GAP_DATE && !edj_is_date(scan))
+		 || (gaptype == GAP_TIME && !edj_is_time(scan))
+		 || (gaptype == GAP_DATETIME && !edj_is_datetime(scan))) {
+			edj_break(scan);
+			return edj_error_null(NULL, "gapmix:Mixed types in the array for %s()", "gap");
 		}
 	}
 
 	/* Get the minimum gap.  If not specified, then use default */
 	if (args->first->next) {
-		if (args->first->next->type == JX_NUMBER) {
+		if (args->first->next->type == EDJ_NUMBER) {
 			/* Scale the number as appropriate for the array's
 			 * data type.  Dates are a bit tricky because we want
 			 * to be immune to daylight savings changes.
 			 */
-			mingap = jx_int(args->first->next);
+			mingap = edj_int(args->first->next);
 			switch (gaptype) {
 			case GAP_NUMBER:   /* no change */ break;
 			case GAP_DATE:	   mingap = mingap * 86400 - 3601; break;
 			case GAP_TIME:
 			case GAP_DATETIME: mingap *= 60; break;
 			}
-		} else if (jx_is_period(args->first->next)) {
+		} else if (edj_is_period(args->first->next)) {
 			/* Sanity check */
 			if (gaptype == GAP_NUMBER)
-				return jx_error_null(NULL, "gapnumber:You can't specify a minimum gap as a period when scanning numbers");
+				return edj_error_null(NULL, "gapnumber:You can't specify a minimum gap as a period when scanning numbers");
 
 			/* Convert the period string to a number of seconds,
 			 * by simulating a period(str, "s") call.  Yes, I know
 			 * this is inefficient but we only do it once.
 			 */
-			jx_t *oldnext, simargs, simnext;
-			simargs.type = JX_ARRAY;
+			edj_t *oldnext, simargs, simnext;
+			simargs.type = EDJ_ARRAY;
 			simargs.first = args->first->next;
 			oldnext = args->first->next->next;
 			simargs.first->next = &simnext;
-			simnext.type = JX_STRING;
+			simnext.type = EDJ_STRING;
 			simnext.next = NULL;
 			strcpy(simnext.text, "s");
-			result = jx_datetime_fn(&simargs, "period");
+			result = edj_datetime_fn(&simargs, "period");
 			args->first->next->next = oldnext;
-			if (jx_is_error(result))
+			if (edj_is_error(result))
 				return result;
-			assert(result->type == JX_NUMBER);
-			mingap = jx_int(result);
-			jx_free(result);
+			assert(result->type == EDJ_NUMBER);
+			mingap = edj_int(result);
+			edj_free(result);
 		} else
-			return jx_error_null(NULL, "gapmin:Minimum gap for %s() must be a number or period");
+			return edj_error_null(NULL, "gapmin:Minimum gap for %s() must be a number or period");
 
 	} else {
 		switch (gaptype) {
@@ -2927,100 +3008,100 @@ static jx_t *jfn_gap(jx_t *args, void *agdata)
 
 	/* Scan for gaps.  One tricky thing here is, since the array could
 	 * be a deferred array, we need to keep a copy of the previous item.
-	 * Merely remembering a pointer returned by jx_next() isn't good
+	 * Merely remembering a pointer returned by edj_next() isn't good
 	 * enough.
 	 */
-	result = jx_array();
-	scan = jx_first(arr);
-	prevcopy = jx_copy(scan);
+	result = edj_array();
+	scan = edj_first(arr);
+	prevcopy = edj_copy(scan);
 	i = 0;
 	switch (gaptype) {
 	case GAP_NUMBER:
-		scanprev = jx_int(scan);
-		while ((scan = jx_next(scan)) != NULL) {
+		scanprev = edj_int(scan);
+		while ((scan = edj_next(scan)) != NULL) {
 			i++;
-			scanthis = jx_int(scan);
+			scanthis = edj_int(scan);
 			if (scanthis - scanprev >= mingap)
 				addgap(result, i, prevcopy, scan);
 			else
-				jx_free(prevcopy);
-			prevcopy = jx_copy(scan);
+				edj_free(prevcopy);
+			prevcopy = edj_copy(scan);
 			scanprev = scanthis;
 		}
 		break;
 
 	case GAP_DATE:
 	case GAP_DATETIME:
-		scanprev = jx_datetime_seconds(scan->text);
-		while ((scan = jx_next(scan)) != NULL) {
+		scanprev = edj_datetime_seconds(scan->text);
+		while ((scan = edj_next(scan)) != NULL) {
 			i++;
-			scanthis = jx_datetime_seconds(scan->text);
+			scanthis = edj_datetime_seconds(scan->text);
 			if (scanthis - scanprev >= mingap)
 				addgap(result, i, prevcopy, scan);
 			else
-				jx_free(prevcopy);
-			prevcopy = jx_copy(scan);
+				edj_free(prevcopy);
+			prevcopy = edj_copy(scan);
 			scanprev = scanthis;
 		}
 		break;
 
 	case GAP_TIME:
-		scanprev = jx_time_seconds(scan->text);
-		while ((scan = jx_next(scan)) != NULL) {
+		scanprev = edj_time_seconds(scan->text);
+		while ((scan = edj_next(scan)) != NULL) {
 			i++;
-			scanthis = jx_time_seconds(scan->text);
+			scanthis = edj_time_seconds(scan->text);
 			if (scanthis - scanprev >= mingap)
 				addgap(result, i, prevcopy, scan);
 			else
-				jx_free(prevcopy);
-			prevcopy = jx_copy(scan);
+				edj_free(prevcopy);
+			prevcopy = edj_copy(scan);
 			scanprev = scanthis;
 		}
 		break;
 	}
-	jx_free(prevcopy);
+	edj_free(prevcopy);
 	return result;
 
 }
 
 
-static jx_t *jfn_sleep(jx_t *args, void *agdata)
+static edj_t *jfn_sleep(edj_t *args, void *agdata)
 {
 	struct timespec ts;
 	double	seconds;
 
 	/* Get the sleep duration */
-	if (args->first->type == JX_NUMBER) {
-		seconds = jx_double(args->first);
-	} else if (jx_is_period(args->first)) {
-		jx_t *jseconds;
-		jx_t p, *oldnext;
+	if (args->first->type == EDJ_NUMBER) {
+		seconds = edj_double(args->first);
+	} else if (edj_is_period(args->first)) {
+		edj_t *jseconds;
+		edj_t p, *oldnext;
 
 		/* Build argument array containing args->first and "s". */
 		memset(&p, 0, sizeof p);
-		p.type = JX_STRING;
+		p.type = EDJ_STRING;
 		p.text[0] = 's';
 		oldnext = args->first->next; /* undeferred */
 		args->first->next = &p; /* undeferred */
 
-		/* Pass that into jx_datetime_fn() to get seconds. */
-		jseconds = jx_datetime_fn(args, "period");
-		if (jx_is_error(jseconds)) {
+		/* Pass that into edj_datetime_fn() to get seconds. */
+		jseconds = edj_datetime_fn(args, "period");
+		if (edj_is_error(jseconds)) {
 			args->first->next = oldnext; /* undeferred */
 			return jseconds;
 		}
-		seconds = jx_double(jseconds);
+		seconds = edj_double(jseconds);
 
 		/* Clean up */
 		args->first->next = oldnext; /* undeferred */
-		jx_free(jseconds);
+		edj_free(jseconds);
 	} else {
-		return jx_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string");
+		return edj_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string");
 	}
 
 	/* Sanity check */
 	if (seconds < 0.0)
-		return jx_error_null(NULL, "sleepSign:The %s() function's sleep time must be positive", "sleep");
+		return edj_error_null(NULL, "sleepSign:The %s() function's sleep time must be positive", "sleep");
 
 	/* Sleep */
 	ts.tv_sec = (time_t)seconds;
@@ -3028,30 +3109,30 @@ static jx_t *jfn_sleep(jx_t *args, void *agdata)
 	nanosleep(&ts, NULL);
 
 	/* Return null */
-	return jx_null();
+	return edj_null();
 }
 
 /* Write data to a file in JSON format */
-static jx_t *jfn_writeJSON(jx_t *args, void *agdata)
+static edj_t *jfn_writeJSON(edj_t *args, void *agdata)
 {
-	jx_t	*data, *nocomma;
+	edj_t	*data, *nocomma;
 	char	*filename;
-	jxformat_t tweaked;
+	edjformat_t tweaked;
 	FILE	*fp;
 
 	/* Check the args */
 	data = args->first;
-	if (!args->first->next || args->first->next->type != JX_STRING)
-		return jx_error_null(NULL, "needFileName:The %s() function's second parameter must be a file name", "writeJSON");
+	if (!args->first->next || args->first->next->type != EDJ_STRING)
+		return edj_error_null(NULL, "needFileName:The %s() function's second parameter must be a file name", "writeJSON");
 	filename = args->first->next->text;
 
 	/* Open the file */
 	fp = fopen(filename, "w");
 	if (!fp)
-		return jx_error_null(NULL, "writeFile:Can't open %s for writing", filename);
+		return edj_error_null(NULL, "writeFile:Can't open %s for writing", filename);
 
 	/* Tweak the output format */
-	tweaked = jx_format_default;
+	tweaked = edj_format_default;
 	tweaked.color = 0;
 	tweaked.graphic = 0;
 	tweaked.pretty = 1;
@@ -3066,14 +3147,14 @@ static jx_t *jfn_writeJSON(jx_t *args, void *agdata)
 	 */
 	nocomma = data->next;
 	data->next = NULL;
-	jx_print(data, &tweaked);
+	edj_print(data, &tweaked);
 	data->next = nocomma;
 
 	/* close the file */
 	fclose(fp);
 
 	/* Return true */
-	return jx_boolean(1);
+	return edj_boolean(1);
 }
 
 
@@ -3084,21 +3165,21 @@ static jx_t *jfn_writeJSON(jx_t *args, void *agdata)
  **************************************************************************/
 
 /* count(arg) count non-null and non-false values */
-static jx_t *jfn_count(jx_t *args, void *agdata)
+static edj_t *jfn_count(edj_t *args, void *agdata)
 {
-	return jx_from_int(*(int *)agdata);
+	return edj_from_int(*(int *)agdata);
 }
-static void jag_count(jx_t *args, void *agdata)
+static void jag_count(edj_t *args, void *agdata)
 {
-	if (jx_is_null(args->first))
+	if (edj_is_null(args->first))
 		return;
-	if (args->first->type == JX_BOOLEAN && !jx_is_true(args->first))
+	if (args->first->type == EDJ_BOOLEAN && !edj_is_true(args->first))
 		return;
 	(*(int *)agdata)++;
 }
 
 /* rowNumber(arg) returns a different value for each element in the group */
-static jx_t *jfn_rowNumber(jx_t *args, void *agdata)
+static edj_t *jfn_rowNumber(edj_t *args, void *agdata)
 {
 	int *counter = (int *)agdata;
 	int tmp;
@@ -3107,16 +3188,16 @@ static jx_t *jfn_rowNumber(jx_t *args, void *agdata)
 	/* First arg defines the counting style.  If it is null or false then
 	 * no item is returned and the count isn't incremented.
 	 */
-	if (args->first->type == JX_NULL
-	 || (args->first->type == JX_BOOLEAN && !jx_is_true(args->first)))
+	if (args->first->type == EDJ_NULL
+	 || (args->first->type == EDJ_BOOLEAN && !edj_is_true(args->first)))
 		return NULL;
 
 	/* If it is a number, then add that to the counter */
-	if (args->first->type == JX_NUMBER)
-		return jx_from_int(jx_int(args->first) + (*counter)++);
+	if (args->first->type == EDJ_NUMBER)
+		return edj_from_int(edj_int(args->first) + (*counter)++);
 
 	/* If it is 'a' or "A" then use upper or lowercase ASCII letters */
-	if (args->first->type == JX_STRING) {
+	if (args->first->type == EDJ_STRING) {
 		base = args->first->text[0];
 		switch (base) {
 		case 'a':
@@ -3128,7 +3209,7 @@ static jx_t *jfn_rowNumber(jx_t *args, void *agdata)
 				*--p = base + tmp % 26;
 				tmp /= 26;
 			} while (tmp-- > 0);
-			return jx_string(p, -1);
+			return edj_string(p, -1);
 
 		/* Maybe put roman numerals here some day? case 'i'/'I'
 		 * ivxlcdm: i,ii,iii,iv,v,vi,vii,viii,ix
@@ -3137,126 +3218,126 @@ static jx_t *jfn_rowNumber(jx_t *args, void *agdata)
 	}
 
 	/* As a last resort, just return it as a 1-based number. */
-	return jx_from_int(1 + (*counter)++);
+	return edj_from_int(1 + (*counter)++);
 }
-static void jag_rowNumber(jx_t *args, void *agdata)
+static void jag_rowNumber(edj_t *args, void *agdata)
 {
 }
 
 /* min(arg) returns the minimum value */
-static jx_t *jfn_min(jx_t *args, void *agdata)
+static edj_t *jfn_min(edj_t *args, void *agdata)
 {
 	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
 	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
-		return jx_null();
+		return edj_null();
 	if (data->json)
-		return jx_copy(data->json);
+		return edj_copy(data->json);
 	if (data->sval)
-		return jx_string(data->sval, -1);
-	return jx_from_double(data->dval);
+		return edj_string(data->sval, -1);
+	return edj_from_double(data->dval);
 
 }
-static void jag_min(jx_t *args, void *agdata)
+static void jag_min(edj_t *args, void *agdata)
 {
 	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
 	/* If this is a number and we're comparing numbers ... */
-	if (args->first->type == JX_NUMBER && !data->sval) {
+	if (args->first->type == EDJ_NUMBER && !data->sval) {
 		/* If this is first, or less than previous, use it */
-		double d = jx_double(args->first);
+		double d = edj_double(args->first);
 		if (data->count == 0 || d < data->dval) {
 			data->dval = d;
 			if (data->json) {
-				jx_free(data->json);
+				edj_free(data->json);
 				data->json = NULL;
 			}
 			if (args->first->next) /* undeferred */
-				data->json = jx_copy(args->first->next); /* undeferred */
+				data->json = edj_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
-	} else if (args->first->type == JX_STRING) {
-		if (!data->sval || jx_mbs_casecmp(args->first->text, data->sval) < 0) {
+	} else if (args->first->type == EDJ_STRING) {
+		if (!data->sval || edj_mbs_casecmp(args->first->text, data->sval) < 0) {
 			if (data->sval)
 				free(data->sval);
 			data->sval = strdup(args->first->text);
 			if (data->json) {
-				jx_free(data->json);
+				edj_free(data->json);
 				data->json = NULL;
 			}
 			if (args->first->next) /* undeferred */
-				data->json = jx_copy(args->first->next); /* undeferred */
+				data->json = edj_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	}
 }
 
 /* max(arg) returns the maximum value */
-static jx_t *jfn_max(jx_t *args, void *agdata)
+static edj_t *jfn_max(edj_t *args, void *agdata)
 {
 	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
 	/* NOTE: data->json and data->sval, if used, will be automatically freed */
 	if (data->count == 0)
-		return jx_null();
+		return edj_null();
 	if (data->json)
-		return jx_copy(data->json);
+		return edj_copy(data->json);
 	if (data->sval)
-		return jx_string(data->sval, -1);
-	return jx_from_double(data->dval);
+		return edj_string(data->sval, -1);
+	return edj_from_double(data->dval);
 
 }
-static void jag_max(jx_t *args, void *agdata)
+static void jag_max(edj_t *args, void *agdata)
 {
 	agmaxdata_t *data = (agmaxdata_t *)agdata;
 
 	/* If this is a number, and we're comparing numbers... */
-	if (args->first->type == JX_NUMBER && !data->sval) {
-		double d = jx_double(args->first);
+	if (args->first->type == EDJ_NUMBER && !data->sval) {
+		double d = edj_double(args->first);
 
 		/* If this is first, or more than previous max, use it*/
 		if (data->count == 0 || d > data->dval) {
 			data->dval = d;
 			if (data->json) {
-				jx_free(data->json);
+				edj_free(data->json);
 				data->json = NULL;
 			}
 			if (args->first->next) /* undeferred */
-				data->json = jx_copy(args->first->next); /* undeferred */
+				data->json = edj_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
-	} else if (args->first->type == JX_STRING) {
-		if (!data->sval || jx_mbs_casecmp(args->first->text, data->sval) > 0) {
+	} else if (args->first->type == EDJ_STRING) {
+		if (!data->sval || edj_mbs_casecmp(args->first->text, data->sval) > 0) {
 			if (data->sval)
 				free(data->sval);
 			data->sval = strdup(args->first->text);
 			if (data->json) {
-				jx_free(data->json);
+				edj_free(data->json);
 				data->json = NULL;
 			}
 			if (args->first->next) /* undeferred */
-				data->json = jx_copy(args->first->next); /* undeferred */
+				data->json = edj_copy(args->first->next); /* undeferred */
 		}
 		data->count++;
 	}
 }
 
 /* avg(arg) returns the average value of arg */
-static jx_t *jfn_avg(jx_t *args, void *agdata)
+static edj_t *jfn_avg(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
 	if (data->count == 0)
-		return jx_null();
-	return jx_from_double(data->val / (double)data->count);
+		return edj_null();
+	return edj_from_double(data->val / (double)data->count);
 }
-static void jag_avg(jx_t *args, void *agdata)
+static void jag_avg(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
-	if (args->first->type == JX_NUMBER) {
-		double d = jx_double(args->first);
+	if (args->first->type == EDJ_NUMBER) {
+		double d = edj_double(args->first);
 		if (data->count == 0)
 			data->val = d;
 		else
@@ -3266,20 +3347,20 @@ static void jag_avg(jx_t *args, void *agdata)
 }
 
 /* sum(arg) returns the sum of arg */
-static jx_t *jfn_sum(jx_t *args, void *agdata)
+static edj_t *jfn_sum(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
 	if (data->count == 0)
-		return jx_from_int(0);
-	return jx_from_double(data->val);
+		return edj_from_int(0);
+	return edj_from_double(data->val);
 }
-static void jag_sum(jx_t *args, void *agdata)
+static void jag_sum(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
-	if (args->first->type == JX_NUMBER) {
-		double d = jx_double(args->first);
+	if (args->first->type == EDJ_NUMBER) {
+		double d = edj_double(args->first);
 		if (data->count == 0)
 			data->val = d;
 		else
@@ -3289,20 +3370,20 @@ static void jag_sum(jx_t *args, void *agdata)
 }
 
 /* product(arg) returns the product of arg */
-static jx_t *jfn_product(jx_t *args, void *agdata)
+static edj_t *jfn_product(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
 	if (data->count == 0)
-		return jx_from_int(1);
-	return jx_from_double(data->val);
+		return edj_from_int(1);
+	return edj_from_double(data->val);
 }
-static void jag_product(jx_t *args, void *agdata)
+static void jag_product(edj_t *args, void *agdata)
 {
 	agdata_t *data = (agdata_t *)agdata;
 
-	if (args->first->type == JX_NUMBER) {
-		double d = jx_double(args->first);
+	if (args->first->type == EDJ_NUMBER) {
+		double d = edj_double(args->first);
 		if (data->count == 0)
 			data->val = d;
 		else
@@ -3312,63 +3393,63 @@ static void jag_product(jx_t *args, void *agdata)
 }
 
 /* any(arg) returns true if any row's arg is true */
-static jx_t *jfn_any(jx_t *args, void *agdata)
+static edj_t *jfn_any(edj_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return jx_boolean(i);
+	return edj_boolean(i);
 }
-static void jag_any(jx_t *args, void *agdata)
+static void jag_any(edj_t *args, void *agdata)
 {
 	int *refi = (int *)agdata;
-	*refi |= jx_is_true(args->first);
+	*refi |= edj_is_true(args->first);
 }
 
 /* all(arg) returns true if all of row's arg is true */
-static jx_t *jfn_all(jx_t *args, void *agdata)
+static edj_t *jfn_all(edj_t *args, void *agdata)
 {
 	int i = *(int *)agdata;
-	return jx_boolean(!i);
+	return edj_boolean(!i);
 }
-static void jag_all(jx_t *args, void *agdata)
+static void jag_all(edj_t *args, void *agdata)
 {
 	int *refi = (int *)agdata;
 
-	*refi |= !jx_is_true(args->first);
+	*refi |= !edj_is_true(args->first);
 }
 
 
 /* Return column statistics about a table (array of objects) */
-static jx_t *jfn_explain(jx_t *args, void *agdata)
+static edj_t *jfn_explain(edj_t *args, void *agdata)
 {
-	jx_t *stats = *(jx_t **)agdata;
+	edj_t *stats = *(edj_t **)agdata;
 
 	/* Don't free the memory -- we're returning it */
-	*(jx_t **)agdata = NULL;
+	*(edj_t **)agdata = NULL;
 
 	if (!stats)
-		stats = jx_null();
+		stats = edj_null();
 	return stats;
 }
 
-static void jag_explain(jx_t *args, void *agdata)
+static void jag_explain(edj_t *args, void *agdata)
 {
-	jx_t *stats = *(jx_t **)agdata;
+	edj_t *stats = *(edj_t **)agdata;
 	int depth = 0;
 
 	/* If second parameter is given and is true, then recursively explain
 	 * any embedded objects or arrays of objects.
 	 */
-	if (args->first->next && jx_is_true(args->first->next)) /* undeferred */
+	if (args->first->next && edj_is_true(args->first->next)) /* undeferred */
 		depth = -1;
-	stats = jx_explain(stats, args->first, depth);
+	stats = edj_explain(stats, args->first, depth);
 
-	*(jx_t **)agdata = stats;
+	*(edj_t **)agdata = stats;
 }
 
 
 
 /* Write an array out to a file */
-static jx_t *jfn_writeArray(jx_t *args, void *agdata)
+static edj_t *jfn_writeArray(edj_t *args, void *agdata)
 {
 	FILE *fp = *(FILE **)agdata;
 	long int size;
@@ -3378,15 +3459,15 @@ static jx_t *jfn_writeArray(jx_t *args, void *agdata)
 		if (fp != stdout)
 			fclose(fp);
 		*(FILE **)agdata = NULL;
-		return jx_from_int((int)size);
+		return edj_from_int((int)size);
 	}
-	return jx_from_int(0);
+	return edj_from_int(0);
 }
 
-static void jag_writeArray(jx_t *args, void *agdata)
+static void jag_writeArray(edj_t *args, void *agdata)
 {
 	FILE *fp = *(FILE **)agdata;
-	jx_t	*item;
+	edj_t	*item;
 	char    *ser;
 
 	/* For "null" or "false", do nothing.  For "true" we'd *like* to
@@ -3394,12 +3475,12 @@ static void jag_writeArray(jx_t *args, void *agdata)
 	 * context.
 	 */
 	item = args->first;
-	if (item->type == JX_BOOLEAN) {
-		if (!jx_is_true(item))
+	if (item->type == EDJ_BOOLEAN) {
+		if (!edj_is_true(item))
 			return;
 	}
 	if (!fp) {
-		if (args->first->next && args->first->next->type == JX_STRING) /* undeferred */
+		if (args->first->next && args->first->next->type == EDJ_STRING) /* undeferred */
 			fp = fopen(args->first->next->text, "w"); /* undeferred */
 		else
 			fp = stdout;
@@ -3410,62 +3491,62 @@ static void jag_writeArray(jx_t *args, void *agdata)
 	}
 
 	/* Write this item */
-	ser = jx_serialize(item, NULL);
+	ser = edj_serialize(item, NULL);
 	fwrite(ser, strlen(ser), 1, fp);
 	free(ser);
 }
 
 /* Collect non-null items in an array */
-static jx_t *jfn_arrayAgg(jx_t *args, void *agdata)
+static edj_t *jfn_arrayAgg(edj_t *args, void *agdata)
 {
-	jx_t *result = *(jx_t **)agdata;
+	edj_t *result = *(edj_t **)agdata;
 	if (!result)
-		return jx_array();
-	return jx_copy(result);
+		return edj_array();
+	return edj_copy(result);
 }
-static void  jag_arrayAgg(jx_t *args, void *agdata)
+static void  jag_arrayAgg(edj_t *args, void *agdata)
 {
-	jx_t *result = *(jx_t **)agdata;
+	edj_t *result = *(edj_t **)agdata;
 	if (!result)
-		result = jx_array();
-	if (!jx_is_null(args->first))
-		jx_append(result, jx_copy(args->first));
-	*(jx_t **)agdata = result;
+		result = edj_array();
+	if (!edj_is_null(args->first))
+		edj_append(result, edj_copy(args->first));
+	*(edj_t **)agdata = result;
 }
 
 
 /* objectAgg(key,value) Collect key/value pairs into an object. */
-static jx_t *jfn_objectAgg(jx_t *args, void *agdata)
+static edj_t *jfn_objectAgg(edj_t *args, void *agdata)
 {
-	jx_t *result = *(jx_t **)agdata;
+	edj_t *result = *(edj_t **)agdata;
 	if (!result)
-		return jx_object();
-	return jx_copy(result);
+		return edj_object();
+	return edj_copy(result);
 }
-static void  jag_objectAgg(jx_t *args, void *agdata)
+static void  jag_objectAgg(edj_t *args, void *agdata)
 {
-	jx_t *result = *(jx_t **)agdata;
+	edj_t *result = *(edj_t **)agdata;
 	if (!result)
-		result = jx_object();
-	if (args->first->type == JX_STRING && *args->first->text && args->first->next) /* undeferred */
-		jx_append(result, jx_key(args->first->text, jx_copy(args->first->next))); /* undeferred */
-	*(jx_t **)agdata = result;
+		result = edj_object();
+	if (args->first->type == EDJ_STRING && *args->first->text && args->first->next) /* undeferred */
+		edj_append(result, edj_key(args->first->text, edj_copy(args->first->next))); /* undeferred */
+	*(edj_t **)agdata = result;
 }
 
 /* join(str, delim) Concatenate a series of strings into a single big string.
  * The delim is optional and defaults to ",".
  */
-static jx_t *jfn_join(jx_t *args, void *agdata)
+static edj_t *jfn_join(edj_t *args, void *agdata)
 {
 	agjoindata_t *data = (agjoindata_t *)agdata;
 
 	/* Return the accumulated string.  If no string, return "" */
 	if (data->ag)
-		return jx_string(data->ag, -1);
+		return edj_string(data->ag, -1);
 	else
-		return jx_string("", 0);
+		return edj_string("", 0);
 }
-static void  jag_join(jx_t *args, void *agdata)
+static void  jag_join(edj_t *args, void *agdata)
 {
 	char	*text, *mustfree, *delim;
 	char	buf[40];
@@ -3475,25 +3556,25 @@ static void  jag_join(jx_t *args, void *agdata)
 	/* Get the text.  Skip null, but get text for anything else */
 	mustfree = NULL;
 	switch (args->first->type) {
-	case JX_NULL:
+	case EDJ_NULL:
 		return;
-	case JX_STRING:
-	case JX_BOOLEAN:
+	case EDJ_STRING:
+	case EDJ_BOOLEAN:
 		text = args->first->text;
 		break;
-	case JX_NUMBER:
+	case EDJ_NUMBER:
 		if (*args->first->text)
 			text = args->first->text; /* number in text format */
 		else {
 			if (args->first->text[1] == 'i')
-				snprintf(buf, sizeof buf, "%i", JX_INT(args->first));
+				snprintf(buf, sizeof buf, "%i", EDJ_INT(args->first));
 			else
-				snprintf(buf, sizeof buf, "%g", JX_DOUBLE(args->first));
+				snprintf(buf, sizeof buf, "%g", EDJ_DOUBLE(args->first));
 			text = buf;
 		}
 		break;
 	default:
-		text = mustfree = jx_serialize(args->first, NULL);
+		text = mustfree = edj_serialize(args->first, NULL);
 	}
 
 	/* First string? */
@@ -3504,7 +3585,7 @@ static void  jag_join(jx_t *args, void *agdata)
 		strcpy(data->ag, text);
 	} else {
 		/* Get the delimiter, default to "," */
-		if (args->first->next && args->first->next->type == JX_STRING) /* undeferred */
+		if (args->first->next && args->first->next->type == EDJ_STRING) /* undeferred */
 			delim = args->first->next->text; /* undeferred */
 		else
 			delim = ",";

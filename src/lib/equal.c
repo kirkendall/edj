@@ -1,17 +1,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <jx.h>
+#include <edj.h>
 
 
-/* Compare two jx_t values for equality.  Return 1 if equal, 0 if different.
+/* Compare two edj_t values for equality.  Return 1 if equal, 0 if different.
  * This compares type as well as value.  It can even compare arrays (same types
  * and values in the same order) and objects (same member names and values
  * in any order).
  */
-int jx_equal(jx_t *j1, jx_t *j2)
+int edj_equal(edj_t *j1, edj_t *j2)
 {
-        jx_t  *tmp;
+        edj_t  *tmp;
 
         /* Trivial case */
         if (j1 == j2)
@@ -23,47 +23,47 @@ int jx_equal(jx_t *j1, jx_t *j2)
 
         /* Compare types as appropriate */
         switch (j1->type) {
-          case JX_BOOLEAN:
-          case JX_STRING:
+          case EDJ_BOOLEAN:
+          case EDJ_STRING:
                 /* Compare their literal text, case-sensitively. */
                 return !strcmp(j1->text, j2->text);
 
-	  case JX_NULL:
+	  case EDJ_NULL:
 		return 1;
 
-          case JX_NUMBER:
+          case EDJ_NUMBER:
 		/* Numbers may be binary or text. */
 		if (j1->text[0] == '\0' && j1->text[1] == 'i'
 		 && j2->text[0] == '\0' && j2->text[1] == 'i')
-			return JX_INT(j1) == JX_INT(j2);
+			return EDJ_INT(j1) == EDJ_INT(j2);
 		if (j1->text[0] == '\0' && j1->text[1] == 'd'
 		 && j2->text[0] == '\0' && j2->text[1] == 'd')
-			return JX_DOUBLE(j1) == JX_DOUBLE(j2);
-		return jx_double(j1) == jx_double(j2);
+			return EDJ_DOUBLE(j1) == EDJ_DOUBLE(j2);
+		return edj_double(j1) == edj_double(j2);
 
-          case JX_ARRAY:
+          case EDJ_ARRAY:
                 /* Compare length, and values of elements. */
-                if (jx_length(j1) != jx_length(j2))
+                if (edj_length(j1) != edj_length(j2))
                         return 0;
-                for (j1 = jx_first(j1), j2 = jx_first(j2); j1 && j2; j1 = jx_next(j1), j2 = jx_next(j2)) {
-                        if (!jx_equal(j1, j2)) {
-				jx_break(j1);
-				jx_break(j2);
+                for (j1 = edj_first(j1), j2 = edj_first(j2); j1 && j2; j1 = edj_next(j1), j2 = edj_next(j2)) {
+                        if (!edj_equal(j1, j2)) {
+				edj_break(j1);
+				edj_break(j2);
                                 return 0;
 			}
                 }
                 return 1;
 
-          case JX_OBJECT:
+          case EDJ_OBJECT:
                 /* Compare length, and values/names of members.  It's okay if
                  * the members are listed in a different order; we find them
                  * by name.
                  */
-                if (jx_length(j1) != jx_length(j2))
+                if (edj_length(j1) != edj_length(j2))
                         return 0;
                 for (j1 = j1->first; j1; j1 = j1->next) { /* object */
-                        tmp = jx_by_key(j2, j1->text);
-                        if (!tmp || !jx_equal(j1->first, tmp))
+                        tmp = edj_by_key(j2, j1->text);
+                        if (!tmp || !edj_equal(j1->first, tmp))
                                 return 0;
                 }
                 return 1;

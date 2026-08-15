@@ -3,19 +3,19 @@
 #include <signal.h>
 #include <readline/readline.h>
 #include <readline/history.h>
-#include <jx.h>
-#include "jxprog.h"
+#include <edj.h>
+#include "edjprog.h"
 
 /* This indicates whether we're running something or reading a command line */
 static int running;
 
 /* This catches the SIGINT signal, and uses it to abort an ongoing computation
- * by setting the jx_interrupt flag.
+ * by setting the edj_interrupt flag.
  */
 static void catchinterrupt(int signo)
 {
 	if (running) {
-		jx_interrupt = 1;
+		edj_interrupt = 1;
 		fprintf(stderr, "Stopping...\n");
 	}
 }
@@ -42,9 +42,9 @@ static char *historyfile(void)
 	/* First time, generate it */
 	if (!buf) {
 		/* Get the config directory */
-		char *dir = jx_file_path(NULL, NULL, NULL);
+		char *dir = edj_file_path(NULL, NULL, NULL);
 		if (!dir)
-			return ".jx.history";
+			return ".edj.history";
 
 		/* Append "/history" to it */
 		buf = (char *)malloc(strlen(dir) + 9);
@@ -59,7 +59,7 @@ static char *historyfile(void)
 
 
 /* Interactively read a line from stdin.  */
-static char *jxreadline(const char *prompt)
+static char *edjreadline(const char *prompt)
 {
 	char	*expr;
 	size_t	i;
@@ -88,7 +88,7 @@ static char *jxreadline(const char *prompt)
  * and also a couple of special characters that ReadLine uses to indicate
  * certain parts of the prompt (namely those escape sequences) are zero-width.
  */
-static char *jxprompt(const char *prompt)
+static char *edjprompt(const char *prompt)
 {
 	static char	buf[50];
 
@@ -105,18 +105,18 @@ static char *jxprompt(const char *prompt)
 }
 
 
-void interact(jxcontext_t **contextref, jxcmd_t *initcmds)
+void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 {
 	char	*expr;
-	jxcmd_t *jc;
-	jxcmdout_t *result;
+	edjcmd_t *jc;
+	edjcmdout_t *result;
 
 	/* Enable the use of history and name completion while
 	 * inputting expressions.
 	 */
 	using_history();
 	read_history(historyfile());
-	rl_attempted_completion_function = jx_completion;
+	rl_attempted_completion_function = edj_completion;
 	rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
 
 	/* Catch SIGINT (usually <Ctrl-C>) and use it to stop computation.
@@ -128,12 +128,12 @@ void interact(jxcontext_t **contextref, jxcmd_t *initcmds)
 	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterrupt;
 
 	/* Run the initcmds once.  (Not once for each file.) */
-	result = jx_cmd_run(initcmds, contextref);
+	result = edj_cmd_run(initcmds, contextref);
 	free(result);
 
 	/* Read an expression */
 	for (running = 0;
-	     (expr = jxreadline(jxprompt("jx:"))) != NULL;
+	     (expr = edjreadline(edjprompt("edj:"))) != NULL;
 	     running = 0) {
 		/* Ignore empty lines */
 		if (!expr[0])
@@ -143,22 +143,22 @@ void interact(jxcontext_t **contextref, jxcmd_t *initcmds)
 		running = 1;
 
 		/* Compile */
-		jc = jx_cmd_parse_string(expr);
+		jc = edj_cmd_parse_string(expr);
 		free(expr);
-		if (jc != JX_CMD_ERROR) {
+		if (jc != EDJ_CMD_ERROR) {
 			/* Execute */
-			jx_interrupt = 0;
+			edj_interrupt = 0;
 			run(jc, contextref);
 
 			/* Clean up */
-			jx_cmd_free(jc);
+			edj_cmd_free(jc);
 
 			/* If the last line was incomplete, then output a
 			 * newline.  The readline() library depends on this.
 			 */
-			if (jx_print_incomplete_line) {
+			if (edj_print_incomplete_line) {
 				putchar('\n');
-				jx_print_incomplete_line = 0;
+				edj_print_incomplete_line = 0;
 			}
 		}
 	}

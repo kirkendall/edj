@@ -3,7 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <errno.h>
-#include <jx.h>
+#include <edj.h>
 
 /* This module exists to define some Math.xxx() functions. */
 
@@ -11,22 +11,22 @@
  * Math object as their first parameter, and a single number as their only
  * meaningful parameter.  We can handle most of that efficiently here.
  */
-static jx_t *common(jx_t *args, char *name)
+static edj_t *common(edj_t *args, char *name)
 {
-	jx_t	*arg;
+	edj_t	*arg;
 	double	d;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JX_OBJECT)
+	if (arg->type == EDJ_OBJECT)
 		arg = arg->next;
 
 	/* Must be a single number */
-	if (arg->type != JX_NUMBER || arg->next)
-		return jx_error_null(0, "The %s() function expects single number as its argument", name);
+	if (arg->type != EDJ_NUMBER || arg->next)
+		return edj_error_null(0, "The %s() function expects single number as its argument", name);
 
 	/* Convert to binary */
-	d = jx_double(arg);
+	d = edj_double(arg);
 
 	/* Clear the error code, so we can detect math errors */
 	errno = 0;
@@ -105,143 +105,143 @@ static jx_t *common(jx_t *args, char *name)
 	/* If an error occurred, say to */
 	switch (errno) {
 	case 0:		break; /* no error */
-	case EDOM:	return jx_error_null(0, "Domain error in %s() function", name);
-	case ERANGE:	return jx_error_null(0, "Range error in %s() function", name);
-	default:	return jx_error_null(0, "Error in %s() function", name);
+	case EDOM:	return edj_error_null(0, "Domain error in %s() function", name);
+	case ERANGE:	return edj_error_null(0, "Range error in %s() function", name);
+	default:	return edj_error_null(0, "Error in %s() function", name);
 	}
 
 	/* Return the result */
-	return jx_from_double(d);
+	return edj_from_double(d);
 
 InvalidName:
 	fprintf(stderr, "Invalid Math.function named \"%s\" encountered in the math plugin");
 	abort();
 }
 
-static jx_t *jfn_acos(jx_t *args, void *agdata)
+static edj_t *jfn_acos(edj_t *args, void *agdata)
 {
 	return common(args, "acos");
 }
 
-static jx_t *jfn_acosh(jx_t *args, void *agdata)
+static edj_t *jfn_acosh(edj_t *args, void *agdata)
 {
 	return common(args, "acosh");
 }
 
-static jx_t *jfn_asin(jx_t *args, void *agdata)
+static edj_t *jfn_asin(edj_t *args, void *agdata)
 {
 	return common(args, "asin");
 }
 
-static jx_t *jfn_asinh(jx_t *args, void *agdata)
+static edj_t *jfn_asinh(edj_t *args, void *agdata)
 {
 	return common(args, "asinh");
 }
 
-static jx_t *jfn_atan(jx_t *args, void *agdata)
+static edj_t *jfn_atan(edj_t *args, void *agdata)
 {
 	return common(args, "atan");
 }
 
-static jx_t *jfn_atanh(jx_t *args, void *agdata)
+static edj_t *jfn_atanh(edj_t *args, void *agdata)
 {
 	return common(args, "atanh");
 }
 
-static jx_t *jfn_cbrt(jx_t *args, void *agdata)
+static edj_t *jfn_cbrt(edj_t *args, void *agdata)
 {
 	return common(args, "cbrt");
 }
 
-static jx_t *jfn_ceil(jx_t *args, void *agdata)
+static edj_t *jfn_ceil(edj_t *args, void *agdata)
 {
 	return common(args, "ceil");
 }
 
-static jx_t *jfn_cos(jx_t *args, void *agdata)
+static edj_t *jfn_cos(edj_t *args, void *agdata)
 {
 	return common(args, "cos");
 }
 
-static jx_t *jfn_cosh(jx_t *args, void *agdata)
+static edj_t *jfn_cosh(edj_t *args, void *agdata)
 {
 	return common(args, "cosh");
 }
 
-static jx_t *jfn_exp(jx_t *args, void *agdata)
+static edj_t *jfn_exp(edj_t *args, void *agdata)
 {
 	return common(args, "exp");
 }
 
-static jx_t *jfn_floor(jx_t *args, void *agdata)
+static edj_t *jfn_floor(edj_t *args, void *agdata)
 {
 	return common(args, "floor");
 }
 
-static jx_t *jfn_log(jx_t *args, void *agdata)
+static edj_t *jfn_log(edj_t *args, void *agdata)
 {
 	return common(args, "log");
 }
 
-static jx_t *jfn_log10(jx_t *args, void *agdata)
+static edj_t *jfn_log10(edj_t *args, void *agdata)
 {
 	return common(args, "log10");
 }
 
-static jx_t *jfn_log2(jx_t *args, void *agdata)
+static edj_t *jfn_log2(edj_t *args, void *agdata)
 {
 	return common(args, "log2");
 }
 
-static jx_t *jfn_round(jx_t *args, void *agdata)
+static edj_t *jfn_round(edj_t *args, void *agdata)
 {
 	return common(args, "round");
 }
 
-static jx_t *jfn_sin(jx_t *args, void *agdata)
+static edj_t *jfn_sin(edj_t *args, void *agdata)
 {
 	return common(args, "sin");
 }
 
-static jx_t *jfn_sinh(jx_t *args, void *agdata)
+static edj_t *jfn_sinh(edj_t *args, void *agdata)
 {
 	return common(args, "sinh");
 }
 
-static jx_t *jfn_sqrt(jx_t *args, void *agdata)
+static edj_t *jfn_sqrt(edj_t *args, void *agdata)
 {
 	return common(args, "sqrt");
 }
 
-static jx_t *jfn_tan(jx_t *args, void *agdata)
+static edj_t *jfn_tan(edj_t *args, void *agdata)
 {
 	return common(args, "tan");
 }
 
-static jx_t *jfn_trunc(jx_t *args, void *agdata)
+static edj_t *jfn_trunc(edj_t *args, void *agdata)
 {
 	return common(args, "trunc");
 }
 
 /* The following are different, in that they take 2 arguments */
 
-static jx_t *jfn_atan2(jx_t *args, void *agdata)
+static edj_t *jfn_atan2(edj_t *args, void *agdata)
 {
-	jx_t	*arg;
+	edj_t	*arg;
 	double	x, y;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JX_OBJECT)
+	if (arg->type == EDJ_OBJECT)
 		arg = arg->next;
 
 	/* Must be two numbers */
-	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
-		return jx_error_null(0, "The %s() function expects two numbers number as its arguments", atan2);
+	if (arg->type != EDJ_NUMBER || !arg->next || arg->next->type != EDJ_NUMBER || arg->next->next)
+		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", atan2);
 
 	/* Convert to binary */
-	y = jx_double(arg);
-	x = jx_double(arg->next);
+	y = edj_double(arg);
+	x = edj_double(arg->next);
 
 	/* Clear errno so we can detect errors */
 	errno = 0;
@@ -251,32 +251,32 @@ static jx_t *jfn_atan2(jx_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return jx_error_null(0, "Error in %s() function", "atan2");
+		return edj_error_null(0, "Error in %s() function", "atan2");
 
 	/* Return the result */
-	return jx_from_double(x);
+	return edj_from_double(x);
 }
 
-static jx_t *jfn_hypot(jx_t *args, void *agdata)
+static edj_t *jfn_hypot(edj_t *args, void *agdata)
 {
-	jx_t	*arg;
+	edj_t	*arg;
 	double	d, sumsquared;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JX_OBJECT)
+	if (arg->type == EDJ_OBJECT)
 		arg = arg->next;
 
 	/* If given a single number, just return its absolute value */
-	if (arg->type == JX_NUMBER && !arg->next)
-		return jx_from_double(abs(jx_double(arg)));
+	if (arg->type == EDJ_NUMBER && !arg->next)
+		return edj_from_double(abs(edj_double(arg)));
 
 	/* Reset errno so we can detect errors */
 	errno = 0;
 
 	/* Sum up the squares of the arguments. */
 	for(sumsquared = 0; arg && errno == 0; arg = arg->next) {
-		d = jx_double(arg);
+		d = edj_double(arg);
 		sumsquared += d * d;
 	}
 
@@ -286,32 +286,32 @@ static jx_t *jfn_hypot(jx_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return jx_error_null(0, "Error in %s() function", "hypot");
+		return edj_error_null(0, "Error in %s() function", "hypot");
 
 	/* Return the result */
-	return jx_from_double(d);
+	return edj_from_double(d);
 
 BadArgs:
-	return jx_error_null(0, "The %s() function expects at least two numbers number as its arguments", "hypot");
+	return edj_error_null(0, "The %s() function expects at least two numbers number as its arguments", "hypot");
 }
 
-static jx_t *jfn_pow(jx_t *args, void *agdata)
+static edj_t *jfn_pow(edj_t *args, void *agdata)
 {
-	jx_t	*arg;
+	edj_t	*arg;
 	double	base, power;
 
 	/* Skip over the Math object, if given */
 	arg = args->first;
-	if (arg->type == JX_OBJECT)
+	if (arg->type == EDJ_OBJECT)
 		arg = arg->next;
 
 	/* Must be two numbers */
-	if (arg->type != JX_NUMBER || !arg->next || arg->next->type != JX_NUMBER || arg->next->next)
-		return jx_error_null(0, "The %s() function expects two numbers number as its arguments", "pow");
+	if (arg->type != EDJ_NUMBER || !arg->next || arg->next->type != EDJ_NUMBER || arg->next->next)
+		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", "pow");
 
 	/* Convert to binary */
-	base = jx_double(arg);
-	power = jx_double(arg->next);
+	base = edj_double(arg);
+	power = edj_double(arg->next);
 
 	/* Clear errno so we can detect errors */
 	errno = 0;
@@ -321,10 +321,10 @@ static jx_t *jfn_pow(jx_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return jx_error_null(0, "Error in %s() function", "pow");
+		return edj_error_null(0, "Error in %s() function", "pow");
 
 	/* Return the result */
-	return jx_from_double(base);
+	return edj_from_double(base);
 }
 
 /* This is the init function.  It registers all of the above functions, and
@@ -332,49 +332,49 @@ static jx_t *jfn_pow(jx_t *args, void *agdata)
  */
 char *pluginmath()
 {
-	jx_t	*math;
+	edj_t	*math;
 
 	/* Register the functions */
-	jx_calc_function_hook("acos",  "n:number", "number", jfn_acos);
-	jx_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
-	jx_calc_function_hook("asin",  "n:number", "number", jfn_asin);
-	jx_calc_function_hook("asinh", "n:number", "number", jfn_asinh);
-	jx_calc_function_hook("atan",  "n:number", "number", jfn_atan);
-	jx_calc_function_hook("atanh", "n:number", "number", jfn_atanh);
-	jx_calc_function_hook("cbrt",  "n:number", "number", jfn_cbrt);
-	jx_calc_function_hook("ceil",  "n:number", "number", jfn_ceil);
-	jx_calc_function_hook("cos",   "n:number", "number", jfn_cos);
-	jx_calc_function_hook("cosh",  "n:number", "number", jfn_cosh);
-	jx_calc_function_hook("exp",   "n:number", "number", jfn_exp);
-	jx_calc_function_hook("floor", "n:number", "number", jfn_floor);
-	jx_calc_function_hook("log",   "n:number", "number", jfn_log);
-	jx_calc_function_hook("log10", "n:number", "number", jfn_log10);
-	jx_calc_function_hook("log2",  "n:number", "number", jfn_log2);
-	jx_calc_function_hook("round", "n:number", "number", jfn_round);
-	jx_calc_function_hook("sin",   "n:number", "number", jfn_sin);
-	jx_calc_function_hook("sinh",  "n:number", "number", jfn_sinh);
-	jx_calc_function_hook("sqrt",  "n:number", "number", jfn_sqrt);
-	jx_calc_function_hook("tan",   "n:number", "number", jfn_tan);
-	jx_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
+	edj_calc_function_hook("acos",  "n:number", "number", jfn_acos);
+	edj_calc_function_hook("acosh", "n:number", "number", jfn_acosh);
+	edj_calc_function_hook("asin",  "n:number", "number", jfn_asin);
+	edj_calc_function_hook("asinh", "n:number", "number", jfn_asinh);
+	edj_calc_function_hook("atan",  "n:number", "number", jfn_atan);
+	edj_calc_function_hook("atanh", "n:number", "number", jfn_atanh);
+	edj_calc_function_hook("cbrt",  "n:number", "number", jfn_cbrt);
+	edj_calc_function_hook("ceil",  "n:number", "number", jfn_ceil);
+	edj_calc_function_hook("cos",   "n:number", "number", jfn_cos);
+	edj_calc_function_hook("cosh",  "n:number", "number", jfn_cosh);
+	edj_calc_function_hook("exp",   "n:number", "number", jfn_exp);
+	edj_calc_function_hook("floor", "n:number", "number", jfn_floor);
+	edj_calc_function_hook("log",   "n:number", "number", jfn_log);
+	edj_calc_function_hook("log10", "n:number", "number", jfn_log10);
+	edj_calc_function_hook("log2",  "n:number", "number", jfn_log2);
+	edj_calc_function_hook("round", "n:number", "number", jfn_round);
+	edj_calc_function_hook("sin",   "n:number", "number", jfn_sin);
+	edj_calc_function_hook("sinh",  "n:number", "number", jfn_sinh);
+	edj_calc_function_hook("sqrt",  "n:number", "number", jfn_sqrt);
+	edj_calc_function_hook("tan",   "n:number", "number", jfn_tan);
+	edj_calc_function_hook("trunc", "n:number", "number", jfn_trunc);
 
-	jx_calc_function_hook("atan2", "y:number, x:number", "number", jfn_atan2);
-	jx_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
-	jx_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
+	edj_calc_function_hook("atan2", "y:number, x:number", "number", jfn_atan2);
+	edj_calc_function_hook("hypot", "n1:number, ...", "number", jfn_hypot);
+	edj_calc_function_hook("pow",   "base:number, power:number", "number", jfn_pow);
 
 	/* Insert constants into the Math object */
-	math = jx_by_key(jx_system, "Math");
+	math = edj_by_key(edj_system, "Math");
 	if (!math) {
-		math = jx_object();
-		jx_append(jx_system, jx_key("Math", math));
+		math = edj_object();
+		edj_append(edj_system, edj_key("Math", math));
 	}
-	jx_append(math, jx_key("E", jx_from_double(M_E)));
-	jx_append(math, jx_key("LN10", jx_from_double(M_LN10)));
-	jx_append(math, jx_key("LN2", jx_from_double(M_LN2)));
-	jx_append(math, jx_key("LOG10E", jx_from_double(M_LOG10E)));
-	jx_append(math, jx_key("LOG2E", jx_from_double(M_LOG2E)));
-	jx_append(math, jx_key("PI", jx_from_double(M_PI)));
-	jx_append(math, jx_key("SQRT1_2", jx_from_double(M_SQRT1_2)));
-	jx_append(math, jx_key("SQRT2", jx_from_double(M_SQRT2)));
+	edj_append(math, edj_key("E", edj_from_double(M_E)));
+	edj_append(math, edj_key("LN10", edj_from_double(M_LN10)));
+	edj_append(math, edj_key("LN2", edj_from_double(M_LN2)));
+	edj_append(math, edj_key("LOG10E", edj_from_double(M_LOG10E)));
+	edj_append(math, edj_key("LOG2E", edj_from_double(M_LOG2E)));
+	edj_append(math, edj_key("PI", edj_from_double(M_PI)));
+	edj_append(math, edj_key("SQRT1_2", edj_from_double(M_SQRT1_2)));
+	edj_append(math, edj_key("SQRT2", edj_from_double(M_SQRT2)));
 
 	/* Success */
 	return NULL;

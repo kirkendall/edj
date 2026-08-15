@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>After 1.0</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx After 1.0">
-    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, jx, article, After 1.0">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj After 1.0">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, edj, article, After 1.0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body class="article">
@@ -23,7 +23,7 @@
     release version 1.0 just to add them.
     <p>
     Obviously this isn't an exhaustive list.
-    The next version of jx will include features not listed here, I'm sure.
+    The next version of edj will include features not listed here, I'm sure.
 
     <h2>Screen</h2>
     The existing command line interface is nice.
@@ -49,7 +49,7 @@
     You won't lose any line-editing functionality by using the "screen" plugin.
 
     <h2>Data Types</h2>
-    Currently, jx allows you to declare types for vars, consts, functions,
+    Currently, edj allows you to declare types for vars, consts, functions,
     and function arguments, but it ignores those declarations.
     They're currently useful only as comments.
     <p>
@@ -99,7 +99,7 @@
     and that will require data locks for global vars.
     The registry gives me a place to store those locks.
     None of the built-in functions alter variables, but you can write
-    functions in jx script that do.
+    functions in edj script that do.
     <p>
     There is already a global registry of functions, by the way.
     This is subtly different from the var/const registry, in that functions
@@ -136,9 +136,9 @@
     It gives us a way to have the main task to detect when
     some other task completes.
     <p>
-    JavaScript's syntax for handling things like this won't work in jx,
+    JavaScript's syntax for handling things like this won't work in edj,
     because JavaScript's implementation depends on object classes and closures
-    (basically function pointers) which jx doesn't support.
+    (basically function pointers) which edj doesn't support.
     <p>
     This is separate from using multiple CPU cores, by the way.
     JavaScript is single-threaded but still supports asynchronous events.
@@ -148,11 +148,11 @@
     tend to assume multiple threads equals multiple cores, but that isn't
     always the case.)
     <p>
-    I chose to make jx run as a single thread because I often run it on live
+    I chose to make edj run as a single thread because I often run it on live
     web hosts, and I don't want my scripts to tie up all of the CPU cores.
     As long as 7 out of 8 cores are still serving up the web app,
     it'll run fast enough.
-    If jx ever supports the use of multiple CPU cores, it will need a way
+    If edj ever supports the use of multiple CPU cores, it will need a way
     to limit the number of cores used.
 
     <h2>POSIX plugin</h2>
@@ -164,7 +164,7 @@
     POSIX is huge, so honestly this will probably only ever be subset of it.
     A useful subset.
     <p>
-    I've deliberately avoided giving any jx scripting functions the same name
+    I've deliberately avoided giving any edj scripting functions the same name
     as a POSIX function, just to keep this potential alive.
 
     <h2>Key Registry</h2>
@@ -185,7 +185,7 @@
     Clearly something like that could be useful when generating reports or
     converting data to specific text format.
     <p>
-    They are enclosed in backtick (`) characters, which jx (and SQL) uses for
+    They are enclosed in backtick (`) characters, which edj (and SQL) uses for
     quoting keys/names that contain problematic characters.
     I don't think this will be a problem; if a backtick-quoted string contains
     "${<var>expr</var>}" then it's a template string; otherwise its a quoted
@@ -232,7 +232,7 @@
 
     <h2>Data Compression, and Support for Non-UTF-8 Text</h2>
     These are obviously useful, but surprisingly hard to implement.
-    Normally, jx just maps a JSON file into memory and parses it with the
+    Normally, edj just maps a JSON file into memory and parses it with the
     assumption that it contains UTF-8 text.
     If the file is compressed, then we need to generate an uncompressed
     version of the file that we can map into memory.

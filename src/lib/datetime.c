@@ -3,9 +3,9 @@
 #include <time.h>
 #include <string.h>
 #include <ctype.h>
-#include <jx.h>
+#include <edj.h>
 
-/* This file implements most of jx's date and time functions.  This is
+/* This file implements most of edj's date and time functions.  This is
  * messy!  C has poor date handling abilities, and the purpose of this file
  * is to encapsulate this messiness, so other files can be clean.
  */
@@ -16,14 +16,14 @@ typedef struct {
 	int	tz;	/* minutes east of UTC */
 	int	localtz;/* Use the local timezone, including daylight savings */
 	int	z;	/* Prefer "Z" for UTC instead of "+00:00" */
-} jxdatetime_t;
+} edjdatetime_t;
 
 
 /* Return the number of days in the given month.  This is used by normalize()
  * and it also has the side-effect of normalizing the month and year, since we
  * need that to know the days.
  */
-static int dayspermonth(jxdatetime_t *dt)
+static int dayspermonth(edjdatetime_t *dt)
 {
 	static int daysper[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -47,7 +47,7 @@ static int dayspermonth(jxdatetime_t *dt)
  * fields and related fields to get everthing back in range again.  For example
  * if you *dt is 1999-12-32 then after normalization it'll be 2000-01-01.
  */
-static void normalize(jxdatetime_t *dt)
+static void normalize(edjdatetime_t *dt)
 {
 	/* normalize seconds, adjusting minutes */
 	while (dt->second < 0) {
@@ -94,7 +94,7 @@ static void normalize(jxdatetime_t *dt)
 }
 
 /* Negate all fields of a period */
-static void negate_period(jxdatetime_t *dt)
+static void negate_period(edjdatetime_t *dt)
 {
 	dt->year = -dt->year;
 	dt->month = -dt->month;
@@ -107,7 +107,7 @@ static void negate_period(jxdatetime_t *dt)
 /* Test whether a given period is negative.  It's negative if the first
  * non-zero number is negative.
  */
-static int is_negative_period(jxdatetime_t *dt)
+static int is_negative_period(edjdatetime_t *dt)
 {
 	if (dt->year != 0)
 		return dt->year < 0;
@@ -125,7 +125,7 @@ static int is_negative_period(jxdatetime_t *dt)
 /* Normalize a period.  This should result in all numbers being non-negative
  * or all non-positive.
  */
-static void normalize_period(jxdatetime_t *dt)
+static void normalize_period(edjdatetime_t *dt)
 {
 	int	negate;
 	/* If negative, then negate it so the first number is positive */
@@ -175,7 +175,7 @@ static void normalize_period(jxdatetime_t *dt)
 }
 
 /* Parse an ISO period string.  Return 0 if successful, 1 if malformed */
-static int parseperiod(const char *str, jxdatetime_t *dt)
+static int parseperiod(const char *str, edjdatetime_t *dt)
 {
 	int	num, negate, sign, intime, infrac, weeks;
 
@@ -314,7 +314,7 @@ static int parseperiod(const char *str, jxdatetime_t *dt)
 /* Add a period to a date or another period.  If "dt" really is a date then
  * you'll probably want to call normalize(dt) after this.
  */
-static void addperiod(jxdatetime_t *dt, const jxdatetime_t *period)
+static void addperiod(edjdatetime_t *dt, const edjdatetime_t *period)
 {
 	dt->year += period->year;
 	dt->month += period->month;
@@ -327,7 +327,7 @@ static void addperiod(jxdatetime_t *dt, const jxdatetime_t *period)
 /* Subtract a period to a date or another period.  If "dt" really is a date
  * then you'll probably want to call normalize(dt) after this.
  */
-static void subtractperiod(jxdatetime_t *dt, const jxdatetime_t *period)
+static void subtractperiod(edjdatetime_t *dt, const edjdatetime_t *period)
 {
 	dt->year -= period->year;
 	dt->month -= period->month;
@@ -341,7 +341,7 @@ static void subtractperiod(jxdatetime_t *dt, const jxdatetime_t *period)
  * datetime or time, which is ignored.  The non-timezone fields of *dt are
  * NOT altered in any way.
  */
-static void parsetz(const char *str, jxdatetime_t *dt)
+static void parsetz(const char *str, edjdatetime_t *dt)
 {
 	int tzhours, tzminutes;
 	char tzsign[2];
@@ -373,7 +373,7 @@ static void parsetz(const char *str, jxdatetime_t *dt)
  * some time, and usually when dealing with local timezones we don't care
  * about how far east/west of Greenwich we are.
  */
-static void setlocaltz(jxdatetime_t *dt)
+static void setlocaltz(edjdatetime_t *dt)
 {
 	time_t	when;	/* date/time in binary */
 	struct tm tmlocal, tmutc;
@@ -411,9 +411,9 @@ static void setlocaltz(jxdatetime_t *dt)
 }
 
 /* Convert a parsed datetime to a time_t */
-static time_t dtbinary(jxdatetime_t *dt)
+static time_t dtbinary(edjdatetime_t *dt)
 {
-	jxdatetime_t localdt;
+	edjdatetime_t localdt;
 	struct tm tm;
 
 	/* Make a copy of *dt that we can tweak */
@@ -449,7 +449,7 @@ static time_t dtbinary(jxdatetime_t *dt)
 /* Parse an ISO time string, with optional timezone.  Return 0 on success or
  * some other value on errors.
  */
-static int parsetime(const char *str, jxdatetime_t *dt)
+static int parsetime(const char *str, edjdatetime_t *dt)
 {
 	int fields;
 	char	ampm[3];
@@ -505,10 +505,10 @@ static int convertMonthName(char mon[3])
 /* Parse a date or datetime, including the timezone (if any).  Returns 0 on
  * success, or 1 if str is malformed.
  */
-static int parsedatetime(const char *str, jxdatetime_t *dt)
+static int parsedatetime(const char *str, edjdatetime_t *dt)
 {
 	int fields;
-	jxdatetime_t jt;
+	edjdatetime_t jt;
 	char	mon[4], sign[2];
 	int	tzhour, tzminute;
 
@@ -586,10 +586,10 @@ static int parsedatetime(const char *str, jxdatetime_t *dt)
 	return 0;
 }
 
-/* Convert a jxdatetime_t to a string.  "dtz" is "D" for date only, "T"
+/* Convert an edjdatetime_t to a string.  "dtz" is "D" for date only, "T"
  * for time, "DT" for datetime, and "Z" to include the timezone.
  */
-static void datetimestr(char *result, const jxdatetime_t *dt, const char *dtz)
+static void datetimestr(char *result, const edjdatetime_t *dt, const char *dtz)
 {
 	int	tz;
 
@@ -712,27 +712,27 @@ static int match(const char *pattern, const char *str)
 /* Finally we get to the exposed functions                                    */
 
 /* Return 1 iff *str looks like an ISO date "YYYY-MM-DD" */
-int jx_str_date(const char *str)
+int edj_str_date(const char *str)
 {
 	return match("####-##-##", str);
 }
 
 /* Return 1 iff *str looks like an ISO time "YYYY-MM-DD" with optional TZ */
-int jx_str_time(const char *str)
+int edj_str_time(const char *str)
 {
 	return match("##:##:##.Z", str) || match("##:##Z", str);
 }
 
 /* Return 1 iff *str looks like an ISO datetime "YYYY-MM-DDThh:mm:ss" optional TAZ */
-int jx_str_datetime(const char *str)
+int edj_str_datetime(const char *str)
 {
 	return match("####-##-##T##:##:##.Z", str);
 }
 
 /* Return 1 iff *str looks like an ISO period "DnYnMnWnDTnHnMnS" */
-int jx_str_period(const char *str)
+int edj_str_period(const char *str)
 {
-	jxdatetime_t period;
+	edjdatetime_t period;
 
 	/* If we can parse it as a period, then its a period */
 	return parseperiod(str, &period) == 0;
@@ -742,9 +742,9 @@ int jx_str_period(const char *str)
  * mostly for use in the gap() function (jfn_gap() in calcfunc.c).  Returns -1
  * on error.
  */
-int jx_datetime_seconds(const char *str)
+int edj_datetime_seconds(const char *str)
 {
-	jxdatetime_t dt;
+	edjdatetime_t dt;
 	if (parsedatetime(str, &dt))
 		return -1;
 	return (int)dtbinary(&dt);
@@ -754,7 +754,7 @@ int jx_datetime_seconds(const char *str)
  * intended mostly for use in the gap() function(jfn_gap() in calcfunc.c).
  * Returns -1 on error, or the number of seconds since midnight on success
  */
-int jx_time_seconds(const char *str)
+int edj_time_seconds(const char *str)
 {
 	int	hour, minute, second;
 
@@ -765,13 +765,13 @@ int jx_time_seconds(const char *str)
 }
 
 
-/* This is a helper function, combining common parts of jx_date(),
- * jx_time(), and jx_datetime().  The "dtz" parameter controls behavior.
+/* This is a helper function, combining common parts of edj_date(),
+ * edj_time(), and edj_datetime().  The "dtz" parameter controls behavior.
  * Return 0 on success or non-zero on error.
  */
 static int dtzhelper(char *result, const char *str, const char *tz, const char *dtz)
 {
-	jxdatetime_t dt, newtz;
+	edjdatetime_t dt, newtz;
 
 	/* Parse it */
 	if (*dtz == 'D') {
@@ -812,7 +812,7 @@ static int dtzhelper(char *result, const char *str, const char *tz, const char *
 /* Return the date portion of a date or datetime.  Return 0 on success,
  * else non-0 for error.
  */
-int jx_date(char *result, const char *str)
+int edj_date(char *result, const char *str)
 {
 	return dtzhelper(result, str, NULL, "D");
 }
@@ -823,7 +823,7 @@ int jx_date(char *result, const char *str)
  * "tz" can be "" for local time, "Z" for UTC, or "+00:00" or "+0000"
  * for other timezones.
  */
-int jx_time(char *result, const char *str, const char *tz)
+int edj_time(char *result, const char *str, const char *tz)
 {
 	return dtzhelper(result, str, tz, "TZ");
 }
@@ -834,7 +834,7 @@ int jx_time(char *result, const char *str, const char *tz)
  * the timezone string in the response.  "tz" can be "" for local time,
  * "Z" for UTC, or "+00:00" or "+0000" for other timezones.
  */
-int jx_datetime(char *result, const char *str, const char *tz)
+int edj_datetime(char *result, const char *str, const char *tz)
 {
 	return dtzhelper(result, str, tz, "DTZ");
 }
@@ -846,7 +846,7 @@ int jx_datetime(char *result, const char *str, const char *tz)
  * last returns the number of minutes east of Greenwich, as a string.
  * Returns 0 on success or non-zero on failure.
  */
-int jx_timezone(char *result, const char *str, const char *format)
+int edj_timezone(char *result, const char *str, const char *format)
 {
 	return 1; //!!!
 }
@@ -855,9 +855,9 @@ int jx_timezone(char *result, const char *str, const char *format)
 /* Add an ISO period to an ISO datetime, and return the result.  Returns 0
  * on success, or non-zero on error.
  */
-int jx_datetime_add(char *result, const char *str, const char *period)
+int edj_datetime_add(char *result, const char *str, const char *period)
 {
-	jxdatetime_t	dt, per;
+	edjdatetime_t	dt, per;
 
 	/* Parse the strings */
 	if (parsedatetime(str, &dt) || parseperiod(period, &per))
@@ -875,9 +875,9 @@ int jx_datetime_add(char *result, const char *str, const char *period)
 /* Subtract an ISO period from an ISO datetime, and return the result.
  * Returns 0 on success, or non-zero on error.
  */
-int jx_datetime_subtract(char *result, const char *str, const char *period)
+int edj_datetime_subtract(char *result, const char *str, const char *period)
 {
-	jxdatetime_t	dt, per;
+	edjdatetime_t	dt, per;
 
 	/* Parse the strings */
 	if (parsedatetime(str, &dt) || parseperiod(period, &per))
@@ -895,14 +895,14 @@ int jx_datetime_subtract(char *result, const char *str, const char *period)
 /* Return the difference between two ISO datetimes, as an ISO period.
  * Returns 0 on success or non-zero on error.
  */
-int jx_datetime_diff(char *result, const char *str1, const char *str2)
+int edj_datetime_diff(char *result, const char *str1, const char *str2)
 {
-	jxdatetime_t dt1, dt2;
+	edjdatetime_t dt1, dt2;
 	time_t when1, when2, diff, seconds;
 	int	neg, dates;
 
 	/* Detect whether they're dates instead of datetimes */
-	dates = jx_str_date(str1) || jx_str_date(str2);
+	dates = edj_str_date(str1) || edj_str_date(str2);
 
 	/* Convert both datetimes to time_t values */
 	if (parsedatetime(str1, &dt1) || parsedatetime(str2, &dt2))
@@ -971,9 +971,9 @@ int jx_datetime_diff(char *result, const char *str1, const char *str2)
 /* Store the absolute value of a period.  Return 0 on success or non-zero on
  * error.
  */
-int jx_period_abs(char *result, const char *text)
+int edj_period_abs(char *result, const char *text)
 {
-	jxdatetime_t jdt;
+	edjdatetime_t jdt;
 
 	/* Fail if not a period */
 	if (parseperiod(text, &jdt))
@@ -1012,8 +1012,8 @@ int jx_period_abs(char *result, const char *text)
 
 /*****************************************************************************/
 
-/* Return a pointer to the named unit within a jxdatetime_t */
-static int *dtunit(jxdatetime_t *jdt, char *unit, int didhour, int asdate)
+/* Return a pointer to the named unit within an edjdatetime_t */
+static int *dtunit(edjdatetime_t *jdt, char *unit, int didhour, int asdate)
 {
 	switch (tolower(*unit)) {
 	case 'y':
@@ -1044,21 +1044,21 @@ static int *dtunit(jxdatetime_t *jdt, char *unit, int didhour, int asdate)
 /* If an object contains a member with a given key, and its value is a number,
  * then return the value as an int.  Otherwise return 0.
  */
-static int intfield(jx_t *obj, char *key)
+static int intfield(edj_t *obj, char *key)
 {
-	jx_t *member = jx_by_key(obj, key);
-	if (!member || member->type != JX_NUMBER)
+	edj_t *member = edj_by_key(obj, key);
+	if (!member || member->type != EDJ_NUMBER)
 		return 0;
-	return jx_int(member);
+	return edj_int(member);
 }
 
 /* This implements most of the logic for the date(), time(), datetime(),
  * and period() functions.
  */
-jx_t *jx_datetime_fn(jx_t *args, char *typename)
+edj_t *edj_datetime_fn(edj_t *args, char *typename)
 {
-	jx_t		*scan;
-	jxdatetime_t	jdt, newtz;
+	edj_t		*scan;
+	edjdatetime_t	jdt, newtz;
 	time_t		t;
 	struct tm	tmlocal;
 	int		num, *unitptr;
@@ -1081,26 +1081,26 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		astime = 1;
 
 	/* Defend against bad calls */
-	if (!args || args->type != JX_ARRAY || !args->first)
-		return jx_error_null(0, "Bad args to jx_datetime()");
+	if (!args || args->type != EDJ_ARRAY || !args->first)
+		return edj_error_null(0, "Bad args to edj_datetime()");
 
 	/* First arg is a string to parse, or an object to dissect, or a number
 	 * to use as a time_t value or start of the first num/unit pair.
-	 * Convert to a jxdatetime_t.
+	 * Convert to an edjdatetime_t.
 	 */
 	memset(&jdt, 0, sizeof jdt);
 	switch (args->first->type) {
-	case JX_STRING:
+	case EDJ_STRING:
 		if (!asdate && !astime) {
 			if (parseperiod(args->first->text, &jdt))
-				return jx_error_null(0, "Invalid period");
+				return edj_error_null(0, "Invalid period");
 		} else {
 			if (parsetime(args->first->text, &jdt)
 			 && parsedatetime(args->first->text, &jdt))
-				return jx_error_null(0, "Invalid date/time");
+				return edj_error_null(0, "Invalid date/time");
 		}
 		break;
-	case JX_OBJECT:
+	case EDJ_OBJECT:
 		jdt.year = intfield(args->first, "year");
 		jdt.month = intfield(args->first, "month");
 		jdt.day = intfield(args->first, "day");
@@ -1108,11 +1108,11 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		jdt.minute = intfield(args->first, "minute");
 		jdt.second = intfield(args->first, "second");
 		jdt.tz = intfield(args->first, "tz");
-		jdt.localtz = jx_is_true(jx_by_key(args->first, "localtz"));
-		jdt.z = jx_is_true(jx_by_key(args->first, "z"));
+		jdt.localtz = edj_is_true(edj_by_key(args->first, "localtz"));
+		jdt.z = edj_is_true(edj_by_key(args->first, "z"));
 		break;
-	case JX_NUMBER:
-		t = jx_int(args->first);
+	case EDJ_NUMBER:
+		t = edj_int(args->first);
 		if (!asdate && !astime) {
 			/* For periods, an initial date should be paired with
 			 * a unit to be named later.  (Or seconds by default).
@@ -1132,7 +1132,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		}
 		break;
 	default:
-		return jx_error_null(0, "%s must be a string or object or \"time_t\" number", typename);
+		return edj_error_null(0, "%s must be a string or object or \"time_t\" number", typename);
 	}
 
 	/* For non-periods, if year is 0 then use local date. */
@@ -1150,24 +1150,24 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 
 	/* Process any other arguments. */
 	for (scan = args->first->next; scan; scan = scan->next) { /* undeferred */
-		if (scan->type == JX_NUMBER) {
+		if (scan->type == EDJ_NUMBER) {
 			/* If we already had a number, interpret it as seconds*/
 			if (havenum)
 				jdt.second = num;
 
 			/* Remember the new number */
-			num = jx_int(scan);
+			num = edj_int(scan);
 			havenum = 1;
-		} else if (scan->type == JX_STRING && tolower(*scan->text) == 't') {
+		} else if (scan->type == EDJ_STRING && tolower(*scan->text) == 't') {
 			astimet = 1;
-		} else if (scan->type == JX_STRING && tolower(*scan->text) == 'l') {
+		} else if (scan->type == EDJ_STRING && tolower(*scan->text) == 'l') {
 			aslocale = 1;
-		} else if (scan->type == JX_STRING && tolower(*scan->text) == 'n') {
+		} else if (scan->type == EDJ_STRING && tolower(*scan->text) == 'n') {
 			asnormal = 1;
-		} else if (scan->type == JX_STRING && strchr(scan->text, '%')) {
+		} else if (scan->type == EDJ_STRING && strchr(scan->text, '%')) {
 			aslocale = 1;
 			localefmt = scan->text;
-		} else if (scan->type == JX_STRING
+		} else if (scan->type == EDJ_STRING
 		    && (asdate || astime)
 		    && (!*scan->text || strchr("Zz+-", *scan->text))) {
 			/* Parse the new timezone */
@@ -1188,10 +1188,10 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 				jdt.localtz = newtz.localtz;
 				jdt.z = newtz.z;
 			}
-		} else if (scan->type == JX_STRING) {
+		} else if (scan->type == EDJ_STRING) {
 			/* It had better be a unit label */
 			unit = scan->text;
-		} else if (jx_is_true(scan)) {
+		} else if (edj_is_true(scan)) {
 			asobject = 1;
 		}
 
@@ -1199,7 +1199,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		if (havenum && unit) {
 			unitptr = dtunit(&jdt, unit, didhour, asdate);
 			if (!unitptr)
-				return jx_error_null(0, "Unrecognized time unit \"%s\"", unit);
+				return edj_error_null(0, "Unrecognized time unit \"%s\"", unit);
 			*unitptr = num;
 			if (unitptr == &jdt.hour)
 				didhour = 1;
@@ -1215,7 +1215,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 	 */
 	if (havenum) {
 		if (asdate || astime)
-			return jx_error_null(0, "Extra number to %s()", typename);
+			return edj_error_null(0, "Extra number to %s()", typename);
 		jdt.second = num;
 	}
 
@@ -1232,7 +1232,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		/* Find the field */
 		unitptr = dtunit(&jdt, unit, 0, asdate);
 		if (!unitptr)
-			return jx_error_null(0, "Unrecognized time unit \"%s\"", unit);
+			return edj_error_null(0, "Unrecognized time unit \"%s\"", unit);
 		if (!asdate && !astime) {
 			/* For period, fold any larger units into the requested
 			 * one.  This requires approximations for lengths of
@@ -1251,19 +1251,19 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		}
 
 		/* Just return the requested value */
-		return jx_from_int(*unitptr);
+		return edj_from_int(*unitptr);
 	} else if (asobject) {
 		/* Return as an object */
-		scan = jx_object();
+		scan = edj_object();
 		if (asdate || !astime) {
-			jx_append(scan, jx_key("year", jx_from_int(jdt.year)));
-			jx_append(scan, jx_key("month", jx_from_int(jdt.month)));
-			jx_append(scan, jx_key("day", jx_from_int(jdt.day)));
+			edj_append(scan, edj_key("year", edj_from_int(jdt.year)));
+			edj_append(scan, edj_key("month", edj_from_int(jdt.month)));
+			edj_append(scan, edj_key("day", edj_from_int(jdt.day)));
 		}
 		if (astime || !asdate) {
-			jx_append(scan, jx_key("hour", jx_from_int(jdt.hour)));
-			jx_append(scan, jx_key("minute", jx_from_int(jdt.minute)));
-			jx_append(scan, jx_key("second", jx_from_int(jdt.second)));
+			edj_append(scan, edj_key("hour", edj_from_int(jdt.hour)));
+			edj_append(scan, edj_key("minute", edj_from_int(jdt.minute)));
+			edj_append(scan, edj_key("second", edj_from_int(jdt.second)));
 
 			/* Timezone is skipped for period */
 			if (astime) {
@@ -1274,16 +1274,16 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 					setlocaltz(&jdt);
 
 				/* Append timezone info */
-				jx_append(scan, jx_key("tz", jx_from_int(jdt.tz)));
-				jx_append(scan, jx_key("localtz", jx_boolean(jdt.localtz)));
-				jx_append(scan, jx_key("z", jx_boolean(jdt.z)));
+				edj_append(scan, edj_key("tz", edj_from_int(jdt.tz)));
+				edj_append(scan, edj_key("localtz", edj_boolean(jdt.localtz)));
+				edj_append(scan, edj_key("z", edj_boolean(jdt.z)));
 			}
 		}
 		return scan;
 	} else if (astimet) {
 		/* Return as time_t number */
 		t = dtbinary(&jdt);
-		return jx_from_int((int)t);
+		return edj_from_int((int)t);
 	} else if (!asdate && !astime) {
 		/* Return as an ISO Period string */
 		s = buf;
@@ -1325,7 +1325,7 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		/* If all units were 0, then as at least want "P0D" */
 		if (s == &buf[1])
 			strcpy(s, "0D");
-		return jx_string(buf, -1);
+		return edj_string(buf, -1);
 	} else if (aslocale) {
 		/* Start by converting to binary, and then back struct tm.
 		 * We can't just stuff jdt values into the struct tm because
@@ -1352,8 +1352,8 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		for (s = buf; isdigit(*s); s++) {
 		}
 		if (*buf && !*s)
-			return jx_from_int(atoi(buf));
-		return jx_string(buf, -1);
+			return edj_from_int(atoi(buf));
+		return edj_string(buf, -1);
 	} else {
 		/* Return as an ISO date/time/datetime string */
 		if (asdate && astime)
@@ -1363,6 +1363,6 @@ jx_t *jx_datetime_fn(jx_t *args, char *typename)
 		else
 			s = "TZ";
 		datetimestr(buf, &jdt, s);
-		return jx_string(buf, -1);
+		return edj_string(buf, -1);
 	}
 }

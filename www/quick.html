@@ -1,32 +1,32 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Quick Intro to jx</title>
-    <link rel="stylesheet" type="text/css" href="jx.css">
-    <meta name="description" content="jx quick intro">
-    <meta name="keywords" content="jx, introduction, quick, intro, overview">
+    <title>Quick Intro to edj</title>
+    <link rel="stylesheet" type="text/css" href="edj.css">
+    <meta name="description" content="edj quick intro">
+    <meta name="keywords" content="edj, introduction, quick, intro, overview">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>Quick Introduction to jx</h1>
+    <h1>Quick Introduction to edj</h1>
     This document just breezes quickly through the features of the
-    <strong>jx</strong> program.
+    <strong>edj</strong> program.
     It is intended to give you a feel for what it can do, but not explain
     every detail of how it's doing it.
     By the time you reach the end of this document, you should have a good feel
-    for whether <strong>jx</strong> can help you do what you need to do.
+    for whether <strong>edj</strong> can help you do what you need to do.
     <p>
-    Only the <strong>jx</strong> program and its language are described
+    Only the <strong>edj</strong> program and its language are described
     here.
     The library that it uses is a whole other story.
 
-    <h2>Who is jx for?</h2>
+    <h2>Who is edj for?</h2>
     Me.  I wrote it for me.
     <p>
     I'm a systems programmer who maintains interfaces with a wide variety
     of service providers.
     I dig through a lot of JSON data.
-    99.9% of that can be automated, using <strong>jx</strong> and/or
+    99.9% of that can be automated, using <strong>edj</strong> and/or
     its library.
     Sometimes, though, I need to dig through the downloaded data manually,
     and there's a lot of it.
@@ -40,7 +40,7 @@
     It's stored in tables there.
     The JSON data may use nested data structures, but there's a strong
     table orientation throughout most of it.
-    jx is good with tables.
+    edj is good with tables.
     <p>
     Often the data was, at some point, represented in XML.
     It gets converted to JSON but still has some of the stink of XML on it.
@@ -49,22 +49,22 @@
     by repeatable elements.
     But this means an empty array is simply gone,
     and a one-element array can become a simple variable.
-    Many of jx's array operators and functions were written with this
+    Many of edj's array operators and functions were written with this
     in mind.
     Another XML-ism is that you often get objects inside of objects inside
     of objects.
     There can be good reasons for doing this in any data language, but
     it happens more in XML.
-    jx has a <tt>.@</tt> operator which is sort of a "deep search"
+    edj.has a <tt>.@</tt> operator which is sort of a "deep search"
     version of the usual <tt>.</tt> operator to help with this.
 
-    <h2>What is jx like?</h2>
+    <h2>What is edj like?</h2>
     Syntactically, the main influences are JavaScript and SQL.
     There are some new operators and functions, but mostly its like a
     stripped-down JavaScript with some SQL features added in.
     It supports the most common JavaScript functions and operators.
     <blockquote>
-    jx's scripting language is <strong>not a full JavaScript or SQL
+    edj's scripting language is <strong>not a full JavaScript or SQL
     implementation</strong>, nor will it ever be.
     That isn't the goal.
     Instead, it's meant to be a simple little language for doing simple
@@ -85,9 +85,9 @@
     It's also sort of like the debugging console in most desktop web browsers.
     <p>
     Here are a few examples just to whet your appetite.
-    The bold text is a jx expression, and the text after it is the result.
+    The bold text is an edj expression, and the text after it is the result.
     You can click on any bold text to copy it to the clipboard; if you 
-    have jx installed and running on your computer, this makes it easy
+    have edj installed and running on your computer, this makes it easy
     to play with the examples.
 
     <div class="example">
@@ -113,7 +113,7 @@
 	</table>
       </samp>
       test.scores is a JSON array of objects.
-      jx treats that as a table and, by default, outputs it as a grid.
+      edj treats that as a table and, by default, outputs it as a grid.
       (A web browser's debugging console can output arrays of objects as
       a grid too, via its <tt>console.table()</tt> function.)
     </div>
@@ -161,19 +161,19 @@
 
     <p>
     These are just one-liners.  Nothing fancy or too complicated.
-    The big takeaway is: jx expressions are a lot like JavaScript,
+    The big takeaway is: edj expressions are a lot like JavaScript,
     with a bit of SQL and a not-all-that-magical <tt>#</tt> operator.
 
-    <h2>How can jx help process downloads?</h2>
+    <h2>How can edj.help process downloads?</h2>
 
-    jx is very good at converting JSON data to other formats.
+    edj is very good at converting JSON data to other formats.
     Those formats could be a different JSON layout (e.g., to convert data
     from different service providers to a single consistent format),
     or CSV or even a series of shell script records.
 
     <div class="example">
-      <kbd>#This is a shell command, not a jx command</kbd>
-      <kbd>jx -s sh -c data.scores sampledata/test.json</kbd>
+      <kbd>#This is a shell command, not an edj command</kbd>
+      <kbd>edj -s sh -c data.scores sampledata/test.json</kbd>
       <samp>
 name=Peter run=1 score=10<br/>
 name=Paul run=1 score=20<br/>
@@ -192,17 +192,17 @@ name=Mary run=3 score=40
       If any of these values required quoting to protect it from the shell,
       such quoting would be automatically added.
       You can also tweak the variable names by adding a <tt>-sprefix="my_"</tt> flag
-      to jx, if necessary.
+      to edj, if necessary.
       <p>
       This uses the same "test.scores" table as earlier examples.
-      Those earlier examples were all interactive, and we assumed jx
+      Those earlier examples were all interactive, and we assumed edj
       was configured to automatically load files from the "sampledata"
       directory.
     </div>
 
     <div class="example">
-      <kbd>#This is a shell command, not a jx command</kbd>
-      <kbd>jx -s sh -c data.scores sampledata/test.json | while read row<br/>
+      <kbd>#This is a shell command, not an edj command</kbd>
+      <kbd>edj -s sh -c data.scores sampledata/test.json | while read row<br/>
       do<div style="padding-left: 2em;">
       eval $row<br/>
       echo "$name scored $score in run# $run"
@@ -225,32 +225,32 @@ name=Mary run=3 score=40
       Those variables can then be used any way you want.
     </div>
     <p>
-    When looping over large arrays, jx <em>does not</em> need to load
+    When looping over large arrays, edj <em>does not</em> need to load
     the whole array into memory before processing can begin.
     Instead, it parses as much as it can, and notes where the large
     arrays appear in the JSON document, without loading them.
     During processing, as you loop over the array it will read the records
     piecemeal.
 
-    <h2>How can jx help for uploads?</h2>
-    jx allows you to construct JSON data, either in memory or using temporary files.
+    <h2>How can edj.help for uploads?</h2>
+    edj allows you to construct JSON data, either in memory or using temporary files.
     You can also pass data into the script via <var>name</var>=</var>value</var>
     arguments on the command line, and use the
     values of those variables in the script.
 
     <div class="example">
-      <kbd># These are shell commands, not jx commands<br/>
-      file=/tmp/jx$$.json<br/>
+      <kbd># These are shell commands, not edj commands<br/>
+      file=/tmp/edj$$.json<br/>
       echo "{}" &gt;$file<br/>
-      jx -u -c'data.custno=custno' custno=12554 $file<br/>
-      jx -u -c'data.name=first - last' first=Steve last=Kirkendall $file<br/>
-      jx -u -c'data.contactok=contact' contact=false $file<br/>
+      edj -u -c'data.custno=custno' custno=12554 $file<br/>
+      edj -u -c'data.name=first - last' first=Steve last=Kirkendall $file<br/>
+      edj -u -c'data.contactok=contact' contact=false $file<br/>
       cat $file</kbd>
       <samp>{"custno":12554,"name":"Steve Kirkendall","contactok":false}</samp>
       In this example, we're building the JSON data piecemeal in a temporary file.
       First we let the shell choose a filename, and initialize the file to an
       empty object.
-      Then we invoke jx repeatedly to add/update the data.
+      Then we invoke edj repeatedly to add/update the data.
       The <tt>-u</tt> option tells it to write the data out to the same file
       that it read it from;
       the file name is the last thing on the command line.
@@ -265,10 +265,10 @@ name=Mary run=3 score=40
       You can see this in the final object.
     </div>
 
-    <h2>Why run jx interactively?</h2>
+    <h2>Why run edj interactively?</h2>
     It has lots of little features:
     <ul>
-      <li>jx uses the GNU readline library, to provide line editing,
+      <li>edj uses the GNU readline library, to provide line editing,
           history, and name completion.
       <li>Any expression on a line by itself will output its result.
           You don't need to add "print" all the time.
@@ -299,14 +299,14 @@ name=Mary run=3 score=40
     but a few are useful for interactive use.
     They can completely replace the user interface.
 
-    <h2>How big is jx?  How fast is it?</h2>
-    jx is a "medium weight" JSON tool.
+    <h2>How big is edj?  How fast is it?</h2>
+    edj is a "medium weight" JSON tool.
     The program itself is about the same size as the
     <a href="https://jqlang.github.io/jq/">jq</a> JSON query tool,
     but about 5 times larger than the
     <a href="https://github.com/jpmens/jo">jo</a> JSON builder tool.
     A full-fledged JavaScript interpreter would be at least 30 times larger
-    than jx, and it wouldn't interface well with shell scripts, or
+    than edj, and it wouldn't interface well with shell scripts, or
     display tables in grid format, or support plugins, or
     autoload data from directories, or have SQL-like features or the
     <a target="_PARENT" href="index.html?op=each">#</a> operator.
@@ -328,21 +328,21 @@ name=Mary run=3 score=40
     I sometimes run this on a live web host, and don't want to use up all of
     the CPU.
 
-    <h2>Can jx be extended?</h2>
-    Yes, there are basically three ways to extend jx.
+    <h2>Can edj be extended?</h2>
+    Yes, there are basically three ways to extend edj.
     <p>
-    The easy way is to define a custom set of functions in jx's
+    The easy way is to define a custom set of functions in edj's
     scripting language for doing tasks that you find yourself repeating often.
     For example, the above customer-building example could be implemented
     as a function, and then the "-c" option is just <tt>-c'buildCustomer()'</tt>.
-    jx can be configured to load your functions automatically.
+    edj can be configured to load your functions automatically.
     <p>
-    The next method is to modify jx's source code and recompile it.
+    The next method is to modify edj's source code and recompile it.
     If all you need to do is add a new function, that's fairly easy because
     script functions (defined in <tt>calcfunc.c</tt>) are mostly segregated
     from the rest of the code, so you don't need to learn <em>everything</em>
-    about jx's anatomy to add a function.
-    A few basic <tt>jx_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
+    about edj's anatomy to add a function.
+    A few basic <tt>edj_</tt><var>xxxx</var><tt>()</tt> functions will suffice.
     But all the source code is there if you need it.
     Similarly, commands are segregated into the <tt>cmd.c</tt> source file.
     <p>
@@ -352,7 +352,7 @@ name=Mary run=3 score=40
     should serve as good examples.
     Technically, each plugin is a shared library which must define a "plugin<var>name</var>()"
     function.
-    That function will then call jx C functions to register "hooks" for
+    That function will then call edj C functions to register "hooks" for
     things like autoloading data, adding commands, and... lots of stuff.
     No single thing is all that complicated, but there are a lot of hooks
     to choose from.
@@ -364,19 +364,19 @@ name=Mary run=3 score=40
     <a target="_PARENT" href="index.html?f">functions</a>, and
     <a target="_PARENT" href="index.html?cmd">commands</a>.
     The references are loaded with examples, which should give you some idea
-    of what jx can do.
+    of what edj can do.
     Nearly all of these examples are one-liners, which is appropriate for
     an interactive data-exploration tool.
     <p>
     More complex things are possible though, so 
     eventually you'll want to go through the
     <a href="index.html?main=tutscript">Scripting Tutorial</a>.
-    The tutorial is a lot more instructive if you have jx installed and
+    The tutorial is a lot more instructive if you have edj installed and
     running on your computer, though, so you should
-    <a href="index.html?download">Download jx</a> first.
+    <a href="index.html?download">Download edj</a> first.
     <p>
     If you're looking for a C library of quick and powerful JSON function,
-    jx's library might satisfy.
+    edj's library might satisfy.
     There's a
     <a href="index.html?tutlib">library tutorial</a> and
     <a href="index.html?lib">library reference</a> here, to help you get

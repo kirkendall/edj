@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Date, Time, DateTime, and Period</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx - Date, Time, DateTime, and Period">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj - Date, Time, DateTime, and Period">
     <meta name="keywords" content="string, number">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
@@ -13,7 +13,7 @@
     Instead, dates and times are represented by strings.
     JSON documents typically use ISO-8601 formats for dates, times, dateTimes,
     and periods.
-    <strong>jx</strong> supports this pretty well.
+    <strong>edj</strong> supports this pretty well.
     <p>
     There are functions and operators for manipulating dates and times.
     Since they're strings, you can also use string functions and operators
@@ -62,7 +62,7 @@
     <p>
     ISO-8601 time zone identifiers are different from Unix's.
     Unix-style time zone names such as "PST8PDT" or "America/Los_Angeles"
-    are <em>not</em> recognized <strong>jx</strong>.
+    are <em>not</em> recognized <strong>edj</strong>.
 
     <h2>Periods</h2>
     Periods are durations of time, and are represented by strings in
@@ -160,7 +160,7 @@
         This results in the whole expression being negative.
         <p>
         The third example is for dates instead of times, and it shows that when
-        "borrowing" from months to normalize days, jx assumes every month
+        "borrowing" from months to normalize days, edj assumes every month
         as 30 days.
         That certainly isn't perfect, but perfection isn't possible with
         date arithmetic.

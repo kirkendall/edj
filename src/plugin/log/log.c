@@ -8,16 +8,16 @@
 #include <glob.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <jx.h>
+#include <edj.h>
 
-/* These are the default settings.  They are added to jx_config by the
- * init() function, and then loaded by the main jxcalc program via
- * jx_config_load().
+/* These are the default settings.  They are added to edj_config by the
+ * init() function, and then loaded by the main edjcalc program via
+ * edj_config_load().
  */
 static char *config = "{"
 	"\"dir\":\"\","
-	"\"name-list\":[\"tty\",\"jxcalc\"],"
-	"\"name\":\"jxcalc\","
+	"\"name-list\":[\"tty\",\"edjcalc\"],"
+	"\"name\":\"edjcalc\","
 	"\"ext\":\".log\","
 	"\"rollover-list\":[\"daily\",\"size\",\"never\"],"
 	"\"rollover\":\"never\","
@@ -34,7 +34,7 @@ static char *config = "{"
 "}";
 
 
-static jxcmdname_t *jcn_log;
+static edjcmdname_t *jcn_log;
 
 
 /* When logset is used to select a default log name, this is where it's stored.
@@ -46,7 +46,7 @@ static char *defaultname;
 /* Get a boolean config */
 static int getbool(char *key)
 {
-	return jx_is_true(jx_config_get("plugin.log", key));
+	return edj_is_true(edj_config_get("plugin.log", key));
 }
 
 /* Generate the name of a log file.  This incorporates directory name and
@@ -55,7 +55,7 @@ static int getbool(char *key)
  */
 static char *mkfilename(const char *logname, int ver)
 {
-	jx_t	*dir, *ext;
+	edj_t	*dir, *ext;
 	char	*dirstr, *extstr, verstr[20];
 	size_t	len;
 	static size_t	alloclen;
@@ -63,11 +63,11 @@ static char *mkfilename(const char *logname, int ver)
 
 
 	/* Get the directory, defaulting to "." */
-	dir = jx_config_get("plugin.log", "dir");
+	dir = edj_config_get("plugin.log", "dir");
 	dirstr = dir ? dir->text : ".";
 
 	/* Get the extension */
-	ext = jx_config_get("plugin.log", "ext");
+	ext = edj_config_get("plugin.log", "ext");
 	extstr = ext ? ext->text : "log";
 
 	/* Convert the version number to a string */
@@ -139,9 +139,9 @@ static void datedelta(char buf[12], int days)
 /* Return the number of days/logs to keep */
 static int keep()
 {
-	jx_t *val = jx_config_get("plugin.log", "keep");
-	if (val && val->type == JX_NUMBER)
-		return jx_int(val);
+	edj_t *val = edj_config_get("plugin.log", "keep");
+	if (val && val->type == EDJ_NUMBER)
+		return edj_int(val);
 	return 0;
 }
 
@@ -149,7 +149,7 @@ static int keep()
 /* Do file rollover by date */
 static void rolldaily(const char *logname)
 {
-	jx_t	*val;
+	edj_t	*val;
 	time_t	now;
 	struct tm tm;
 	int	utc;
@@ -236,7 +236,7 @@ static void rollsize(const char *logname)
 	char *incrname;
 	size_t	len;
 	struct stat st;
-	jx_t	*val;
+	edj_t	*val;
 	off_t	bytes;
 	int	keeplogs, ver, highver;
 	int	fd;
@@ -253,9 +253,9 @@ static void rollsize(const char *logname)
 
 	/* Get the size limit */
 	bytes = 100000;
-	val = jx_config_get("plugin.log", "bytes");
-	if (val && val->type == JX_NUMBER)
-		bytes = jx_int(val);
+	val = edj_config_get("plugin.log", "bytes");
+	if (val && val->type == EDJ_NUMBER)
+		bytes = edj_int(val);
 
 	/* Check the size of the log file */
 	if (fstat(fd, &st) < 0 || st.st_size < bytes) {
@@ -315,7 +315,7 @@ static FILE *switchfile(const char *logname)
 	static FILE *prevfp;
 	static char *prevname;
 	char	*filename;
-	jx_t	*roll;
+	edj_t	*roll;
 
 	/* If same name, just keep using it */
 	if (prevfp && prevname && !strcmp(prevname, logname))
@@ -328,10 +328,10 @@ static FILE *switchfile(const char *logname)
 		free(prevname);
 
 	/* Do the rollover thing. */
-	roll = jx_config_get("plugin.log", "rollover");
-	if (roll && roll->type == JX_STRING && !strcmp(roll->text, "daily"))
+	roll = edj_config_get("plugin.log", "rollover");
+	if (roll && roll->type == EDJ_STRING && !strcmp(roll->text, "daily"))
 		rolldaily(logname);
-	else if (roll && roll->type == JX_STRING && !strcmp(roll->text, "size"))
+	else if (roll && roll->type == EDJ_STRING && !strcmp(roll->text, "size"))
 		rollsize(logname);
 
 	/* Open the file.  If we can't open it, use stderr. */
@@ -345,14 +345,14 @@ static FILE *switchfile(const char *logname)
 	 */
 	if (ftell(prevfp) == 0) {
 		char today[12];
-		jx_t *bytes = jx_config_get("plugin.log", "bytes");
+		edj_t *bytes = edj_config_get("plugin.log", "bytes");
 		datedelta(today, 0);
-		if (roll && roll->type != JX_STRING)
+		if (roll && roll->type != EDJ_STRING)
 			fprintf(prevfp, "%s never\n", today);
 		else if (roll && !strcmp(roll->text, "daily"))
 			fprintf(prevfp, "%s daily %d", today, keep());
 		else if (roll && !strcmp(roll->text, "size"))
-			fprintf(prevfp, "%s size(%dK) %d", today, jx_int(bytes) / 1024, keep());
+			fprintf(prevfp, "%s size(%dK) %d", today, edj_int(bytes) / 1024, keep());
 		else
 			fprintf(prevfp, "%s never\n", today);
 	}
@@ -366,26 +366,26 @@ static FILE *switchfile(const char *logname)
 /* Parse a logset command.  Mostly this just sets the default output for any
  * following log commands.
  */
-static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
+static edjcmd_t *logset_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
-	jx_t	*setting, *err;
+	edj_t	*setting, *err;
 	char	*setstr;
 	const char *str;
-	jx_cmd_parse_whitespace(src);
+	edj_cmd_parse_whitespace(src);
 
 
 	/* Optional "name:", or just ":" to use the default name from config for the log, must not contain punctuation/whitespace */
 	if (*src->str == ':') {
 		src->str++; /* move past ":" */
 		free(defaultname);
-		setting = jx_config_get("plugin.log", "name");
+		setting = edj_config_get("plugin.log", "name");
 		if (setting)
 			defaultname = strdup(setting->text);
 		else
 			defaultname = NULL;
 	} else if (isalpha(*src->str)) {
 		const char *before = src->str;
-		char *newname = jx_cmd_parse_key(src, 0);
+		char *newname = edj_cmd_parse_key(src, 0);
 		if (!newname || *src->str != ':') {
 			src->str = before;
 		} else {
@@ -396,7 +396,7 @@ static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
 	}
 
 	/* Optional log settings */
-	jx_cmd_parse_whitespace(src);
+	edj_cmd_parse_whitespace(src);
 	if (*src->str && *src->str != ';' && *src->str != '}') {
 		/* Find the end of the command */
 		for (str = src->str; *str && !strchr(";}\n", *str); str++) {
@@ -409,12 +409,12 @@ static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
 			src->str++;
 
 		/* Parse it */
-		setting = jx_by_expr(jx_config, "plugin.log", NULL, NULL, NULL);
-		err = jx_config_parse(setting, setstr, NULL);
+		setting = edj_by_expr(edj_config, "plugin.log", NULL, NULL, NULL);
+		err = edj_config_parse(setting, setstr, NULL);
 		free(setstr);
 		if (err) {
-			*referr = jx_cmd_error(src->str, "%s", err->text);
-			jx_free(err);
+			*referr = edj_cmd_error(src->str, "%s", err->text);
+			edj_free(err);
 		}
 	}
 
@@ -423,23 +423,23 @@ static jxcmd_t *logset_parse(jxsrc_t *src, jxcmdout_t **referr)
 }
 
 /* Placeholder - logset is handled entirely at compile time */
-static jxcmdout_t *logset_run(jxcmd_t *cmd, jxcontext_t **refcontext)
+static edjcmdout_t *logset_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 {
 	return NULL;
 }
 
-static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
+static edjcmd_t *log_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
-	jxsrc_t start;
+	edjsrc_t start;
 	char	*name = NULL;
 	int	detail = 1;
-	jxcalc_t	*list;
+	edjcalc_t	*list;
 	const char	*err;
-	jxcmd_t *cmd;
+	edjcmd_t *cmd;
 
 	/* If the defaultname hasn't been set yet, then set it now */
 	if (!defaultname) {
-		jx_t *j = jx_config_get("plugin.log", "name");
+		edj_t *j = edj_config_get("plugin.log", "name");
 		defaultname = strdup(j->text);
 	}
 
@@ -448,11 +448,11 @@ static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
 	 */
 	start = *src;
 	if (*src->str == ':') {
-		jx_t *setting = jx_config_get("plugin.log", "name");
+		edj_t *setting = edj_config_get("plugin.log", "name");
 		if (setting)
 			name = strdup(setting->text);
 	} else if (isalpha(*src->str)) {
-		name = jx_cmd_parse_key(src, 0);
+		name = edj_cmd_parse_key(src, 0);
 		if (!name || *src->str != ':') {
 			src->str = start.str;
 			if (name)
@@ -464,7 +464,7 @@ static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
 		name = strdup(defaultname);
 
 	/* Optional "n:" to set the detail number */
-	jx_cmd_parse_whitespace(src);
+	edj_cmd_parse_whitespace(src);
 	if (*src->str >= '1' && *src->str <= '9' && src->str[1] == ':') {
 		detail = *src->str - '0';
 		src->str += 2;
@@ -477,41 +477,41 @@ static jxcmd_t *log_parse(jxsrc_t *src, jxcmdout_t **referr)
  	list = NULL;
 	err = NULL;
 	do {
-		jxcalc_t *item = jx_calc_parse(src->str, &src->str, &err, FALSE);
+		edjcalc_t *item = edj_calc_parse(src->str, &src->str, &err, FALSE);
 		if (!item || err || (*src->str && !strchr(";},", *src->str))) {
 			free(name);
 			if (list)
-				jx_calc_free(list);
+				edj_calc_free(list);
 			if (item)
-				jx_calc_free(item);
-			*referr = jx_cmd_error(start.str, err ? err : "Syntax error in \"%s\" expression", "log");
+				edj_calc_free(item);
+			*referr = edj_cmd_error(start.str, err ? err : "Syntax error in \"%s\" expression", "log");
 			return NULL;
 		}
-		list = jx_calc_list(list, item);
+		list = edj_calc_list(list, item);
 	} while (*src->str++ == ',');
 
 	/* Build the command */
-	cmd = jx_cmd(&start, jcn_log);
+	cmd = edj_cmd(&start, jcn_log);
 	cmd->calc = list;
 	cmd->key = name;
 	cmd->var = detail + '0';
 	return cmd;
 }
 
-static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
+static edjcmdout_t *log_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 {
-	jx_t *list, *scan;
+	edj_t *list, *scan;
 	int	showdate, showtime, showpid, showfile, showline;
 	int	lastchar;
-	jxformat_t tweaked;
+	edjformat_t tweaked;
 
 	/* If this detail level is too high, skip it */
-	scan = jx_config_get("plugin.log", "detail");
-	if (cmd->var - '0' > jx_int(scan))
+	scan = edj_config_get("plugin.log", "detail");
+	if (cmd->var - '0' > edj_int(scan))
 		return NULL;
 
 	/* Decide where to log */
-	tweaked = jx_format_default;
+	tweaked = edj_format_default;
 	tweaked.fp = NULL;
 	if (strcmp("tty", cmd->key)) {
 		tweaked.fp = switchfile(cmd->key);
@@ -533,57 +533,57 @@ static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 		else
 			localtime_r(&now, &tm);
 		if (showdate && showtime)
-			jx_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s ",
+			edj_user_printf(&tweaked, "log", "%4d-%02d-%02dT%02d:%02d:%02d%s ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 		else if (showdate)
-			jx_user_printf(&tweaked, "log", "%4d-%02d-%02d ",
+			edj_user_printf(&tweaked, "log", "%4d-%02d-%02d ",
 				tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
 		else
-			jx_user_printf(&tweaked, "log", "%02d:%02d:%02d%s ",
+			edj_user_printf(&tweaked, "log", "%02d:%02d:%02d%s ",
 				tm.tm_hour, tm.tm_min, tm.tm_sec, utc ? "Z" : "");
 	}
 	if (showpid) {
-		jx_user_printf(&tweaked, "log", "[%5d] ", (int)getpid());
+		edj_user_printf(&tweaked, "log", "[%5d] ", (int)getpid());
 	}
 	if (showfile || showline) {
 		int lineno;
-		jxfile_t *jf = jx_file_containing(cmd->where, &lineno);
+		edjfile_t *jf = edj_file_containing(cmd->where, &lineno);
 		if (jf) { 
 			if (showfile)
-				jx_user_printf(&tweaked, "log", "%s", jf->filename);
+				edj_user_printf(&tweaked, "log", "%s", jf->filename);
 			if (showfile && showline)
-				jx_user_ch(':');
+				edj_user_ch(':');
 			if (showline)
-				jx_user_printf(&tweaked, "log", "%d", lineno);
-			jx_user_ch(' ');
+				edj_user_printf(&tweaked, "log", "%d", lineno);
+			edj_user_ch(' ');
 		}
 	}
 
 	/* Evaluate the expression list. */
-	list = jx_calc(cmd->calc, *refcontext, NULL);
+	list = edj_calc(cmd->calc, *refcontext, NULL);
 
 	/* If it's an error then log the error instead of the expression */
-	if (jx_is_null(list) && *list->text) {
-		jx_user_printf(&tweaked, "log", "Expression error: %s\n", list->text);
+	if (edj_is_null(list) && *list->text) {
+		edj_user_printf(&tweaked, "log", "Expression error: %s\n", list->text);
 	} else {
 		/* Output each expression with a space delimiter */
 		lastchar = '\n';
 		for (scan = list->first; scan; scan = scan->next) {
 			/* Space between items */
 			if (scan != list->first)
-				jx_user_ch(' ');
+				edj_user_ch(' ');
 
 			/* Output strings plainly (no quotes), but convert
 			 * anything else to a JSON string.
 			 */
-			if (scan->type == JX_STRING) {
-				jx_user_printf(&tweaked, "log", "%s", scan->text);
+			if (scan->type == EDJ_STRING) {
+				edj_user_printf(&tweaked, "log", "%s", scan->text);
 				if (*scan->text)
 					lastchar = scan->text[strlen(scan->text) - 1];
 			} else {
-				char *tmp = jx_serialize(scan, NULL);
-				jx_user_printf(&tweaked, "log", "%s", tmp);
+				char *tmp = edj_serialize(scan, NULL);
+				edj_user_printf(&tweaked, "log", "%s", tmp);
 				free(tmp);
 				lastchar = 'x'; /* Never empty, never '\n' */
 			}
@@ -591,11 +591,11 @@ static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 
 		/* If the last character wasn't a newline, then add a newline */
 		if (lastchar != '\n')
-			jx_user_ch('\n');
+			edj_user_ch('\n');
 	}
 
 	/* Clean up */
-	jx_free(list);
+	edj_free(list);
 
 	/* If supposed to flush, then do that */
 	if (tweaked.fp && getbool("flush"))
@@ -608,29 +608,29 @@ static jxcmdout_t *log_run(jxcmd_t *cmd, jxcontext_t **refcontext)
 /* Initialize the plugin */
 char *pluginlog(void)
 {
-	jx_t	*settings, *plugin, *colornormal, *colorlog, *name;
+	edj_t	*settings, *plugin, *colornormal, *colorlog, *name;
 	char	*dir;
 
 	/* Set the default options.  The config file hasn't been loaded yet
-	 * so jx_config just contains the default options which don't
+	 * so edj_config just contains the default options which don't
 	 * include any settings for this plugin yet.
 	 */
-	plugin = jx_by_key(jx_config, "plugin");
-	jx_append(plugin, jx_key("log", jx_parse_string(config)));
+	plugin = edj_by_key(edj_config, "plugin");
+	edj_append(plugin, edj_key("log", edj_parse_string(config)));
 
 	/* Add an entry to config.styles for the "log" style */
-	jx_config_style("log", NULL);
+	edj_config_style("log", NULL);
 
 	/* Most default options are hardcoded, but the "dir" setting should
-	 * be the first writable directory in the JXPATH.
+	 * be the first writable directory in the EDJPATH.
 	 */
-	dir = jx_file_path(NULL, NULL, NULL);
-	jx_config_set("plugin.log", "dir", jx_string(dir, -1));
+	dir = edj_file_path(NULL, NULL, NULL);
+	edj_config_set("plugin.log", "dir", edj_string(dir, -1));
 	free(dir);
 
 	/* Add the "log" and "logset" commands */
-	jcn_log = jx_cmd_hook("log", "log", log_parse, log_run);
-	jx_cmd_hook("log", "logset", logset_parse, logset_run);
+	jcn_log = edj_cmd_hook("log", "log", log_parse, log_run);
+	edj_cmd_hook("log", "logset", logset_parse, logset_run);
 
 	/* Success! */
 	return NULL;

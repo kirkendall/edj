@@ -3,14 +3,14 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
-#include <jx.h>
+#include <edj.h>
 
 /* Return the value of a named field within an object or array.  If there
  * is no such element, then return NULL.
  */
-jx_t *jx_by_key(const jx_t *container, const char *key)
+edj_t *edj_by_key(const edj_t *container, const char *key)
 {
-	jx_t *scan;
+	edj_t *scan;
 	char	*simple, *loose;
 
 	/* Defend against NULL */
@@ -20,7 +20,7 @@ jx_t *jx_by_key(const jx_t *container, const char *key)
 	/* Only objects should have named values (though JavaScript also
 	 * supports "associative arrays" which do the same thing)
 	 */
-	if (container->type != JX_OBJECT)
+	if (container->type != EDJ_OBJECT)
 	{
 		/* EEE "Attempt to find named item in a non-object"); */
 		return NULL;
@@ -29,14 +29,14 @@ jx_t *jx_by_key(const jx_t *container, const char *key)
 	/* Scan for it.  If found, return its value */
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
-		assert(scan->type == JX_KEY);
+		assert(scan->type == EDJ_KEY);
 		if (!strcmp(scan->text, key))
 			return scan->first;
 	}
 
 	/* Not found, but try again using loose name comparison */
 	simple = strdup(key);
-	(void)jx_mbs_simple_key(simple, key);
+	(void)edj_mbs_simple_key(simple, key);
 	for (scan = container->first; scan; scan = scan->next) /* object */
 	{
 		/* Locate the key's "loose" version.  If it doesn't exist
@@ -44,7 +44,7 @@ jx_t *jx_by_key(const jx_t *container, const char *key)
 		 */
 		loose = scan->text + strlen(scan->text) + 1;
 		if (!*loose)
-			(void)jx_mbs_simple_key(loose, scan->text);
+			(void)edj_mbs_simple_key(loose, scan->text);
 
 		/* Compare them now */
 		if (!strcmp(loose, simple)) {
@@ -62,13 +62,13 @@ jx_t *jx_by_key(const jx_t *container, const char *key)
  * in anything that it contains.  Also, the container can be an array, not
  * just an object.
  */
-jx_t *jx_by_deep_key(jx_t *container, char *key)
+edj_t *edj_by_deep_key(edj_t *container, char *key)
 {
-        jx_t  *result, *scan;
+        edj_t  *result, *scan;
 
         /* First try the container itself (no nesting) */
-        if (container->type == JX_OBJECT) {
-                result = jx_by_key(container, key);
+        if (container->type == EDJ_OBJECT) {
+                result = edj_by_key(container, key);
                 if (result)
                         return result;
         }
@@ -76,10 +76,10 @@ jx_t *jx_by_deep_key(jx_t *container, char *key)
         /* Next try any containers within this object */
         result = NULL;
         for (scan = container->first; scan && !result; scan = scan->next) { /* object */
-                if (scan->type == JX_KEY && (scan->first->type == JX_OBJECT || scan->first->type == JX_ARRAY))
-                        result = jx_by_deep_key(scan->first, key);
-                else if (scan->type == JX_OBJECT || scan->type == JX_ARRAY)
-                        result = jx_by_deep_key(scan, key);
+                if (scan->type == EDJ_KEY && (scan->first->type == EDJ_OBJECT || scan->first->type == EDJ_ARRAY))
+                        result = edj_by_deep_key(scan->first, key);
+                else if (scan->type == EDJ_OBJECT || scan->type == EDJ_ARRAY)
+                        result = edj_by_deep_key(scan, key);
         }
         return result;
 }
@@ -88,13 +88,13 @@ jx_t *jx_by_deep_key(jx_t *container, char *key)
  * is no such element, then return NULL.
  *
  * IMPORTANT NOTE: If container is a deferred array, then you must call
- * jx_break() on the returned element when you're done with it.  If not a
- * deferred array, then jx_break() is still safe to call on the element.
+ * edj_break() on the returned element when you're done with it.  If not a
+ * deferred array, then edj_break() is still safe to call on the element.
  */
-jx_t *jx_by_index(jx_t *container, int idx)
+edj_t *edj_by_index(edj_t *container, int idx)
 {
-	jx_t *scan;
-	jxdef_t *def;
+	edj_t *scan;
+	edjdef_t *def;
 	int	scanidx;
 
 	/* Defend against NULL */
@@ -102,7 +102,7 @@ jx_t *jx_by_index(jx_t *container, int idx)
 		return NULL;
 
 	/* Only arrays should have indexed values */
-	if (container->type != JX_ARRAY)
+	if (container->type != EDJ_ARRAY)
 	{
 		/* EEE "Attempt to find indexed item in a non-array" */
 		return NULL;
@@ -112,7 +112,7 @@ jx_t *jx_by_index(jx_t *container, int idx)
 	 * an index relative to the end of the array.
 	 */
 	if (idx < 0) {
-		idx += jx_length(container);
+		idx += edj_length(container);
 		if (idx < 0)
 			return NULL;
 	}
@@ -120,12 +120,12 @@ jx_t *jx_by_index(jx_t *container, int idx)
 	/* If this is a deferred array, and it has a quick way to jump to a
 	 * given index, then use that.
 	 */
-	if (jx_is_deferred_array(container)
-	 && (def = (jxdef_t *)(container->first))->fns->byindex)
+	if (edj_is_deferred_array(container)
+	 && (def = (edjdef_t *)(container->first))->fns->byindex)
 		return (*def->fns->byindex)(container, idx);
 
 	/* Scan for it.  If found, return its value */
-	for (scan = jx_first(container), scanidx = 0; scan; scan = jx_next(scan))
+	for (scan = edj_first(container), scanidx = 0; scan; scan = edj_next(scan))
 	{
 		/* if the index matches, use it */
 		if (scanidx == idx)
@@ -143,32 +143,32 @@ jx_t *jx_by_index(jx_t *container, int idx)
  * NULL.
  * 
  * IMPORTANT NOTE: If container is a deferred array, then you must call
- * jx_break() on the returned element when you're done with it.  If not a
- * deferred array, then jx_break() is still safe to call on the element.
+ * edj_break() on the returned element when you're done with it.  If not a
+ * deferred array, then edj_break() is still safe to call on the element.
  */
-jx_t *jx_by_key_value(jx_t *container, const char *key, jx_t *value) 
+edj_t *edj_by_key_value(edj_t *container, const char *key, edj_t *value) 
 {
-	jx_t	*scan, *found;
-	jxdef_t *def;
+	edj_t	*scan, *found;
+	edjdef_t *def;
 
 	/* This only works on tables (arrays of objects) */
-	if (!jx_is_table(container))
+	if (!edj_is_table(container))
 		return NULL;
 
 	/* If it is a deferred array, and it has a "bykey" function pointer,
 	 * then use that.
 	 */
-	if (jx_is_deferred_array(container)
-	 && (def = (jxdef_t*)container->first)->fns->bykeyvalue)
+	if (edj_is_deferred_array(container)
+	 && (def = (edjdef_t*)container->first)->fns->bykeyvalue)
 
 		return (*def->fns->bykeyvalue)(container, key, value);
 
 	/* Scan array for element with that member key:value */
-	for (scan = jx_first(container); scan; scan = jx_next(scan)) {
-		if (scan->type != JX_OBJECT)
+	for (scan = edj_first(container); scan; scan = edj_next(scan)) {
+		if (scan->type != EDJ_OBJECT)
 			continue;
-		found = jx_by_key(scan, key);
-		if (found && jx_equal(found, value)) {
+		found = edj_by_key(scan, key);
+		if (found && edj_equal(found, value)) {
 			return scan;
 		}
 	}
@@ -191,23 +191,23 @@ jx_t *jx_by_key_value(jx_t *container, const char *key, jx_t *value)
  * lists of expressions.
  *
  * The "parent" and "key" arguments are usually NULL.  If non-NULL then *parent
- * will be set to the jx_t of the array or object that contains the returned
- * jx_t.  If *parent is an object, then *key will be set to a dynamically
+ * will be set to the edj_t of the array or object that contains the returned
+ * edj_t.  If *parent is an object, then *key will be set to a dynamically
  * allocated copy of the value's key.  This is handy if you're hoping
- * to replace the jx_t with some other value.  When you're using jx_by_expr()
+ * to replace the edj_t with some other value.  When you're using edj_by_expr()
  * this way, a return value of NULL is not necessarily a bad thing.
  *
- * Deferred arrays cause problems.  We want to return the jx_t within the
+ * Deferred arrays cause problems.  We want to return the edj_t within the
  * container, but deferred arrays allocate and free elements as they are
  * scanned.  So if a deferred array is involved then the returned item must
- * look like a deferred element that jx_break() can clean up.
+ * look like a deferred element that edj_break() can clean up.
  */
-jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **parent, char **key)
+edj_t *edj_by_expr(edj_t *container, const char *expr, const char **next, edj_t **parent, char **key)
 {
 	char	keybuf[100];
 	int	i, deep, quote;
-	jx_t	*step;
-	jx_t	*defelem;
+	edj_t	*step;
+	edj_t	*defelem;
 
 	/* Defend against NULL */
 	if (!container)
@@ -243,17 +243,17 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **pa
 		if (isdigit(*expr))
 		{
 			if (container) {
-				if (container->type != JX_ARRAY)
+				if (container->type != EDJ_ARRAY)
 				{
-					/* EEE if (jx_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
+					/* EEE if (edj_debug_flags.expr) "Attempt to use an index on a non-array via an expr");*/
 					if (defelem)
-						jx_break(defelem);
+						edj_break(defelem);
 					return NULL;
 				}
-				step = jx_by_index(container, atoi(expr));
+				step = edj_by_index(container, atoi(expr));
 				if (!step) {
 					if (defelem)
-						jx_break(defelem);
+						edj_break(defelem);
 					return NULL;
 				}
 			}
@@ -263,36 +263,36 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **pa
 			/* If this is an element of a deferred array, remember
 			 * that so we can clean up later.
 			 */
-			if (jx_is_deferred_element(step) && !defelem)
+			if (edj_is_deferred_element(step) && !defelem)
 				defelem = step;
 		}
 		else if (isalpha(*expr) || *expr == '_')
 		{
 			if (container) {
-				if (container->type != JX_OBJECT)
+				if (container->type != EDJ_OBJECT)
 				{
-					/* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
+					/* EEE if (edj_debug_flags.expr) edj_throw(NULL, "Attempt to find a member in a non-object via an expr");*/
 					if (defelem)
-						jx_break(defelem);
+						edj_break(defelem);
 					return NULL;
 				}
 				for (i = 0; i < sizeof keybuf - 1 && (isalnum(*expr) || *expr == '_'); i++)
 					keybuf[i] = *expr++;
 				keybuf[i] = '\0';
 				if (deep)
-					step = jx_by_deep_key(container, keybuf);
+					step = edj_by_deep_key(container, keybuf);
 				else
-					step = jx_by_key(container, keybuf);
+					step = edj_by_key(container, keybuf);
 			}
 		}
 		else if (*expr == '"' || *expr == '`')
 		{
 			if (container) {
-				if (container->type != JX_OBJECT)
+				if (container->type != EDJ_OBJECT)
 				{
-					/* EEE if (jx_debug_flags.expr) jx_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
+					/* EEE if (edj_debug_flags.expr) edj_throw(NULL, "Attempt to find a member in a non-object via an expr"); */
 					if (defelem)
-						jx_break(defelem);
+						edj_break(defelem);
 					return NULL;
 				}
 				quote = *expr++;
@@ -301,9 +301,9 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **pa
 				keybuf[i] = '\0';
 				expr++;
 				if (deep)
-					step = jx_by_deep_key(container, keybuf);
+					step = edj_by_deep_key(container, keybuf);
 				else
-					step = jx_by_key(container, keybuf);
+					step = edj_by_key(container, keybuf);
 			}
 		}
 		else
@@ -324,22 +324,22 @@ jx_t *jx_by_expr(jx_t *container, const char *expr, const char **next, jx_t **pa
 	} while (*expr && strchr("[].~", *expr));
 
 	/* If we were in a deferred array, then we need to make the returned
-	 * jx_t look like an element of that deferred array.
+	 * edj_t look like an element of that deferred array.
 	 */
-	if (defelem && container && !jx_is_deferred_element(container)) {
-		/* We need to call jx_break() on the defelem to free up
+	if (defelem && container && !edj_is_deferred_element(container)) {
+		/* We need to call edj_break() on the defelem to free up
 		 * the scanning resources.  Before we do that, though, we
 		 * need to make a copy of the returned value.
 		 */
-		container = jx_copy(container);
+		container = edj_copy(container);
 
 		/* The copy should have its ->next pointer going to a generic
-		 * JX_DEFER node, just so jx_break() will free it.
+		 * EDJ_DEFER node, just so edj_break() will free it.
 		 */
-		container->next = jx_defer(NULL);
+		container->next = edj_defer(NULL);
 
 		/* Okay, now it's safe to free the deferred element */
-		jx_break(defelem);
+		edj_break(defelem);
 	}
 
 	/* return the result */

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>jx</title>
-    <link rel="stylesheet" type="text/css" href="jx.css">
-    <meta name="description" content="jx function reference">
-    <meta name="keywords" content="jx, function reference, index">
+    <title>edj</title>
+    <link rel="stylesheet" type="text/css" href="edj.css">
+    <meta name="description" content="edj function reference">
+    <meta name="keywords" content="edj, function reference, index">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       div.tipBox { 
         font-size: 120%;
         display: inline-block;
       }
-      div.tipBox div.jx {
+      div.tipBox div.edj {
         font-size: 250%;
         display: inline-block;
       }
@@ -43,34 +43,54 @@
     <script>
 	// This is a collection of all searchable lists
 	var searchable = [
-	    {label:"jx functions", query:"f", member:"function", list:flist},
-	    {label:"jx operators", query:"op", member:"opcategory", list:oplist},
+	    {label:"edj functions", query:"f", member:"function", list:flist},
+	    {label:"edj operators", query:"op", member:"opcategory", list:oplist},
 	    {label:"All documentation", member:"keyword", list:kwlist}
 	];
 	var searches;
 
 	var tips = [
-	    {text:"means JSON Explorer"},
-	    {text:"means JSON Extractor"},
-	    {text:"means JSON<span style=\"font-size:133%\">&#x2194;</span>XML Converter (with the xml plugin)", link:"p=xml"},
-	    {text:"means Joy Multiplier?"},
+	    {text:"\"edj\" is not an acronym. I just wanted a short<br/>distinctive name with \"j\" in it."},
 	    {text:"The curl plugin is good for writing API clients.", link:"p=curl"},
 	    {text:"JavaScript? Not quite. SQL? A tiny bit."},
 	    {text:"Interactive? Hell yeah, when you want it."},
 	    {text:"Batch? Yes in so many ways."},
 	    {text:"Most common JavaScript functions are available", link:"f"},
-	    {text:"Try \"function yourFunctionName\" on a line by itself.", linkn:"cmd=function"},
-	    {text:"The \"array # expr\" operator filters arrays.", link:"op=each"},
-	    {text:"The \"table #= table\" operator does a natural join.", link:"op=join"},
-	    {text:"The \"data @ expr\" operator does a deep search<br/>for data that makes expr true", link:"op=find"},
-	    {text:"The \"find()\" function does a deep search<br/>for a given value", link:"f=find"},
-	    {text:"A table is simply an array of objects"},
-	    {text:"Running \"set sh\" causes tables to be<br/>output as shell variables", link:"cmd=set"},
-	    {text:"Running \"set csv\" (with the csv plugin)<br/>causes tables to be output as CSV", link:"cmd=set"},
-	    {text:"Running \"set grid\" causes tables<br/>to be output as a grid", link:"cmd=set"},
-	    {text:"Running \"set json\" causes tables<br/>to be output as JSON", link:"cmd=set"},
+	    {text:"The <tt>function</tt> command with no arguments<br/>lists all user-defined functions", link:"cmd=function"},
+	    {text:"Try <tt>function</tt> <var>yourFunctionName</var> on a line by itself.", linkn:"cmd=function"},
+	    {text:"The <var>array</var> <tt>#</tt> <var>expr</<var> operator filters arrays.", link:"op=each"},
+	    {text:"The <var>table</var> <tt>#=</tt> <var>table</var> operator does a natural join.", link:"op=join"},
+	    {text:"The <var>data</var> <tt>@</tt> <var>expr</var> operator does a deep search<br/>for data that makes expr true", link:"op=find"},
+	    {text:"The <tt>find()</tt> function does a deep search<br/>for a given value", link:"f=find"},
+	    {text:"The <tt>gap()</tt> function finds gaps in an array<br/>of numbers or dates/times/datetimes", link:"f=gap"},
+	    {text:"The <tt>blob()</tt> function lets you work with binary data", link:"f=blob"},
+	    {text:"The <tt>diff()</tt> function lists differences<br/>between two arrays or objects", link:"f=diff"},
+	    {text:"The <tt>grep()</tt> function returns rows from a table<br/>that contain a given value, no matter how deeply nested", link:"f=grep"},
+	    {text:"The <tt>money()</tt> function makes money values look pretty", link:"f=money"},
+	    {text:"The <tt>unroll()</tt> function lets you treat nested tables as a \"join\"", link:"f=unroll"},
+	    {text:"<tt>=</tt> and <tt>&lt;&gt;</tt> are case-insensitive<br/>string comparison operators", link:"op=equal"},
+	    {text:"Many functions support an extra <tt>true</tt><br/>argument to make them case-insensitive"},
+	    {text:"If a case-sensitive member name can't be found,<br/>then it tries a case-insensitive search"},
+	    {text:"The <tt>.@</tt> operator is like <tt>.</tt> except that it'll do a deep search", link:"op=dot"},
+	    {text:"The <tt>..</tt> operator is exactly like <tt>.</tt> but low precedence.<br/>This is handy when you're incrementally building a query.", link:"op=dot"},
+	    {text:"The <tt>i...j</tt> returns an array of integers from i to j", link:"op=ellipsis"},
+	    {text:"You can append to an array via <var>myArray</var><tt>[]=</tt><var>newValue</var>", link:"cmd=assign"},
+	    {text:"Negative array subscripts count from the end of the array.", link:"op=subscript"},
+	    {text:"You can use <var>table</var><tt>[</tt><var>key</var><tt>:</tt><var>value</var><tt>]</tt>to search for an element<br/>of table that contains a member with the given key and value.", link:"op=subscript"},
+	    {text:"While <var>str1</var><tt>+</tt><var>str2</var> simply concatenates (as in JavaScript),</br/><tt>str1</var><tt>-</tt><var>str2</tt> concatenates with exactly one space between them", link:"op=arithmetic"},
+	    {text:"Check out the SQL-like <tt>SELECT</tt> operator", link:"op=select"},
+	    {text:"The <tt>VALUES</tt> operator assigns names to array elements,<br/>converting the array to an object.", link:"op=values"},
+	    {text:"Many minor SQL operators are supported including<br/><tt>LIKE, IN, AND, OR, NOT,</tt> and <tt>BETWEEN...AND</tt>", link:"op=values"},
+	    {text:"Plugins are easy to load and use!", link:"p"},
+	    {text:"A table is simply a non-empty array of objects"},
+	    {text:"The <tt>explain</tt> command describes a table schema", link:"cmd=explain"},
+	    {text:"Running <tt>set sh</tt> causes tables to be<br/>output as shell variables", link:"cmd=set"},
+	    {text:"Running <tt>set csv</tt> (with the csv plugin)<br/>causes tables to be output as CSV", link:"cmd=set"},
+	    {text:"Running <tt>set grid</tt> causes tables to be output<br/>as a grid.  This is the default.", link:"cmd=set"},
+	    {text:"Running <tt>set json</tt> causes tables<br/>to be output as JSON", link:"cmd=set"},
+	    {text:"The \"grid\" table format is smart enough to handle<br/>newlines such as the output of <tt>wrap()</tt>", link:"f=wrap"},
 	    {text:"ISO 8601 date arithmetic is easy!", link:"a=Dates_and_Times"},
-	    {text:"You can read environment variables", link:"a=Working_with_Environment_Variables"},
+	    {text:"You can read environment variables<br/>via $NAME, $NAME[<var>suffix</var>], or getenv(<var>name</var>)", link:"a=Working_with_Environment_Variables"},
 	];
 
 	// Show an ever-changing tip
@@ -84,8 +104,8 @@
 	    if (tip.link)
 	        link = link + "?" + tip.link;
 
-	    // Change the tip and font.
-	    $("#jxtip").html(tip.text).attr("href", link);
+	    // Change the tip and link.
+	    $("#edjtip").html(tip.text).attr("href", link);
 
 	    // Arrange for it to change again after 10 seconds
 	    window.setTimeout(showTip, 10000);
@@ -105,7 +125,7 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		    $("#main").prop("src", "lit/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "lit/sidebar.html?lit="+namevalue[2]);
 		    break;
-		case 'f': // Functions (jx, not C)
+		case 'f': // Functions (edj, not C)
 		    $("#main").prop("src", "f/" + namevalue[2] + ".html");
 		    $("#sidebar").prop("src", "f/sidebar.html?f="+namevalue[2]);
 		    break;
@@ -156,11 +176,11 @@ console.log(namevalue[1] + "=" + namevalue[2]);
       </colgroup>
       <tr id="top" style="height:4em;overflow:hidden;">
         <td colspan="3" style="vertical-align:middle; text-align: center">
-          <a class="button" style="float:left; background:rgba(190,220,190,.5); font-size:250%; font-style:italic; margin:0; padding-left:0.3em; padding-right:0.2em;" href="index.html">jx</a>
+          <a class="button" style="float:left; margin:0;" href="index.html"><img src="edjlogo.gif" style="height:3.5em; display:block" /></a>
 	  <div style="float:right; padding-top: 1em;">
             <input type="search" name="search" autocomplete="off" placeholder="Search">
 	  </div>
-          <div class="tipBox"><div class="jx">JX</div> <a id="jxtip" class="tip" href="index.html">JSON Explorer</a></div>
+          <div class="tipBox"><div class="edj">edj</div> <a id="edjtip" class="tip" href="index.html">JSON Tool</a></div>
 	</td>
       </tr>
       <tr id="content">

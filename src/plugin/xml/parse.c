@@ -42,11 +42,11 @@ typedef struct {
  * in state->name.
  */
 typedef struct {
-	jx_t	*attributes;	/* Object with attributes, or NULL if none */
-	jx_t	*content;	/* Contents: string, number, object, or NULL */
+	edj_t	*attributes;	/* Object with attributes, or NULL if none */
+	edj_t	*content;	/* Contents: string, number, object, or NULL */
 } xml_parse_tag_t;
 
-static jx_t *xml_parse_helper(xml_parse_state_t *state);
+static edj_t *xml_parse_helper(xml_parse_state_t *state);
 
 /* Replace all known entities with their corresponding text, and return the
  * size of the resulting text in bytes, not counting the terminating '\0'
@@ -55,7 +55,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state);
 static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 {
 	const char *max;	/* end of the string */
-	jx_t	*entity, *found;
+	edj_t	*entity, *found;
 	wchar_t	wc;	/* used for &#nnnn; and &#xhhhh; */
 	char	*name;
 	size_t	namesize;
@@ -71,7 +71,7 @@ static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 		max = str + len;
 
 	/* Locate the object containing entity translations */
-	entity = jx_config_get("plugin.xml", "entity");
+	entity = edj_config_get("plugin.xml", "entity");
 
 	/* Allocate the initial name buffer */
 	namesize = 100;
@@ -124,16 +124,16 @@ static size_t xml_entities_to_plain(char *buf, const char *str, size_t len)
 		}
 
 		/* Named entity.  Look it up */
-		found = jx_by_key(entity, name);
+		found = edj_by_key(entity, name);
 		if (found) {
 			/* Use its value.  It could be a string or number */
-			if (found->type == JX_STRING) {
+			if (found->type == EDJ_STRING) {
 				if (buf)
 					strcpy(buf + len, found->text);
 				len += strlen(found->text);
 				continue;
-			} else if (found->type == JX_NUMBER) {
-				wc = (wchar_t)jx_int(found);
+			} else if (found->type == EDJ_NUMBER) {
+				wc = (wchar_t)edj_int(found);
 				if (buf) {
 					out = wctomb(buf + len, wc);
 				} else {
@@ -180,13 +180,13 @@ static void xml_parse_pop_name(xml_parse_state_t *state)
 }
 
 /* Return the type of JSON value that an empty tag pair represents */
-static jx_t *xml_parse_empty(xml_parse_state_t *state)
+static edj_t *xml_parse_empty(xml_parse_state_t *state)
 {
 	switch (state->empty[0]) {
-	case 'o':	return jx_object();
-	case 'a':	return jx_array();
-	case 'n':	return jx_null();
-	default:	return jx_string("",0);
+	case 'o':	return edj_object();
+	case 'a':	return edj_array();
+	case 'n':	return edj_null();
+	default:	return edj_string("",0);
 	}
 }
 
@@ -230,7 +230,7 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 	char	type;
 	int	nest;
 	size_t	len;
-	jx_t	*value;
+	edj_t	*value;
 	const char	*oldcursor;
 
 	/* We should be at the start of a tag */
@@ -255,7 +255,7 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 		/* Return it.  The name is in state->name, there are no
 		 * attributes, and the content is a string.
 		 */
-		ret.content = jx_string(state->cursor, len);
+		ret.content = edj_string(state->cursor, len);
 		state->cursor += len + 1;
 		return ret;
 	}
@@ -288,28 +288,28 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 				for (len = 0; state->cursor[len] != '"'; len++) {
 				}
 				plainlen = xml_entities_to_plain(NULL, state->cursor, len);
-				value = jx_string("", plainlen);
+				value = edj_string("", plainlen);
 				(void)xml_entities_to_plain(value->text, state->cursor, len);
 				state->cursor += len + 1;
 			} else {
 				/* Unquoted */
 				for (len = 0; !isspace(state->cursor[len]) && !strchr("/?>", state->cursor[len]); len++) {
 				}
-				value = jx_string(state->cursor, len);
+				value = edj_string(state->cursor, len);
 				state->cursor += len;
 			}
 
 		} else {
 			/* assume it is Boolean "true" */
-			value = jx_boolean(1);
+			value = edj_boolean(1);
 		}
 
 		/* Add this to the attributes object. If this is the first then
 		 * we also need to allocate the object.
 		 */
 		if (!ret.attributes)
-			ret.attributes = jx_object();
-		jx_append(ret.attributes, jx_key(state->name, value));
+			ret.attributes = edj_object();
+		edj_append(ret.attributes, edj_key(state->name, value));
 
 		/* Skip whitespace */
 		xml_parse_space(state);
@@ -327,7 +327,7 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 		}
 		state->err = "malformed tag";
 		if (ret.attributes) {
-			jx_free(ret.attributes);
+			edj_free(ret.attributes);
 			ret.attributes = NULL;
 		}
 		return ret;
@@ -345,7 +345,7 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 	xml_parse_pop_name(state);
 	if (!ret.content) {
 		if (ret.attributes) {
-			jx_free(ret.attributes);
+			edj_free(ret.attributes);
 			ret.attributes = NULL;
 		}
 		return ret;
@@ -354,10 +354,10 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 	/* We expect to be at a closing tag.  If not, either that's an error. */
 	if (*state->cursor != '<' || state->cursor[1] != '/') {
 		if (ret.attributes) {
-			jx_free(ret.attributes);
+			edj_free(ret.attributes);
 			ret.attributes = NULL;
 		}
-		jx_free(ret.content);
+		edj_free(ret.content);
 		ret.content = NULL;
 		state->err = "Parse error";
 		return ret;
@@ -373,10 +373,10 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 	if (strcmp(state->attrname, state->name)) {
 		if (state->strictPair) {
 			if (ret.attributes) {
-				jx_free(ret.attributes);
+				edj_free(ret.attributes);
 				ret.attributes = NULL;
 			}
-			jx_free(ret.content);
+			edj_free(ret.content);
 			ret.content = NULL;
 			state->err = "Mismatched <tag>...</tag>";
 			return ret;
@@ -389,10 +389,10 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 		xml_parse_space(state);
 	} else {
 		if (ret.attributes) {
-			jx_free(ret.attributes);
+			edj_free(ret.attributes);
 			ret.attributes = NULL;
 		}
-		jx_free(ret.content);
+		edj_free(ret.content);
 		ret.content = NULL;
 		state->err = "xmlclose:Unexpected chars in </tag>";
 	}
@@ -412,9 +412,9 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
  * It returns NULL on errors, or if it hits the end of the buffer without
  * finding anything to parse.
  */
-static jx_t *xml_parse_helper(xml_parse_state_t *state)
+static edj_t *xml_parse_helper(xml_parse_state_t *state)
 {
-	jx_t	*parsed, *attr, *content, *scan;
+	edj_t	*parsed, *attr, *content, *scan;
 	xml_parse_tag_t tag;
 	size_t	len, entitylen;
 
@@ -436,7 +436,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 
 		/* Expand entities, and store it in a string */
 		entitylen = xml_entities_to_plain(NULL, state->cursor, len);
-		parsed = jx_string("", entitylen);
+		parsed = edj_string("", entitylen);
 		(void)xml_entities_to_plain(parsed->text, state->cursor, len);
 
 		/* Are we supposed to parse numbers? */
@@ -457,7 +457,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 						/* Yes, it looks like a number!
 						 * Convert to number.
 						 */
-						parsed->type = JX_NUMBER;
+						parsed->type = EDJ_NUMBER;
 					}
 				}
 			}
@@ -477,7 +477,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		}
 
 		/* Copy it into a string */
-		parsed = jx_string(state->cursor, len);
+		parsed = edj_string(state->cursor, len);
 
 		/* Move cursor past the value and "]]>" */
 		state->cursor += len + 3;
@@ -497,14 +497,14 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 	}
 
 	/* We found a nested tag.  Parse it and its content. May be repeated. */
-	parsed = jx_object();
+	parsed = edj_object();
 	do {
 		/* Parse a tag */
 		tag = xml_parse_tag(state);
 
 		/* Detect errors */
 		if (state->err) {
-			jx_free(parsed);
+			edj_free(parsed);
 			return NULL;
 		}
 
@@ -522,9 +522,9 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		}
 
 		/* Look for existing members for this tag, both for the
-		 * attributes and the content.  We don't use jx_by_key()
+		 * attributes and the content.  We don't use edj_by_key()
 		 * for this because XML is case-sensitive.  Also, this loop
-		 * finds the JX_KEY nodes, which work better for us than
+		 * finds the EDJ_KEY nodes, which work better for us than
 		 * the values.
 		 */
 		for (attr = content = NULL, scan = parsed->first;
@@ -536,7 +536,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 				content = scan;
 		}
 
-		/* NOTE: At this point, "content" and "attr" refer to JX_KEY
+		/* NOTE: At this point, "content" and "attr" refer to EDJ_KEY
 		 * nodes in the parsed data, or are NULL if no such nodes exist.
 		 * "tag.content" and "tag.attributes" are values (not keys)
 		 * from the current tag.  "tag.content" will never be NULL,
@@ -547,9 +547,9 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		 * as a non-array value.
 		 */
 		if (!content) {
-			jx_append(parsed, jx_key(state->name, tag.content));
+			edj_append(parsed, edj_key(state->name, tag.content));
 			if (tag.attributes)
-				jx_append(parsed, jx_key(state->attrname, tag.attributes));
+				edj_append(parsed, edj_key(state->attrname, tag.attributes));
 			xml_parse_space(state);
 			continue;
 		}
@@ -558,9 +558,9 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		 * must be doing arrays.  If the existing content isn't an
 		 * array yet, then convert it to an array now.
 		 */
-		if (content->first->type != JX_ARRAY) {
-			jx_t *array = jx_array();
-			jx_append(array, content->first);
+		if (content->first->type != EDJ_ARRAY) {
+			edj_t *array = edj_array();
+			edj_append(array, content->first);
 			content->first = array;
 		}
 
@@ -569,29 +569,29 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 		 * to add it as an array.  Either way, we need to pad it to
 		 * be the same length as the content array.
 		 */
-		if (tag.attributes && (!attr || attr->first->type != JX_ARRAY)) {
-			jx_t *array = jx_array();
+		if (tag.attributes && (!attr || attr->first->type != EDJ_ARRAY)) {
+			edj_t *array = edj_array();
 			int pad;
 			if (attr) {
-				jx_append(array, attr->first);
+				edj_append(array, attr->first);
 				attr->first = array;
 			} else {
-				attr = jx_key(state->attrname, array);
-				jx_append(parsed, attr);
+				attr = edj_key(state->attrname, array);
+				edj_append(parsed, attr);
 			}
-			pad = jx_length(content->first) - jx_length(array);
+			pad = edj_length(content->first) - edj_length(array);
 			for (; pad > 0; pad--)
-				jx_append(array, jx_object());
+				edj_append(array, edj_object());
 		}
 
 		/* Append the new content to the array. */
-		jx_append(content->first, tag.content ? tag.content : jx_null());
+		edj_append(content->first, tag.content ? tag.content : edj_null());
 
 		/* Do the same for attributes.  If no attributes, but there
 		 * is an attribute array, then append an empty object instead.
 		 */
 		if (attr)
-			jx_append(attr->first, tag.attributes ? tag.attributes  : jx_object());
+			edj_append(attr->first, tag.attributes ? tag.attributes  : edj_object());
 
 
 		/* Skip whitespace */
@@ -610,7 +610,7 @@ static jx_t *xml_parse_helper(xml_parse_state_t *state)
 
 /*----------------------------------------------------------------------------*/
 
-/* The following two functions are passed to jx_parse_hook() to allow XML
+/* The following two functions are passed to edj_parse_hook() to allow XML
  * data to be recognized and parsed.
  */
 
@@ -623,20 +623,20 @@ static int xml_test(const char *str, size_t len)
 /* Parse "str" as XML and return it as a JSON object.  Store a pointer to the
  * end of the parsed text at "refend" unless "refend" is NULL.  If an error
  * is detected, store a pointer to the location of the error at "referr" (if
- * "referr" is not NULL) and return a jx_t containing an error null.
+ * "referr" is not NULL) and return an edj_t containing an error null.
  */
-static jx_t *xml_parse(const char *buf, size_t len, const char **refend, const char **referr)
+static edj_t *xml_parse(const char *buf, size_t len, const char **refend, const char **referr)
 {
-	jx_t *result;
+	edj_t *result;
 	xml_parse_state_t state;
 
 	/* Set up the parse state */
 	state.cursor = buf;
 	state.end = buf + len;
-	state.parseNumber = jx_config_get_boolean("plugin.xml", "parseNumber");
-	state.strictPair = jx_config_get_boolean("plugin.xml", "strictPair");
-	state.empty = jx_config_get_text("plugin.xml", "empty");
-	state.suffix = jx_config_get_text("plugin.xml", "attributeSuffix");
+	state.parseNumber = edj_config_get_boolean("plugin.xml", "parseNumber");
+	state.strictPair = edj_config_get_boolean("plugin.xml", "strictPair");
+	state.empty = edj_config_get_text("plugin.xml", "empty");
+	state.suffix = edj_config_get_text("plugin.xml", "attributeSuffix");
 	state.suffixlen = strlen(state.suffix);
 	state.err = NULL;
 	state.namesize = 128;
@@ -652,9 +652,9 @@ static jx_t *xml_parse(const char *buf, size_t len, const char **refend, const c
 	/* If NULL then we got an error. Convert NULL to an error message. */
 	if (!result) {
 		if (state.err)
-			result = jx_error_null(state.cursor, "xml:%s", state.err);
+			result = edj_error_null(state.cursor, "xml:%s", state.err);
 		else
-			result = jx_error_null(state.cursor, "xmlempty:No XML data");
+			result = edj_error_null(state.cursor, "xmlempty:No XML data");
 	}
 
 	/* Clean up and exit */

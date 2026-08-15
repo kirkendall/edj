@@ -2,9 +2,9 @@
 <html>
   <head>
     <title>slice</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx slice - Return part of an array or string">
-    <meta name="keywords" content="array, jx, function reference, slice">
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj slice - Return part of an array or string">
+    <meta name="keywords" content="array, edj, function reference, slice">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
@@ -16,7 +16,7 @@
       the given <var>subject</var> array, or a substring from a string.
       <p>
       If the <var>start</var> argument is 0 or more, then it indicates how many
-      elements or characters to skip from the <var>subject</var>.
+      elements or characters to skip from the start of <var>subject</var>.
       If <var>start</var> is negative, then it counts from the end of <var>subject</var>.
       <p>
       If <var>end</var> is omitted, then the slice extends to the end of <var>subject</var>.
@@ -32,7 +32,7 @@
 	<samp>[3,4]</samp>
         The <tt>(0...10)</tt> returns an array of integers from 0 to 10.
         The <tt>.slice(3,5)</tt> skips the first 3 elements,
-        and returns the text elements up to but not including the 5th element.
+        and returns the next elements up to but not including the 5th element.
       </div>
 
       <div class="example">
@@ -40,6 +40,15 @@
 	<samp>[10]</samp>
         This time we start copying from 1 element from the end of <var>arr</var>.
         There is no <var>end</var> parameter so the slice extends to the end of <var>arr</var>.
+      </div>
+
+      <div class="example">
+        <kbd>"gluon.dev.edj.center".split(".").slice(-2).join(".")</kbd>
+        <samp>"edg.center"</samp>
+        Here we're extracting the organization's DNS name from a full DNS name.
+        First we split the hierarchical names into separate elements of an
+        array, and then we take the last two elements of that array and
+        join them back into a single string again.
       </div>
 
       <div class="example">
@@ -56,15 +65,24 @@
         <li>If the end point is before the start point, then an empty array
             or string is returned.
 
-        <li>For strings, the main difference between <tt>slice</tt> and
+        <li>For strings, the main difference between <tt>slice()</tt> and
             <a target="_PARENT" href="../index.html?f=substr">substr()</a>
             is the way they indicate the end of the returned substring.
             <tt>slice()</tt> is passed the position to end at, while
             <tt>substr()</tt> is passed the desired length.
 
 	<li>Why do we have JavaScript's <tt>slice()</tt> function but not
-	    <tt>splice()</tt>?  It's because jx's expressions don't
+	    <tt>splice()</tt>?  It's because edj's expressions don't
 	    have side-effects.  <tt>splice()</tt> is all side-effect.
+	    <p>
+	    I'm trying to keep expressions
+	    "<span title="free from side-effects such as altering variables">functional</span>"
+	    for a variety of reasons.
+	    For example, some day I might make edj multithreaded and that
+	    will be easier and more efficient if it doesn't need to worry
+	    about side-effects.
+	    User-defined functions can have side-effects, though, so this
+	    might be a lost cause.
 
       </ul>
     </details>

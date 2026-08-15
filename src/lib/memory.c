@@ -1,7 +1,7 @@
 /* Memory.c
  *
- * This file contains a variety of low-level jx_t allocation functions,
- * and the jx_free() function for deallocating them.
+ * This file contains a variety of low-level edj_t allocation functions,
+ * and the edj_free() function for deallocating them.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,33 +9,33 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-#include <jx.h>
+#include <edj.h>
 
 /* Here we need to access the "real" allocation/free functions */
-#ifdef JX_DEBUG_MEMORY
-# undef jx_free
-# undef jx_simple
-# undef jx_string
-# undef jx_number
-# undef jx_from_int
-# undef jx_from_double
-# undef jx_boolean
-# undef jx_null
-# undef jx_error_null
-# undef jx_array
-# undef jx_key
-# undef jx_object
-# undef jx_defer
-# undef jx_first
-# undef jx_parse_string
-# undef jx_copy
-# undef jx_copy_filter
-# undef jx_calc
+#ifdef EDJ_DEBUG_MEMORY
+# undef edj_free
+# undef edj_simple
+# undef edj_string
+# undef edj_number
+# undef edj_from_int
+# undef edj_from_double
+# undef edj_boolean
+# undef edj_null
+# undef edj_error_null
+# undef edj_array
+# undef edj_key
+# undef edj_object
+# undef edj_defer
+# undef edj_first
+# undef edj_parse_string
+# undef edj_copy
+# undef edj_copy_filter
+# undef edj_calc
 #endif
 
 /* For debugging, this is used to store places that allocate memory, and
  * how many nodes were allocated there without freeing.  If a program links
- * with this library without defining JX_DEBUG_MEMORY then this will be
+ * with this library without defining EDJ_DEBUG_MEMORY then this will be
  * unused, but it's fairly small.
  */
 typedef struct
@@ -46,24 +46,24 @@ typedef struct
 } memory_tracker_t;
 static memory_tracker_t *memory_tracker;
 
-/* This counts the number of jx_t's currently allocated.  Not threadsafe! */
-int jx_debug_count = 0;
+/* This counts the number of edj_t's currently allocated.  Not threadsafe! */
+int edj_debug_count = 0;
 
-/* Return an estimated byte count for a given jx_t tree */
-size_t jx_sizeof(jx_t *json)
+/* Return an estimated byte count for a given edj_t tree */
+size_t edj_sizeof(edj_t *json)
 {
         size_t size = 0;
         size_t len;
 
         while (json) {
-                size += sizeof(jx_t);
+                size += sizeof(edj_t);
 
                 switch (json->type) {
-                  case JX_STRING:
-                  case JX_NUMBER:
-                  case JX_BOOLEAN:
-                  case JX_NULL:
-                  case JX_KEY:
+                  case EDJ_STRING:
+                  case EDJ_NUMBER:
+                  case EDJ_BOOLEAN:
+                  case EDJ_NULL:
+                  case EDJ_KEY:
                         /* Add the text length including the terminating \0,
                          * tweaked for alignment
                          */
@@ -71,24 +71,24 @@ size_t jx_sizeof(jx_t *json)
                         size += len;
                         break;
 
-                  case JX_DEFER:
-			/* Rough guess: twice the size of a jx_t.  We count
-			 * one jx_t after this switch, so we just add 1 here.
+                  case EDJ_DEFER:
+			/* Rough guess: twice the size of an edj_t.  We count
+			 * one edj_t after this switch, so we just add 1 here.
 			 */
-			size += sizeof(jx_t);
+			size += sizeof(edj_t);
 			break;
 
-                  case JX_ARRAY:
-                  case JX_OBJECT:
-                  case JX_BADTOKEN:
-                  case JX_NEWLINE:
-                  case JX_ENDARRAY:
-                  case JX_ENDOBJECT:
+                  case EDJ_ARRAY:
+                  case EDJ_OBJECT:
+                  case EDJ_BADTOKEN:
+                  case EDJ_NEWLINE:
+                  case EDJ_ENDARRAY:
+                  case EDJ_ENDOBJECT:
                         ; /* Listed just to keep the compiler happy */
                 }
 
                 /* Recursively add the "first" data */
-                size += jx_sizeof(json->first);
+                size += edj_sizeof(json->first);
 
                 /* Iteratively add the "next" data */
                 json = json->next; /* undeferred */
@@ -98,9 +98,9 @@ size_t jx_sizeof(jx_t *json)
 }
 
 /* Free a JSON data tree */
-void jx_free(jx_t *json)
+void edj_free(edj_t *json)
 {
-        jx_t *next;
+        edj_t *next;
 
 	/* Defend against NULL */
 	if (!json)
@@ -111,12 +111,12 @@ void jx_free(jx_t *json)
          */
 	assert(json->memslot == 0 || memory_tracker[json->memslot].line != 0);
 
-	/* If ->next points to a JX_DEFER, that means this jx_t is an
+	/* If ->next points to a EDJ_DEFER, that means this edj_t is an
 	 * element of a deferred array, currently being scanned.  Free the
 	 * resources used for this scan session.
 	 */
-	if (json->next && json->next->type == JX_DEFER) {
-		jxdeffns_t *fns = (jxdeffns_t *)json->next;
+	if (json->next && json->next->type == EDJ_DEFER) {
+		edjdeffns_t *fns = (edjdeffns_t *)json->next;
 		if (fns->free)
 			(*fns->free)(json);
 	}
@@ -124,34 +124,34 @@ void jx_free(jx_t *json)
 	/* Iteratively free this node and its siblings */
 	while (json) {
 
-		/* If this is a JX_DEFER array, then free its resources
+		/* If this is a EDJ_DEFER array, then free its resources
 		 * specially
 		 */
-		if (json->first && json->first->type == JX_DEFER) {
-			jxdef_t *def = (jxdef_t *)json->first;
+		if (json->first && json->first->type == EDJ_DEFER) {
+			edjdef_t *def = (edjdef_t *)json->first;
 			if (def->fns->free)
 				(*def->fns->free)(json);
 		}
 
-		/* Recursively free contained data.  Note that JX_NULL nodes
+		/* Recursively free contained data.  Note that EDJ_NULL nodes
 		 * abuse the ->first field to store a pointer into source text
-		 * instead of a jx_t.
+		 * instead of an edj_t.
 		 */
-		if (json->type != JX_NULL)
-			jx_free(json->first);
+		if (json->type != EDJ_NULL)
+			edj_free(json->first);
 
-		/* Free this jx_t struct */
+		/* Free this edj_t struct */
 		next = json->next; /* undeferred */
 		free(json);
-		jx_debug_count--;
+		edj_debug_count--;
 		json = next;
 	}
 }
 
-/* Allocate a jx_t node and initialize some fields */
-jx_t *jx_simple(const char *str, size_t len, jxtype_t type)
+/* Allocate an edj_t node and initialize some fields */
+edj_t *edj_simple(const char *str, size_t len, edjtype_t type)
 {
-	jx_t *json;
+	edj_t *json;
 	size_t  size;
 
 	/* String is optional.  If omitted then use "" as a placeholder */
@@ -161,7 +161,7 @@ jx_t *jx_simple(const char *str, size_t len, jxtype_t type)
 		len = strlen(str);
 
         /* Compute the size, rounding up to a multiple of 32 */
-        size = sizeof(jx_t) - sizeof json->text + len + 1;
+        size = sizeof(edj_t) - sizeof json->text + len + 1;
         size = (size | 0x1f) + 1;
 
 	/* Allocate it.  Trust malloc() to be efficient */
@@ -174,79 +174,79 @@ jx_t *jx_simple(const char *str, size_t len, jxtype_t type)
 		strncpy(json->text, str, len);
 
 	/* return it */
-	jx_debug_count++;
+	edj_debug_count++;
 	return json;
 }
 
-/* Allocate a jx_t for a given string.  Note that any escape sequences
- * such as \n or \u22c8 are handled by the parser via jx_mbs_unescape()
+/* Allocate an edj_t for a given string.  Note that any escape sequences
+ * such as \n or \u22c8 are handled by the parser via edj_mbs_unescape()
  * so we just get the actual data here.  Passing -1 for len causes it to
  * compute the length via strlen().  "str" is not required to have a
  * terminating '\0' but the returned json->text field will.
  */
-jx_t *jx_string(const char *str, size_t len)
+edj_t *edj_string(const char *str, size_t len)
 {
-	return jx_simple(str, len, JX_STRING);
+	return edj_simple(str, len, EDJ_STRING);
 }
 
-/* Allocate a jx_t for a given number, expressed as a string.  If you pass
+/* Allocate an edj_t for a given number, expressed as a string.  If you pass
  * -1 for len, it'll compute the length via strlen().
  */
-jx_t *jx_number(const char *str, size_t len)
+edj_t *edj_number(const char *str, size_t len)
 {
-	return jx_simple(str, len, JX_NUMBER);
+	return edj_simple(str, len, EDJ_NUMBER);
 }
 
-/* Allocate a jx_t for a given integer */
-jx_t *jx_from_int(int i)
+/* Allocate an edj_t for a given integer */
+edj_t *edj_from_int(int i)
 {
-	jx_t *json = jx_number("", 0);
+	edj_t *json = edj_number("", 0);
 	json->text[1] = 'i';
-	JX_INT(json) = i;
+	EDJ_INT(json) = i;
 	return json;
 }
 
-/* Allocate a jx_t for a given floating-point number */
-jx_t *jx_from_double(double f)
+/* Allocate an edj_t for a given floating-point number */
+edj_t *edj_from_double(double f)
 {
-	jx_t *json = jx_number("", 0);
+	edj_t *json = edj_number("", 0);
 	json->text[1] = 'd';
-	JX_DOUBLE(json) = f;
+	EDJ_DOUBLE(json) = f;
 	return json;
 }
 
-/* Allocate a jx_t for a boolean value. */
-jx_t *jx_boolean(int boolean)
+/* Allocate an edj_t for a boolean value. */
+edj_t *edj_boolean(int boolean)
 {
 	if (boolean)
-		return jx_simple("true", 4, JX_BOOLEAN);
+		return edj_simple("true", 4, EDJ_BOOLEAN);
 	else
-		return jx_simple("false", 5, JX_BOOLEAN);
+		return edj_simple("false", 5, EDJ_BOOLEAN);
 }
 
-/* Allocate a jx_t for a null value */
-jx_t *jx_null(void)
+/* Allocate an edj_t for a null value */
+edj_t *edj_null(void)
 {
-	return jx_simple("", 0, JX_NULL);
+	return edj_simple("", 0, EDJ_NULL);
 }
 
-/* Allocate a jx_t for a null value, encoding an error message */
-jx_t *jx_error_null(const char *where, const char *fmt, ...)
+/* Allocate an edj_t for a null value, encoding an error message */
+edj_t *edj_error_null(const char *where, const char *fmt, ...)
 {
 	char	buf[200], *bigbuf;
 	int	len;
 	va_list	ap;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* First try it in a modest buffer.  Usually works. */
 	va_start(ap, fmt);
 	len = vsnprintf(buf, sizeof buf, fmt, ap);
 	va_end(ap);
 	if (len < 0)
-		return jx_null();
+		return edj_null();
 	if (len <= sizeof buf - 1) {
-		result = jx_simple(buf, len, JX_NULL);
-		result->first = (jx_t *)where;
+		result = edj_simple(buf, len, EDJ_NULL);
+		result->first = (edj_t *)where;
 		return result;
 	}
 
@@ -255,16 +255,16 @@ jx_t *jx_error_null(const char *where, const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(bigbuf, len, fmt, ap);
 	va_end(ap);
-	result = jx_simple(buf, len, JX_NULL);
+	result = edj_simple(buf, len, EDJ_NULL);
 	free(bigbuf);
-	result->first = (jx_t *)where;
+	result->first = (edj_t *)where;
 	return result;
 }
 
-/* Allocate a jx_t for a key.  The value must be non-NULL (though it can be
- * jx_null() ).  Later, you can use jx_append() to change the value.
+/* Allocate an edj_t for a key.  The value must be non-NULL (though it can be
+ * edj_null() ).  Later, you can use edj_append() to change the value.
  */
-jx_t *jx_key(const char *key, jx_t *value)
+edj_t *edj_key(const char *key, edj_t *value)
 {
 	assert(value != NULL);
 
@@ -272,33 +272,33 @@ jx_t *jx_key(const char *key, jx_t *value)
 	 * This is so we can also store the simplified version later, if
 	 * necessary.
 	 */
-	jx_t *json = jx_simple(key, strlen(key) * 2 + 1, JX_KEY);
+	edj_t *json = edj_simple(key, strlen(key) * 2 + 1, EDJ_KEY);
 	json->first = value;
 	return json;
 }
 
-/* Allocate a jx_t for an empty object */
-jx_t *jx_object()
+/* Allocate an edj_t for an empty object */
+edj_t *edj_object()
 {
-	return jx_simple(NULL, 0, JX_OBJECT);
+	return edj_simple(NULL, 0, EDJ_OBJECT);
 }
 
-/* Allocate a jx_t for an empty array */
-jx_t *jx_array()
+/* Allocate an edj_t for an empty array */
+edj_t *edj_array()
 {
-	return jx_simple(NULL, 0, JX_ARRAY);
+	return edj_simple(NULL, 0, EDJ_ARRAY);
 }
 
 /* This is a dummy type of deferred array which is always empty.  It is used
- * when jx_defer() is called with NULL instead of a real list of deferred
+ * when edj_defer() is called with NULL instead of a real list of deferred
  * functions.
  */
-static jx_t *dummy(jx_t *node)
+static edj_t *dummy(edj_t *node)
 {
 	return NULL;
 };
-static jxdeffns_t dummyfns = {
-	sizeof(jx_t) + sizeof(jxdeffns_t),	/* size (of the whole more-than-jx_t */
+static edjdeffns_t dummyfns = {
+	sizeof(edj_t) + sizeof(edjdeffns_t),	/* size (of the whole more-than-edj_t */
 	"Dummy",	/* desc */
 	dummy,		/* first */
 	dummy,		/* next */
@@ -308,13 +308,13 @@ static jxdeffns_t dummyfns = {
 	NULL		/* bykey */
 };
 
-/* Allocate a JX_DEFER node.  "fns" is a collection of function pointers
+/* Allocate a EDJ_DEFER node.  "fns" is a collection of function pointers
  * that implement the desired type of deferred array, or NULL to use a
  * dummy set of functions.
  */
-jx_t *jx_defer(jxdeffns_t *fns)
+edj_t *edj_defer(edjdeffns_t *fns)
 {
-	jx_t *json;
+	edj_t *json;
 	size_t	size;
 
 	/* If no "fns" then use dummy */
@@ -322,16 +322,16 @@ jx_t *jx_defer(jxdeffns_t *fns)
 		fns = &dummyfns;
 
 	/* Allocate it, with extra space.  Note that we must tweak the size
-	 * because jx_simple wants to be passed the size of the "text" field,
+	 * because edj_simple wants to be passed the size of the "text" field,
 	 * but fns->size is the size of the whole thing.
 	 */
-	size = fns->size - sizeof(jx_t) + sizeof json->text;
-	json = jx_simple(NULL, size, JX_DEFER);
+	size = fns->size - sizeof(edj_t) + sizeof json->text;
+	json = edj_simple("", size, EDJ_DEFER);
 
 	/* Store the fns pointer, with this deferred array's implementation
-	 * functions.  The rest of the jxdef_t is already initialized to 0's
+	 * functions.  The rest of the edjdef_t is already initialized to 0's
 	 */
-	((jxdef_t *)json)->fns = fns; 
+	((edjdef_t *)json)->fns = fns; 
 
 	/* Return it */
 	return json;
@@ -347,14 +347,14 @@ static void memory_check_leaks(void)
         int     i;
         if (!memory_tracker)
 		return;
-#ifdef JX_DEBUG_MEMORY
-	jx_debug_free(__FILE__, __LINE__, jx_system);
+#ifdef EDJ_DEBUG_MEMORY
+	edj_debug_free(__FILE__, __LINE__, edj_system);
 #endif
         for (i = 0; i < 4096; i++)
                 if (memory_tracker[i].count > 0)
-                        fprintf(stderr, "%s:%d: Leaked %d jx_t's\n", memory_tracker[i].file, memory_tracker[i].line, memory_tracker[i].count);
+                        fprintf(stderr, "%s:%d: Leaked %d edj_t's\n", memory_tracker[i].file, memory_tracker[i].line, memory_tracker[i].count);
         if (memory_tracker[4096].count > 0)
-                fprintf(stderr, "Leaked %d jx_t's from an untracked source\n", memory_tracker[4096].count);
+                fprintf(stderr, "Leaked %d edj_t's from an untracked source\n", memory_tracker[4096].count);
 }
 
 /* For debugging, this looks for a slot for counting allocations from a given
@@ -366,10 +366,10 @@ static int memory_slot(const char *file, int line)
 
         /* If memory tracking hasn't been initialized, then do so now */
         if (!memory_tracker) {
-                /* Allocate memory for the tracker.  Each jx_t has a 12-bit
+                /* Allocate memory for the tracker.  Each edj_t has a 12-bit
                  * field for tracking its allocation source, so we want 4096
                  * tracker slots.  We also want one more slot in case there
-                 * are more than 4096 source lines that allocate jx_t's.
+                 * are more than 4096 source lines that allocate edj_t's.
                  */
                 memory_tracker = calloc(4097, sizeof(memory_tracker_t));
 
@@ -406,13 +406,13 @@ static int memory_slot(const char *file, int line)
 
 
 /* The following are debugging wrappers around the above functions.  They are
- * normally only called if the source program defines JX_DEBUG_MEMORY but
+ * normally only called if the source program defines EDJ_DEBUG_MEMORY but
  * we want to use the same library whether debugging is being used or not,
  * so these are defined unconditionally.
  */
-void jx_debug_free(const char *file, int line, jx_t *json)
+void edj_debug_free(const char *file, int line, edj_t *json)
 {
-	jx_t *next;
+	edj_t *next;
 
         /* Iterate over the ->next links */
         for (; json; json = next)
@@ -423,13 +423,13 @@ void jx_debug_free(const char *file, int line, jx_t *json)
 		 * This isn't reliable!  It won't reject valid free's but it
 		 * might miss some invalid ones, if the memory was recycled.
 		 */
-		if (json->type == JX_BADTOKEN) {
+		if (json->type == EDJ_BADTOKEN) {
 			fprintf(stderr, "%s:%d: Attempt to free memory twice\n", file, line);
 			if (json->memslot)
 				fprintf(stderr, "%s:%d: This is where it was first freed\n", memory_tracker[json->memslot].file, -memory_tracker[json->memslot].line);
 		}
 
-		/* We track by where the jx_t is allocated not by where it
+		/* We track by where the edj_t is allocated not by where it
 		 * is freed.  Decrement the allocation count for that line.
 		 */
 		int slot = json->memslot;
@@ -444,128 +444,128 @@ void jx_debug_free(const char *file, int line, jx_t *json)
 		 * "null" uses ->first for the position of the error, so we
 		 * don't want to free that.
 		 */
-		if (!jx_is_error(json))
-			jx_debug_free(file, line, json->first);
+		if (!edj_is_error(json))
+			edj_debug_free(file, line, json->first);
 
 		/* Free this node */
 		json->first = json->next = NULL; /* undeferred */
 		json->memslot = memory_slot(file, -line);
-		jx_free(json);
+		edj_free(json);
 	}
 }
 
-jx_t *jx_debug_simple(const char *file, int line, const char *str, size_t len, jxtype_t type)
+edj_t *edj_debug_simple(const char *file, int line, const char *str, size_t len, edjtype_t type)
 {
-        jx_t  *json;
+        edj_t  *json;
         int slot = memory_slot(file, line);
         memory_tracker[slot].count++;
-        json = jx_simple(str, len, type);
+        json = edj_simple(str, len, type);
         json->memslot = slot;
         return json;
 }
 
-/* Allocate a jx_t for a given string. */
-jx_t *jx_debug_string(const char *file, int line, const char *str, size_t len)
+/* Allocate an edj_t for a given string. */
+edj_t *edj_debug_string(const char *file, int line, const char *str, size_t len)
 {
-        return jx_debug_simple(file, line, str, len, JX_STRING);
+        return edj_debug_simple(file, line, str, len, EDJ_STRING);
 }
 
-/* Allocate a jx_t for a given number, expressed as a string */
-jx_t *jx_debug_number(const char *file, int line, const char *str, size_t len)
+/* Allocate an edj_t for a given number, expressed as a string */
+edj_t *edj_debug_number(const char *file, int line, const char *str, size_t len)
 {
-	return jx_debug_simple(file, line, str, len, JX_NUMBER);
+	return edj_debug_simple(file, line, str, len, EDJ_NUMBER);
 }
 
-/* Allocate a jx_t for a given integer */
-jx_t *jx_debug_from_int(const char *file, int line, int i)
+/* Allocate an edj_t for a given integer */
+edj_t *edj_debug_from_int(const char *file, int line, int i)
 {
-	jx_t	*json = jx_debug_number(file, line, "", 0);
+	edj_t	*json = edj_debug_number(file, line, "", 0);
 	json->text[1] = 'i';
-	JX_INT(json) = i;
+	EDJ_INT(json) = i;
 	return json;
 }
 
-/* Allocate a jx_t for a given floating-point number */
-jx_t *jx_debug_from_double(const char *file, int line, double f)
+/* Allocate an edj_t for a given floating-point number */
+edj_t *edj_debug_from_double(const char *file, int line, double f)
 {
-	jx_t	*json = jx_debug_number(file, line, "", 0);
+	edj_t	*json = edj_debug_number(file, line, "", 0);
 	json->text[1] = 'd';
-	JX_DOUBLE(json) = f;
+	EDJ_DOUBLE(json) = f;
 	return json;
 }
 
 
-/* Allocate a jx_t for a given boolean */
-jx_t *jx_debug_boolean(const char *file, int line, int boolean)
+/* Allocate an edj_t for a given boolean */
+edj_t *edj_debug_boolean(const char *file, int line, int boolean)
 {
 	if (boolean)
-		return jx_debug_simple(file, line, "true", 4, JX_BOOLEAN);
+		return edj_debug_simple(file, line, "true", 4, EDJ_BOOLEAN);
 	else
-		return jx_debug_simple(file, line, "false", 5, JX_BOOLEAN);
+		return edj_debug_simple(file, line, "false", 5, EDJ_BOOLEAN);
 }
 
-/* Allocate a jx_t for null */
-jx_t *jx_debug_null(const char *file, int line)
+/* Allocate an edj_t for null */
+edj_t *edj_debug_null(const char *file, int line)
 {
-	return jx_debug_simple(file, line, "", 0, JX_NULL);
+	return edj_debug_simple(file, line, "", 0, EDJ_NULL);
 }
 
-/* Allocate a jx_t for a given error */
-jx_t *jx_debug_error_null(const char *file, int line, char *fmt, ...)
+/* Allocate an edj_t for a given error */
+edj_t *edj_debug_error_null(const char *file, int line, char *fmt, ...)
 {
 	char	buf[200], *bigbuf;
 	int	len;
 	va_list	ap;
-	jx_t	*result;
+	edj_t	*result;
 
 	/* First try it in a modest buffer.  Usually works. */
 	va_start(ap, fmt);
 	len = vsnprintf(buf, sizeof buf, fmt, ap);
 	va_end(ap);
 	if (len < 0)
-		return jx_debug_null(file, line);
+		return edj_debug_null(file, line);
 	if (len <= sizeof buf)
-		return jx_debug_simple(file, line, buf, len - 1, JX_NULL);
+		return edj_debug_simple(file, line, buf, len - 1, EDJ_NULL);
 
 	/* Allocate a larger buffer to hold the string, and use it */
 	bigbuf = malloc(len);
 	va_start(ap, fmt);
 	vsnprintf(bigbuf, len, fmt, ap);
 	va_end(ap);
-	result = jx_debug_simple(file, line, buf, len - 1, JX_NULL);
+	result = edj_debug_simple(file, line, buf, len - 1, EDJ_NULL);
 	free(bigbuf);
 	return result;
 }
 
-/* Allocate a jx_t for a key.  If value is non-NULL, then it will be used
+/* Allocate an edj_t for a key.  If value is non-NULL, then it will be used
  * as the value associated with the key.
  */
-jx_t *jx_debug_key(const char *file, int line, const char *key, jx_t *value)
+edj_t *edj_debug_key(const char *file, int line, const char *key, edj_t *value)
 {
 	/* Allocate double the space for the key name, so we have a place to
-	 * put the "loose" version from jx_mbs_simple_key().
+	 * put the "loose" version from edj_mbs_simple_key().
 	 */
-	jx_t *json = jx_debug_simple(file, line, key, strlen(key) * 2 + 1, JX_KEY);
+	edj_t *json = edj_debug_simple(file, line, key, strlen(key) * 2 + 1, EDJ_KEY);
 	json->first = value;
 	return json;
 }
 
-/* Allocate a jx_t for an empty object */
-jx_t *jx_debug_object(const char *file, int line)
+/* Allocate an edj_t for an empty object */
+edj_t *edj_debug_object(const char *file, int line)
 {
-	return jx_debug_simple(file, line, NULL, 0, JX_OBJECT);
+	return edj_debug_simple(file, line, NULL, 0, EDJ_OBJECT);
 }
 
-/* Allocate a jx_t for an empty array */
-jx_t *jx_debug_array(const char *file, int line)
+/* Allocate an edj_t for an empty array */
+edj_t *edj_debug_array(const char *file, int line)
 {
-	return jx_debug_simple(file, line, NULL, 0, JX_ARRAY);
+	return edj_debug_simple(file, line, NULL, 0, EDJ_ARRAY);
 }
 
-/* Allocate a JX_DEFER node */
-jx_t *jx_debug_defer(const char *file, int line, jxdeffns_t *fns)
+/* Allocate a EDJ_DEFER node */
+edj_t *edj_debug_defer(const char *file, int line, edjdeffns_t *fns)
 {
-	jx_t *json;
+	edj_t *json;
 	size_t	size;
 
 	/* If no "fns" then use dummy */
@@ -574,20 +574,20 @@ jx_t *jx_debug_defer(const char *file, int line, jxdeffns_t *fns)
 		
 	/* Allocate it, with extra space for an overall size of fns->size */
 	size = fns->size - sizeof json->text;
-	json = jx_debug_simple(file, line, "", size, JX_DEFER);
+	json = edj_debug_simple(file, line, "", size, EDJ_DEFER);
 
 	/* Store the fns pointer, with this deferred array's implementation
-	 * functions.  The rest of the jxdef_t is already initialized to 0's
+	 * functions.  The rest of the edjdef_t is already initialized to 0's
 	 */
-	((jxdef_t *)json)->fns = fns; 
+	((edjdef_t *)json)->fns = fns; 
 
 	/* Return it */
 	return json;
 }
 
 
-/* This is called via jx_walk() to tweak the source line for tracking memory leaks */
-static int fixslot(jx_t *json, void *data)
+/* This is called via edj_walk() to tweak the source line for tracking memory leaks */
+static int fixslot(edj_t *json, void *data)
 {
 	int	slot = *(int *)data;
 
@@ -605,50 +605,50 @@ static int fixslot(jx_t *json, void *data)
 }
 
 /* Parse a string and return it */
-jx_t *jx_debug_parse_string(const char *file, int line, const char *str)
+edj_t *edj_debug_parse_string(const char *file, int line, const char *str)
 {
-        jx_t *json;
+        edj_t *json;
         int slot = memory_slot(file, line);
-        json = jx_parse_string(str);
-        jx_walk(json, fixslot, &slot);
+        json = edj_parse_string(str);
+        edj_walk(json, fixslot, &slot);
         return json;
 }
 
 /* Find the first element of a (possibly deferred) array */
-jx_t *jx_debug_first(const char *file, int line, jx_t *array)
+edj_t *edj_debug_first(const char *file, int line, edj_t *array)
 {
 	int slot = memory_slot(file, line);
-	jx_t *json = jx_first(array);
-	if (jx_is_deferred_element(json)) {
+	edj_t *json = edj_first(array);
+	if (edj_is_deferred_element(json)) {
 		fixslot(json, &slot);
 		fixslot(json->next, &slot);
 	}
 	return json;
 }
 
-/* Do a deep copy of a jx_t tree */
-jx_t *jx_debug_copy(const char *file, int line, jx_t *json)
+/* Do a deep copy of an edj_t tree */
+edj_t *edj_debug_copy(const char *file, int line, edj_t *json)
 {
         int slot = memory_slot(file, line);
-        json = jx_copy(json);
-        jx_walk(json, fixslot, &slot);
+        json = edj_copy(json);
+        edj_walk(json, fixslot, &slot);
         return json;
 }
 
-/* Do a deep copy of a jx_t tree, filtering items through function */
-jx_t *jx_debug_copy_filter(const char *file, int line, jx_t *json, int (*test)(jx_t *elem))
+/* Do a deep copy of an edj_t tree, filtering items through function */
+edj_t *edj_debug_copy_filter(const char *file, int line, edj_t *json, int (*test)(edj_t *elem))
 {
         int slot = memory_slot(file, line);
-        json = jx_copy_filter(json, test);
-        jx_walk(json, fixslot, &slot);
+        json = edj_copy_filter(json, test);
+        edj_walk(json, fixslot, &slot);
         return json;
 }
 
 /* Evaluate an expression */
-jx_t *jx_debug_calc(const char *file, int line, jxcalc_t *calc, jxcontext_t *context, void *agdata)
+edj_t *edj_debug_calc(const char *file, int line, edjcalc_t *calc, edjcontext_t *context, void *agdata)
 {
 	int slot = memory_slot(file, line);
-	jx_t *json = jx_calc(calc, context, agdata);
-	jx_walk(json, fixslot, &slot);
+	edj_t *json = edj_calc(calc, context, agdata);
+	edj_walk(json, fixslot, &slot);
 	return json;
 }

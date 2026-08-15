@@ -25,5 +25,5 @@ tags:
 
 wc:
 	@echo `find . -name '*.[ch]' -exec cat {} \; | wc -l` lines of C code
-	@echo `find . -name '*.jc' -exec cat {} \; | wc -l` lines of jx scripts
+	@echo `find . -name '*.jc' -exec cat {} \; | wc -l` lines of edj scripts
 	@echo `find www man -regex '.*\.\(html\|css\|sh\|man\|1\)' -exec cat {} \; | wc -l` lines of documentation
