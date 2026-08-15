@@ -1,15 +1,15 @@
-# jx
+# edj
 
-jx is program for exploring or converting JSON data.
+**edj** is program for exploring or converting JSON data.
 It is a versatile tool that is easy to learn and can handle big data.
 Its main features are:
 
 * It uses a syntax that's a combination of JavaScript and SQL.
-  If you're familiar with those two languages then jx should be
+  If you're familiar with those two languages then edj should be
   fairly intuitive.
   There are a few added operators and functions for things like filtering
   arrays and joining tables, but they're easy to learn.
-  A major goal for jx is that it should _not_ have a steep learning curve.
+  A major goal for edj is that it should _not_ have a steep learning curve.
 
   - Javascript features include nearly all operators, and the most common
     functions,  Many statements are available too.  You can define consts,
@@ -19,7 +19,7 @@ Its main features are:
     aggregate functions like COUNT() and SUM(), and operators including
     BETWEEN...AND, LIKE, and IS NULL.
 
-  - Added features include an _array_*#*_expr_ operator for filtering arrays
+  - Added features include an _array_**#**_expr_ operator for filtering arrays
     and tables, intuitive support for ISO 8601 times/dates/periods, and some
     carefully chosen extensions to JavaScript's functions.
 
@@ -31,11 +31,11 @@ Its main features are:
     completion.  (Currently this is implemented via the GNU Readline library
     but I'm running into its limitations pretty hard, so this may change.)
 
-  - When used in a shell script, you can pass values in to jx via
+  - When used in a shell script, you can pass values in to edj via
     _name_=_value_ arguments on the command line, or via environment variables.
     Collecting JSON output is easy.
     If you want your shell to process rows of a table, that's pretty easy too
-    because jx supports a "shell" output format, where each row is output
+    because edj supports a "shell" output format, where each row is output
     as a line of _name_=_value_ pairs with shell quoting.
 
   - When used as a self-contained scripting language, it can easily generate
@@ -52,14 +52,14 @@ Its main features are:
   It feels almost as important as name completion.
 
 * Most of the logic is implemented in a library.
-  Implementing it this way allows you to embed jx in other programs.
+  Implementing it this way allows you to embed edj in other programs.
   The library has "hooks" that let you add your own extensions to the syntax.
   You can also use its low-level functions to manipulate JSON data in your
   own C/C++ programs.
 
 * It supports plugins.
-  Plugins are available for sending web requests, handling XML data, directly
-  interfacing with MySQL or SQLLite databases, logging, cacheing, and more.
+  Plugins are available for sending web requests, handling XML data, logging,
+  cacheing, and more.
   You can implement your own plugins that use the above-mentioned "hooks"
   to extend the syntax.
 
@@ -67,26 +67,35 @@ Its main features are:
   Any JSON files in those directories can be loaded just by using the
   file's basename as a variable name.
 
-* You can configure persistent (cross-invocation) autoload directories,
-  plugins, and other settings... but for interactive use only.
-  Persistent settings are intentionally inhibited for non-interactive scripts
-  so that the scripts will have a consistent environment to run in.
+* For interactive sessions, you can easily make the configuration be persistent
+  meaning it'll use the altered configuration as your default across sessions.
+  The persistent features can include autoload directories, plugins, scripts,
+  and other settings.
+  (Persistent configurations are intentionally inhibited for non-interactive
+  scripts so that the scripts will have a consistent environment to run in.)
 
 * The JSON data parser is quick.  Also, it can process large documents
   incrementally.
+  This is done in an unobtrusive way - If **edj** decides to load an array
+  incrementally, it'll still be an array and you can access it like any other
+  array.
 
 * Tables (arrays of objects) can be output in a nice grid format.
-  CSV and Shell output formats are also supported.
-  Other formats can be added via plugins.
+  Shell output formats are also supported.
+  Other formats such as CSV can be added via plugins.
 
 * It fully supports UTF-8 text.
   The grid output is aware that not all Unicode characters are the same width.
 
-* jx is well documented.
+* **edj** is well documented.
 
   - Online documentation is available at
-    [https://www.jxhub.net](https://www.jxhub.net).
+    [https://www.edj.center](https://www.edj.center).
     This site is mostly intended to serve as a quick reference, but there
     are also some tutorials and articles there.
 
   - It has a fairly extensive "help" command.
+
+  - You can see a function's declaration by running "function *name*" without
+    a parenthesized parameter list.
+    This works for both built-in functions and user-defined functions.
