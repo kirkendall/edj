@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html style="overflow-x:hidden">
   <head>
-     <link rel="stylesheet" type="text/css" href="../jx.css">
+     <link rel="stylesheet" type="text/css" href="../edj.css">
   </head>
   <body>
-    <h3>jx Functions</h3>
+    <h3>edj Functions</h3>
     <div class="sidebar" id="sidebar">
       @@@
     </div>

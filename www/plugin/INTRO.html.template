@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>JX Plugins</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx plugin summary">
-    <meta name="keywords" content="jx, plugin reference">
+    <title>EDJ Plugins</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj plugin summary">
+    <meta name="keywords" content="edj, plugin reference">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>JX Plugins</h1>
+    <h1>EDJ Plugins</h1>
     This is a list of plugins that are available to the
-    <strong>jx</strong> program.
+    <strong>edj</strong> program.
     <p>
     There are basically two ways to load plugins:
     From the shell command line via a "-l<var>plugin</var>" or "-L<var>plugin</var>" flag, or

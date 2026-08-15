@@ -60,7 +60,7 @@
     yet another dependency.
     <p>
     In the case of edj, when you install "edj" you must also install
-    "libjx.so" where "edj" can find it (usually <tt>/usr/lib64/</tt>
+    "libedj.so" where "edj" can find it (usually <tt>/usr/lib64/</tt>
     on Linux systems).
     Any plugins that you want to use must also be copied over.
     And since the "curl" plugin depends on the libcurl.so library, you have
@@ -86,11 +86,11 @@
     containing all of the plugins.
     This library is only used for linking into "edjstatic", and the linker will
     only include the plugins that you specifically want.
-    (This is separate from the "libjx.a" library containing the core of
+    (This is separate from the "libedj.a" library containing the core of
     edj, by the way.  Don't get them confused.)
     <p>
     The version of the <tt>json_plugin_load()</tt> function in the static
-    "libjx.a" library contains a list of plugins to include in the binary.
+    "libedj.a" library contains a list of plugins to include in the binary.
     By adjusting the list, you can make any plugin available to "edjstatic".
     But there's a catch: Some of the plugins depend on other libraries, which
     may in turn depend on other libraries, all of which will get sucked into
@@ -109,7 +109,7 @@
       table.referencelist.steps td:nth-child(2) { font-family:monospace; font-size:125%; white-space:nowrap; }
     </style>
     <table class="referencelist steps">
-      <tr><td>1</td><td>cd src/lib</td><td>Go into the source directory for the "libjx.so"/"libjx.a" library.</td></tr>
+      <tr><td>1</td><td>cd src/lib</td><td>Go into the source directory for the "libedj.so"/"libedj.a" library.</td></tr>
       <tr><td>2</td><td>vi Makefile</td><td>Edit the Makefile.  I'm using vi here, but any text editor will do.</td</tr>
       <tr><td>3</td><td>/^STATIC=</td><td>Search for the "STATIC=..." line.</td></tr>
       <tr><td>4</td><td>f=lC-DSTATICCSV -DSTATICLOG&lt;esc&gt;</td><td>

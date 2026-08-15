@@ -34,7 +34,7 @@
     You'll see the <tt>edj_t</tt> data type used a lot in this article.
     It's used to represent JSON values, including just about all data in
     an edj script.
-    See the <a target="_PARENT" href="../index.html?a=The_jx_t_Structure">The edj_t Structure</a>
+    See the <a target="_PARENT" href="../index.html?a=The_edj_t_Structure">The edj_t Structure</a>
     for more info, if you're curious.
 
     <h2>Behavior of a function</h2>
@@ -276,7 +276,7 @@
 		jfn_widest,		<em>/* the function that returns the final value */</em>
 		jag_widest,		<em>/* the function that finds the widest-so-far */</em>
 		<b>sizeof</b>(agwidest_t),	<em>/* amount of storage space needed. */</em>
-		JXFUNC_JXFREE);	<em>/* automatically free the edj_t in agwidest_t */</em>
+		EDJFUNC_EDJFREE);	<em>/* automatically free the edj_t in agwidest_t */</em>
     </pre>
     It could be used like this:
     <div class="example">
@@ -289,19 +289,19 @@
     requires a bit more discussion.
     <p>
     There are two flags you can pass to <tt>edj_calc_aggregate_hook()</tt>
-    for the final parameter: EDJFUNC_FREE and JXFUNC_JXFREE.
+    for the final parameter: EDJFUNC_FREE and EDJFUNC_EDJFREE.
     For EDJFUNC_FREE, the first bytes of the <var>agdata</var> are assumed
     to be a pointer to memory that was allocated via <tt>malloc()</tt> or
     its friends; when the <var>agdata</var> is no longer needed, if those
     bytes represent a non-NULL pointer then <tt>free()</tt> will automatically
     be called on that pointer, to free whatever it was pointing to.
-    The JXFUNC_JXFREE flag does the same, but assumes it is a <tt>edj_t</tt>
+    The EDJFUNC_EDJFREE flag does the same, but assumes it is a <tt>edj_t</tt>
     pointer which must be freed via <tt>edj_free()</tt>.
     If you use both flags together (via the bitwise-OR operator, |),
     then edj assumes the <var>agdata</var> starts with a pointer to
     call <tt>free()</tt> on followed by a pointer to call <tt>edj_free()</tt>
     on.
-    The example above uses JXFUNC_JXFREE because the first field in the
+    The example above uses EDJFUNC_EDJFREE because the first field in the
     <tt>agwidest_t</tt> data type is a <tt>edj_t</tt> pointer.
     <p>
     Automatic freeing isn't just convenient; it's <em>necessary</em>.
@@ -311,10 +311,10 @@
     <p>
     The <tt>jfn_widest()</tt> function returns the longest string.
     It <em>could have</em> returned a <tt>edj_copy()</tt> copy of the
-    string and then allowed JXFUNC_JXFREE to free the copy in the
+    string and then allowed EDJFUNC_EDJFREE to free the copy in the
     <var>agdata</var>, but it's more efficient to just return it directly
     and set the pointer in the <var>agdata</var> to NULL to prevent
-    JXFUNC_JXFREE from freeing it.
+    EDJFUNC_EDJFREE from freeing it.
 
     <h2>Adding a function in src/lib/calcfunc.c</h2>
 
@@ -330,7 +330,7 @@
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td><a target="_PARENT" href="../index.html?a=The_jx_t_Structure">The edj_t Structure</a></td><td>Details about the <tt>edj_t</tt> data type</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?a=The_edj_Structure">The edj_t Structure</a></td><td>Details about the <tt>edj_t</tt> data type</td></tr>
         <tr><td><a target="_PARENT" href="../index.html?a=How_to_Write_a_Plugin">How to Write a Plugin</a></td><td>Step-by-step guide to writing new plugins</td></tr>
       </table>
     </details>

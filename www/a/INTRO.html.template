@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>jx Articles</title>
-    <link rel="stylesheet" type="text/css" href="../jx.css">
-    <meta name="description" content="jx function summary">
-    <meta name="keywords" content="jx, articles">
+    <title>edj Articles</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj function summary">
+    <meta name="keywords" content="edj, articles">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
   </head>
   <body>
-    <h1>jx Articles</h1>
+    <h1>edj Articles</h1>
 
     These either announce news, or provide in-depth explanations of related
-    groups of jx features.
+    groups of edj features.
 
     @@@
   </body>

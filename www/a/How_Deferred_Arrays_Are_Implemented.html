@@ -37,12 +37,12 @@
 
     <h2>"Normal" Arrays</h2>
     Non-deferred arrays are represented by linked lists of
-    <a target="_PARENT" href="../index.html?a=The_jx_t_Structure">edj_t</a>
+    <a target="_PARENT" href="../index.html?a=The_edj_t_Structure">edj_t</a>
     nodes.
     There's a <tt>edj_t</tt> with <tt>-&gt;type=EDJ_ARRAY</tt>, and its
     <tt>-&gt;first</tt> points to the first element.
     To step from one element to the next,
-    follow the element's <tt>-&gt;next</tt> pointer.
+    follow each element's <tt>-&gt;next</tt> pointer.
     To iterate over a non-deferred array, you can...
     <pre>		
 	<i>/* This only works for non-deferred arrays! */</i>
@@ -60,46 +60,27 @@
 
     Deferred arrays are also represented by a <tt>edj_t</tt> with
     <tt>-&gt;type=EDJ_ARRAY</tt>, but instead of having <tt>-&gt;first</tt>
-    point to the <tt>edj_t</tt> of the first element, it points to a
-    <tt>EDJ_DEFER</tt>.
-    In other words, for any deferred array, its
-    <tt>-&gt;first-&gt;type=EDJ_DEFER</tt>.
+    point to the <tt>edj_t</tt> of the actual first element, it points to
+    one with <tt>-&gt;type=EDJ_DEFER</tt>.
     <p>
     Internally, though, there's some funny business going on.
     Instead of pointing to a real <tt>edj_t</tt>, it actually points to a
     <tt>edjdef_t</tt>.
-    <tt>edjdef_t</tt> is a struct which starts in which the first member
+    <tt>edjdef_t</tt> is a struct in which the first member
     is a <tt>edj_t</tt>, but there are other members tacked on too.
     There's a <tt>fns</tt> member which points to a collection of function
     pointers that implement this particular deferred array's behavior, and
-    a <tt>file</tt> member which points to the file that deferred data is
-    being read from (if any).
-    If a other storage is needed, then yet another layer of type-spoofing
+    a <tt>file</tt> member which points to the file that the deferred data is
+    being read from (or NULL if elements aren't coming from a file).
+    If any other storage is needed, then yet another layer of type-spoofing
     may be present to add that storage.
     <p>
     Still, since it starts with <tt>edj_t</tt> data, the <tt>-&gt;type</tt>
     field is valid, and will always be <tt>EDJ_DEFER</tt>.
     <p>
     The collection of function pointers includes one for finding the first
-    element, or for the next element, and possibly some others for optimizing
+    element, one for the next element, and possibly some others for optimizing
     things like finding the <var>n'th</var> element.
-
-    <h2>edj_is_deferred_array() and edj_is_deferred_element()</h2>
-
-    If a non-deferred array happens to be empty then the above test would be
-    dangerous since it'd involve dereferencing NULL.
-    The <tt>edj_is_deferred_array()</tt> function does the test in a safe way.
-    It's also less cryptic.
-    However, the design of deferred arrays is intended to allow the same code
-    to work on normal and deferred arrays with (almost) equal ease, so you
-    rarely need to know this.
-    <p>
-    Similarly, edj_is_deferred_element() tests whether an element was read
-    from a deferred array.
-    This can be significant because when you step from one element to the next,
-    then the old element is freed.
-    If you need to save an element's value, or even just part of its value,
-    then you need to copy it using <tt>edj_copy()</tt>.
 
     <h2>edj_first() and edj_next()</h2>
 
@@ -250,6 +231,24 @@
     </ol>
     <p>
     Honestly none of those three "good" ways are perfect though.
+
+    <h2>edj_is_deferred_array() and edj_is_deferred_element()</h2>
+
+    If an array happens to be empty
+    then testing <var>array</var><tt>-&gt;type</tt> would be dangerous
+    since it'd involve dereferencing NULL.
+    The <tt>edj_is_deferred_array()</tt> function does the test in a safe way.
+    It's also less cryptic.
+    However, the design of deferred arrays is intended to allow the same code
+    to work on normal and deferred arrays with (almost) equal ease, so you
+    rarely need to know this.
+    <p>
+    Similarly, edj_is_deferred_element() tests whether an element was read
+    from a deferred array.
+    This can be significant because when you step from one element to the next,
+    then the old element is freed.
+    If you need to save an element's value, or even just part of its value,
+    then you need to copy it using <tt>edj_copy()</tt>.
 
     <h2>Nested Arrays</h2>
 
