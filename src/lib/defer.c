@@ -152,7 +152,7 @@ void edj_undefer(edj_t *arr)
 
 	/* Replace the EDJ_DEFER node with the new array's contents */
 	edj_free(arr->first);
-	arr->first = undeferred->first;
+	*arr = *undeferred;
 
 	/* Clean up */
 	undeferred->first = NULL;
