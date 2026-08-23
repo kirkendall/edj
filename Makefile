@@ -2,10 +2,12 @@ BIN=	`pwd`/bin
 INC=	`pwd`/include
 LIB=	`pwd`/lib
 PLUGIN=	`pwd`/plugin
-CFLAGS=	-I$(INC) -DJX_DEBUG_MEMORY
+CFLAGS=	-I$(INC) -DEDJ_DEBUG_MEMORY
 #CFLAGS=	-I$(INC)
 LDFLAGS=-L/usr/local/lib64 -L$(LIB)
-CC=	gcc -fpic -Wall
+#CC=	gcc -pg -g -fpic -Wall
+#CC=	gcc -g -fpic -Wall
+CC=	gcc -O -fpic -Wall
 
 all:
 	[ -d "$(BIN)" ] || mkdir "$(BIN)"

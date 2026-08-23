@@ -9,7 +9,8 @@ SRC=	curl.c
 OBJ=	curl.o
 LIBS=	-L/usr/local/lib64 `curl-config --libs`
 CFLAGS=	-I$(INC) `curl-config --cflags`
-CC=	gcc -fpic -g
+#CC=	gcc -fpic -g
+CC=	gcc -fpic -O
 
 $(ALL): plugincurl.so
 	cp plugincurl.so $(PLUGIN)/plugincurl.so

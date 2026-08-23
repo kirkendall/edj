@@ -9,8 +9,9 @@ SRC=	xml.c
 BUNDLE=	parse.c unparse.c template.c
 OBJ=	xml.o
 LIBS=	
-CFLAGS=	-I$(INC)
-CC=	gcc -g -fpic
+CFLAGS=	-I$(INC) -DEDJ_DEBUG_MEMORY
+#CC=	gcc -g -fpic
+CC=	gcc -O -fpic
 
 all: $(ALL)
 

@@ -9,7 +9,8 @@ SRC=	example.c
 OBJ=	example.o
 LIBS=	
 CFLAGS=	-I$(INC)
-CC=	gcc -fpic -g
+#CC=	gcc -fpic -g
+CC=	gcc -fpic -O
 
 $(ALL): pluginexample.so
 	cp pluginexample.so $(PLUGIN)/pluginexample.so

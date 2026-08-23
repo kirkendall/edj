@@ -9,7 +9,8 @@ SRC=	shell.c
 OBJ=	shell.o
 LIBS=	
 CFLAGS=	-I$(INC)
-CC=	gcc -fpic -g
+#CC=	gcc -fpic -g
+CC=	gcc -fpic -O
 
 $(ALL): pluginshell.so
 	cp pluginshell.so $(PLUGIN)/pluginshell.so

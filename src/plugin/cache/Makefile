@@ -10,6 +10,7 @@ OBJ=	cache.o
 LIBS=	
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
+#CC=	gcc -fpic -O
 
 $(ALL): plugincache.so
 	cp plugincache.so $(PLUGIN)/plugincache.so

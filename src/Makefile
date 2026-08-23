@@ -1,6 +1,6 @@
 all:
-	make -C lib -e
-	for i in */.; do [ $$i = lib/. ] || make -C $$i -e; done
+	make -e -C lib
+	for i in */.; do [ $$i = lib/. ] || make -e -C $$i; done
 
 clean:
-	for i in */.; do make -C $$i -e clean; done
+	for i in */.; do make -e -C $$i clean; done

@@ -9,6 +9,7 @@ SRC=	log.c
 OBJ=	log.o
 CFLAGS=	-I$(INC)
 CC=	gcc -fpic -g
+CC=	gcc -fpic -O
 
 $(ALL): pluginlog.so
 	cp pluginlog.so $(PLUGIN)/pluginlog.so

@@ -12,11 +12,12 @@ LIBOBJ=	by.o blob.o calc.o calcfunc.o calcparse.o common.o compare.o config.o \
 	explain.o file.o find.o flat.o format.o grid.o is.o length.o mbstr.o \
 	memory.o parse.o print.o serialize.o sort.o text.o user.o walk.o
 #STATIC= -DSTATICCACHE -DSTATICCSV -DSTATICCURL -DSTATICLOG -DSTATICMATH -DSTATICXML
-STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH
-#CC=gcc -g -pg
-#CC=gcc -g -O
-CC=gcc -g -fpic -Wall
+STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH -DSTATICXML
+CC=gcc -g -pg -fpic -Wall
+#CC=gcc -O -fpic -Wall
+#CC=gcc -g -fpic -Wall
 CFLAGS=-Wall -DEDJ_DEBUG_MEMORY -I$(INCLUDE)
+#CFLAGS=-Wall -I$(INCLUDE)
 
 all: $(LIB)/libedj.so $(LIB)/libedj.a
 
