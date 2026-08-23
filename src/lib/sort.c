@@ -3,6 +3,11 @@
 #include <string.h>
 #include <edj.h>
 
+/* This is the size of the hash table.  Don't change it, unless you also change
+ * the hash calculation in jcsort(), below.
+ */
+#define HASHSIZE 1024
+
 /* Elements with the same value in a sort field are collected in a linked list.
  * "arraybuf" is the head of that list, and "value" points to the member that
  * we're sorting by.
@@ -11,6 +16,7 @@ typedef struct {
 	edj_t	arraybuf;
 	edj_t	*value;
 	double	dvalue;
+	int	nexthash;
 } bucket_t;
 
 /* Compare the sorting values for two buckets */
@@ -55,7 +61,6 @@ static int cmpdescending(const void *v1, const void *v2)
 	return cmpascending(v2, v1);
 }
 
-
 /* This helper function does the real sorting, after parameters have been
  * checked.
  */
@@ -66,6 +71,8 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 	int	nbuckets, used, b, b2;
 	bucket_t *bucket;
 	double	dvalue;
+	int	hash, hashtable[HASHSIZE], hashlength[HASHSIZE];
+	char	*s;
 
 	descending = 0;
 	if (orderby && orderby->type == EDJ_BOOLEAN) {
@@ -84,24 +91,29 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 		 */
 		if (grouping && array->first) {
 			elem = array->first;
-			array->first = edj_array();
+			EDJ_END_POINTER(array) = array->first = edj_array();
 			edj_append(array->first, elem);
-			EDJ_END_POINTER(array) = array->first;
 		}
 		return;
 	}
 
-	/* Start with an empty bucket array */
+	/* Start with an empty bucket array and empty hash table */
 	nbuckets = used = 0;
 	bucket = NULL;
+	for (hash = 0; hash < HASHSIZE; hash++) {
+		hashtable[hash] = -1;
+		hashlength[hash] = 0;
+	}
 
 	/* Split the array elements out to buckets.  For strings, we do this
 	 * in a case-sensitive way at this phase.
 	 */
 	while (array->first) {
-		/* If user aborted, then quit */
+#if 0
+		/* If user aborted, then quit. !!! I need to clean up! */
 		if (edj_interrupt)
 			return;
+#endif
 
 		/* Pull the element out of the array */
 		elem = array->first;
@@ -110,11 +122,26 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 
 		/* Fetch its sort value. */
 		value = edj_by_expr(elem, orderby->text, NULL, NULL, NULL);
+		dvalue = 0.0;
 		if (value && value->type == EDJ_NUMBER)
 			dvalue = edj_double(value);
 
-		/* Find a bucket for this value. */
-		for (b = 0; b < used; b++) {
+		/* Generate a hash number */
+		if (value->type == EDJ_STRING) {
+			for (hash = 1022, s = value->text; *s; s++)
+				hash = ((hash << 3) ^ (*s & 0x1f) ^ (hash >> 7)) & 0x3ff;
+		} else if (value->type == EDJ_NUMBER) {
+			hash = ((int)dvalue % 1024) ^ ((int)(dvalue * 1024) % 1024) ;
+		} else {
+			hash = 1023;
+		}
+
+		/* Find a bucket for this value.  This uses a linear search
+		 * so it can be inefficient -- adding n items takes O(n^2)
+		 * time.  A hash table is used to cut that by a factor of 1000
+		 * or so, but its still just a faster O(n^2).
+		 */
+		for (b = hashtable[hash]; b >= 0; b = bucket[b].nexthash) {
 			if (!value && !bucket[b].value)
 				break;
 			else if (value
@@ -133,7 +160,7 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 		}
 
 		/* If no bucket was found, allocate one */
-		if (b >= used) {
+		if (b < 0) {
 			/* Maybe enlarge the bucket array */
 			if (used == nbuckets) {
 				nbuckets = used * 3 / 2 + 100;
@@ -144,9 +171,12 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 			}
 
 			/* Set its value */
+			b = used;
 			bucket[b].value = value;
-			if (value && value->type == EDJ_NUMBER)
-				bucket[b].dvalue = dvalue;
+			bucket[b].dvalue = dvalue;
+			bucket[b].nexthash = hashtable[hash];
+			hashtable[hash] = b;
+			hashlength[hash]++;
 			used++;
 		}
 
@@ -160,6 +190,7 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 	else
 		qsort(bucket, used, sizeof(bucket_t), cmpascending);
 
+#if 0
 	/* Merge any buckets that have the same case-insensitive string value.
 	 * We only have to do this for strings, and we know each bucket contains
 	 * at least one item so EDJ_END_POINTER() is non-NULL.
@@ -173,11 +204,13 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 			/* Same, case-insensitively.  Append b2 to b */
 			EDJ_END_POINTER(&bucket[b].arraybuf)->next = bucket[b2].arraybuf.first; /* undeferred */
 			EDJ_END_POINTER(&bucket[b].arraybuf) = EDJ_END_POINTER(&bucket[b2].arraybuf);
+			EDJ_ARRAY_LENGTH(&bucket[b].arraybuf) += EDJ_ARRAY_LENGTH(&bucket[b2].arraybuf);
 		} else {
 			b++;
 		}
 	}
 	used = b + 1;
+#endif
 
 	/* If there are more sort keys, then recursively sort each bucket */
 	if (orderby->next) { /* undeferred */
@@ -194,19 +227,21 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 		/* normal non-grouping sort */
 		array->first = bucket[0].arraybuf.first;
 		EDJ_END_POINTER(array) = EDJ_END_POINTER(&bucket[0].arraybuf);
+		EDJ_ARRAY_LENGTH(array) = EDJ_ARRAY_LENGTH(&bucket[0].arraybuf);
 		for (b = 1; b < used; b++) {
 			EDJ_END_POINTER(array)->next = bucket[b].arraybuf.first; /* undeferred */
 			EDJ_END_POINTER(array) = EDJ_END_POINTER(&bucket[b].arraybuf);
+			EDJ_ARRAY_LENGTH(array) += EDJ_ARRAY_LENGTH(&bucket[b].arraybuf);
 		}
 	} else {
 		/* grouping, and this is the last sort/group key */
 		EDJ_END_POINTER(array) = NULL;
+		EDJ_ARRAY_LENGTH(array) = 0;
 		for (b = 0; b < used; b++) {
 			elem = edj_array();
 			elem->first = bucket[b].arraybuf.first;
-			for (value = elem->first; value->next; value = value->next) { /* undeferred */
-			}
-			EDJ_END_POINTER(elem) = value;
+			EDJ_END_POINTER(elem) = EDJ_END_POINTER(&bucket[b].arraybuf);
+			EDJ_ARRAY_LENGTH(elem) = EDJ_ARRAY_LENGTH(&bucket[b].arraybuf);
 			edj_append(array, elem);
 		}
 	}
