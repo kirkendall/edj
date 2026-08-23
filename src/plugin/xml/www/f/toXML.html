@@ -10,13 +10,16 @@
   <body>
     <h1>toXML - Convert data to an XML string</h1>
     <dl>
-      <dt>toXML(<var>data</var>:any):string
+      <dt>toXML(<var>data</var>:object, <var>template</var>?:string):string
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=xml">xml</a> plugin.
       You must load the plugin via either -lxml on the shell command line,
       or a <tt>plugin xml;</tt> line in a script.
       <p>
       The <tt>toXML()</tt> function generates an XML string.
+      You can invoke it with or without a template string.
+
+      <h2>Without a template string</h2>
       It is the opposite of the XML parser;
       if you take parsed XML data and feed that to this function,
       you should get the same XML back (possibly with minor formatting changes).
@@ -43,6 +46,70 @@
       settings as the JSON formatter.
       It also uses the plugin's <tt>attributeSuffix</tt> option to control what
       suffix the data keys should use to denote attributes rather than contents.
+
+      <h2>With a template string</h2>
+      This is intended to give you precise control over the XML format.
+      This matters because many SOAP servers are very picky.
+      The <var>template</var> string is basically a framework XML document,
+      with added notations to say what should get inserted where.
+      The supported notations are:
+      <table class="referencelist">
+        <tr><td><var>name</var>="$<var>key</var>"</td><td>
+	  In a tag attribute, replace $<var>key</var> with the value of
+	  <var>data.key</var>.  If that value is missing, <tt>null</tt>,
+	  or "" then substitute nothing, leaving an empty set of quotes.
+	</td></tr>
+
+        <tr><td>*<var>name</var>="$<var>key</var>"</td><td>
+	  In a tag attribute, replace $<var>key</var> with the value of
+	  <var>data.key</var> and delete the "*".  If that value is missing,
+	  <tt>null</tt>, or "" then delete the entire attribute including the
+	  <var>name</var>= part.
+	</td></tr>
+
+	<tr><td>&lt;<var>tag</var>&gt;$<var>key</var>&lt;/<var>tag</var>&gt;</td><td>
+	  In the content between tags, replace $<var>key</var> with the value
+	  of <var>data.key</var>.  If the value is missing, <tt>null</tt>,
+	  or "" then replace it with nothing.
+	</td></tr>
+
+	<tr><td>&lt;<var>tag</var>&gt;$$<var>key</var>&lt;/<var>tag</var>&gt;</td><td>
+	  In the content between tags, treat $$<var>key</var>
+	  (with double dollar signs) like $<var>key</var> except that
+	  $$<var>key</var> will substitute the value of <var>data.key</var>
+	  verbatim, while every variation of $<var>key</var> will replace
+	  XML's special characters with entities to ensure that legal XML.
+	  This means that $$<var>key</var> can be used to insert a chunk of
+	  precomposed XML into a template.
+	</td></tr>
+
+	<tr><td>&lt;*<var>tag</var>&gt;$<var>key</var>&lt;/<var>tag</var>&gt;</td><td>
+	  With a "*" before the tag name, delete the "*".
+	  If no non-empty substitutions took place (either in attributes or
+	  the content) then delete the entire tag.
+	</td></tr>
+
+	<tr><td>$[<var>key</var> ... $]</td><td>
+	  Loop over <var>data.key</var>, assuming that value is an array.
+	  If it is missing or <tt>null</tt> then treat it like an empty
+	  array; i.e. skip the content entirely.  If it is an object, string,
+	  number, or boolean then treat it like a single-element array.
+	  <p>
+	  For elements that are objects, any substitutions within the loop
+	  will look for <var>key</var> first in that element.  If you use
+	  nested loops, it'll look in the innermost first, then the next
+	  innermost, and so on, using <var>data</var> as the final fallback.
+	  <p>
+	  For elements that are strings, numbers, or booleans, you can use
+	  $this to access the element's value, or $that to access the next
+	  nested non-object.
+	</td></tr>
+
+      </table>
+      <p>
+      The template string must have balanced &lt;tag&gt;...&lt;/tag&gt; pairs.
+      It knows that &lt;?...&gt; and &lt;!...&gt; don't need closing tags.
+      It also allows you to use &lt;tag/&gt; if there is no content.
     </dl>
     <details open>
       <summary>Examples</summary>
@@ -54,6 +121,7 @@
         and the value "bar" becomes the content.
         Since it returns a string, the entire thing is enclosed in quotes.
       </div>
+
       <div class="example">
 	<kbd>print toXML({"?xml_":{version:"1.0"},po_:{number:1106},po:{partno:["CR2032","18650"]})</kbd>
 	<samp>&lt;?php version="1.0" &gt;<br/>&lt;po number="1106"&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;CR2032&lt;/partno&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;18650&lt;/partno&gt;<br/>&lt;/po&gt;</samp>
@@ -70,25 +138,55 @@
 	<tt>&lt;partno&gt;</tt> tags.
       </div>
 
+      <div class="example">
+        <kbd>var obj = {a:[{b:1},{b:2}],c:3};</kbd>
+        <kbd>var template = "&lt;foo&gt;&lt;test1 *attr=\"$d\"&gt;&lt;/test1&gt;&lt;*test2 attr=\"$d\"&gt;&lt;/test2&gt;$[a&lt;test3 b=\"$b\" c=\"$c\"/&gt;$]&lt;/foo&gt;\n";</kbd>
+        <kbd>print obj.toXml(template);</kbd>
+        <samp>&lt;foo&gt;&lt;test1&gt;&lt;/test1&gt;test3 b="1" c="3"/&gt;&lt;test3 b="2" c="3"/&gt;&lt;/foo&gt;</samp>
+        Here's a nice meaty example using a template.
+        The &lt;foo&gt; tag is copied without change.
+        The &lt;test1&gt; tag has its attribute deleted because there's a "*"
+        before the attribute name and the data doesn't contain a member named
+        "d".
+        The &lt;test2&gt; tag is deleted entirely because there's a "*" before
+        the tag name, and again the data doesn't contain a member named "d".
+        The $[a notation causes the &lt;test3&gt; tag to be repeated for each
+        element of array <var>obj.a</var>; in $<var>key</var> substitutions,
+        it pulls obj.a[].b for $b, and obj.c for $c.
+        Also, note that &lt;test3&gt; ends with "/&gt;" so <tt>toXML()</tt>
+        knows that there is no content or closing tag.
+      </div>
+
     </details>
 
     <details>
       <summary>Notes</summary>
       <ul>
 
-        <li>For data from this plugin's XML parser, this function is intended
-            to recreate the original XML pretty well.  No guarantees though.
+        <li>For data from this plugin's XML parser, <tt>toXML()</tt> is
+            intended to recreate the original XML pretty well when used
+            without a template.
+            No guarantees though.
             In particular, whitespace around string values may be lost.
+
+	<li>The <var>data</var> argument is used very differently depending
+	    on whether you use a template or not.
+	    Without a template, the structure of <var>data</var> guides the
+	    structure of the resultant XML.
+	    With a template, the <var>data</var> will mostly just contain
+	    assorted values, not necessarily structured the way it's intended
+	    to be output.
+
+	<li>The template syntax is very flexible, but you may still encounter
+	    situations that it can't handle.
+	    The solution here is to use <tt>toXML()</tt> wrapped in whatever
+	    <strong>edj</strong> logic necessary to create chunks of XML,
+	    and then use <tt>toXML()</tt> one final time with $$<var>key</var>
+	    in the template to say where those chunks should be inserted.
 
 	<li>There is no way to make edj automatically output its results
 	    in XML instead of JSON.  To display data as XML, you must use
-	    <tt>print toXML()</tt>.
-
-	<li>There is also a
-	    <a target="_PARENT" href="../../index.html?f=xml/toXMLTemplate">toXMLTemplate()</a>
-	    function which uses a separate template string to guide the
-	    generation of XML, pulling data from a JSON object.
-	    The two functions do similar things, but in very different ways.
+	    <tt>print toXML(),"\n"</tt>.
 
       </ul>
     </details>
@@ -97,7 +195,6 @@
       <summary>See Also</summary>
       <table>
         <tr><td><a target="_PARENT" href="../../index.html?p=xml">plugin xml</a></td><td>Overview of the xml plugin</td><tr>
-        <tr><td><a target="_PARENT" href="../../index.html?f=xml/toXMLTemplate">toXMLTemplate()</a></td><td>Generate XML via a template</td></tr>
         <tr><td><a target="_PARENT" href="../../index.html?cmd=print">print</a></td><td>Output a string without JSON quotes or backslashes.</td></tr>
       </table>
     </details>

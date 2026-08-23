@@ -42,17 +42,37 @@ static char *SETTINGS = "{"
 /* Converts an edj_t object to XML.  Basically the inverse of the parser. */
 static edj_t *jfn_toXML(edj_t *args, void *agdata)
 {
-	size_t len;
-	edj_t *result;
+	size_t	len;
+	edj_t	*result;
+	const char *template = NULL;
+	const char *error;
+	char	*buf;
 
 	/* Only works on objects */
 	if (args->first->type != EDJ_OBJECT)
-		return edj_error_null(NULL, "toxmlobj:The toXML() function only works on objects");
+		return edj_error_null(NULL, "toXmlObj:The () function only works on objects", "toXML");
+	if (args->first->next) {
+		if (args->first->next->type != EDJ_STRING)
+			return edj_error_null("toXmlTmplate:%s() template must be a string", "toXML");
+		template = args->first->next->text;
+	}
 
 	/* Predict the length, allocate a string, and generate it */
-	len = xml_unparse(NULL, args->first);
-	result = edj_string("", len);
-	(void)xml_unparse(result->text, args->first);
+	if (template) {
+		/* With a template */
+		len = xml_template(NULL, args->first, template, &error);
+		if (error)
+			return edj_error_null("%s", error);
+		buf = malloc(len);  // or "char buf[len];" ?
+		(void)xml_template(buf, args->first, template, &error);
+		result = edj_string(buf, -1);
+		free(buf);
+	} else {
+		/* Without a template */
+		len = xml_unparse(NULL, args->first);
+		result = edj_string("", len);
+		(void)xml_unparse(result->text, args->first);
+	}
 
 	return result;
 }
