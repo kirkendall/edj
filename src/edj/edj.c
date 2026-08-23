@@ -413,7 +413,11 @@ int main(int argc, char **argv)
 			 */
 			if (optarg[0] == '-') {
 				/* Add it to the omitscripts list */
-				edj_append(omitscripts, edj_string(optarg + 1, val - optarg));
+				val = strchr(optarg, ',');
+				if (val)
+					edj_append(omitscripts, edj_string(optarg + 1, val - optarg - 1));
+				else
+					edj_append(omitscripts, edj_string(optarg + 1, -1));
 			} else {
 				/* Using -f means it isn't interactive unless
 				 * -i is also given.
