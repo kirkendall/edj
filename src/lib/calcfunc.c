@@ -787,9 +787,9 @@ static edj_t *jfn_widthOf(edj_t *args, void *agdata)
 	switch (args->first->type) {
 	case EDJ_NUMBER:
 		/* Is the number in binary format? */
-		if (args->text[0] == 0) {
+		if (args->first->text[0] == 0) {
 			/* Convert from binary to string, and check that */
-			numstr = edj_serialize(args, NULL);
+			numstr = edj_serialize(args->first, NULL);
 			width = strlen(numstr); /* number width is easy */
 			free(numstr);
 			return edj_from_int(width);
@@ -2185,6 +2185,7 @@ static edj_t *jfn_split(edj_t *args, void *agdata)
 	 * one specially.
 	 */
 	len = 1;
+	regexmatch = 0;
 	for (nelems = 0; (*str || len > 0) && (limit == 0 || nelems < limit - all); str = next) {
 		/* Find the next delimiter as char, string, or regex */
 		if (delim && !*delim) {
@@ -2957,6 +2958,7 @@ static edj_t *jfn_gap(edj_t *args, void *agdata)
 	}
 
 	/* Get the minimum gap.  If not specified, then use default */
+	mingap = 2;
 	if (args->first->next) {
 		if (args->first->next->type == EDJ_NUMBER) {
 			/* Scale the number as appropriate for the array's
