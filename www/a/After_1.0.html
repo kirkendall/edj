@@ -17,7 +17,7 @@
     </center>
 
     There are a number of potential features that I've explored and in some
-    cases even designed and even done some coding on,
+    cases even designed and done some coding on,
     but are not implemented in version 1.0.
     These are all useful things, but aren't so critical that I had to delay
     release version 1.0 just to add them.
@@ -34,6 +34,7 @@
     This would add the ability to open up panels/windows/tabs for
     a variety of purposes:
     <ul>
+      <li>Scrollable "grid" tables, including side-scrolling for wide tables.
       <li>Browsing JSON data, with expand/contract, click-to-copy-expression,
           click-to-copy-value, editable value, and a search feature.
       <li>Using the <a target="_PARENT" href="../index.html?f=diff">diff()</a>
@@ -41,6 +42,8 @@
           output as a clickable index.
       <li>Accessing the documentation, with clickable links and click-to-copy
           examples.
+      <li>The ability to access TUI features in a script, such as pop-up dialogs
+          or menus.
     </ul>
     <p>
     The "fineline" line input library was designed to work well in
@@ -49,8 +52,10 @@
     You won't lose any line-editing functionality by using the "screen" plugin.
 
     <h2>Data Types</h2>
-    Currently, edj allows you to declare types for vars, consts, functions,
-    and function arguments, but it ignores those declarations.
+    Currently, the <a target="_PARENT" href="../index.html?cmd=var">var</a>,
+    <a target="_PARENT" href="../index.html?cmd=const">const</a>, and
+    <a target="_PARENT" href="../index.html?cmd=function">function</a> commands
+    allow you to declare data types, but it ignores those declarations.
     They're currently useful only as comments.
     <p>
     The benefits of truly parsing data types are:
@@ -173,6 +178,7 @@
     This is rather slow!
     The alternative is to create a registry that maps name strings to integers,
     and then search by comparing those integers.
+    That change alone would probably make scripts run about 5% faster.
     <p>
     This could also improve name completion, since the registry would contain
     every known name.
