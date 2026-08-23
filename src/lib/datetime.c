@@ -1088,6 +1088,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 	 * to use as a time_t value or start of the first num/unit pair.
 	 * Convert to an edjdatetime_t.
 	 */
+	num = 0;
 	memset(&jdt, 0, sizeof jdt);
 	switch (args->first->type) {
 	case EDJ_STRING:

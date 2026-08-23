@@ -229,6 +229,7 @@ edj_t *edj_by_expr(edj_t *container, const char *expr, const char **next, edj_t 
 	*keybuf = '\0';
 
 	/* Work through the expr, and down into the container */
+	step = NULL;
 	do
 	{
 		/* Skip leading delimiters */
@@ -256,15 +257,15 @@ edj_t *edj_by_expr(edj_t *container, const char *expr, const char **next, edj_t 
 						edj_break(defelem);
 					return NULL;
 				}
+
+				/* If this is an element of a deferred array,
+				 * remember that so we can clean up later.
+				 */
+				if (edj_is_deferred_element(step) && !defelem)
+					defelem = step;
 			}
 			while (isdigit(*expr))
 				expr++;
-
-			/* If this is an element of a deferred array, remember
-			 * that so we can clean up later.
-			 */
-			if (edj_is_deferred_element(step) && !defelem)
-				defelem = step;
 		}
 		else if (isalpha(*expr) || *expr == '_')
 		{

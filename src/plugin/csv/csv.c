@@ -145,6 +145,29 @@ static void csvprint(edj_t *json, edjformat_t *format)
 	edj_free(headers);
 }
 
+/* Write CSV data out to a file */
+static int csvupdate(edj_t *data, const char *filename)
+{
+	FILE *fp;
+	edjformat_t format;
+
+	/* Fail if not a table */
+	if (!edj_is_table(data))
+		return 0;
+
+	/* Open the file */
+	fp = edj_file_update(filename);
+
+	/* Write the CSV data to the file */
+	format = edj_format_default;
+	format.fp = fp;
+	csvprint(data, &format);
+
+	/* Close it */
+	fclose(fp);
+	return 1;
+}
+
 /*****************************************************************************/
 /* CSV Parser                                                                */
 
@@ -372,6 +395,29 @@ static int csvtest(const char *str, size_t len)
 {
 	edj_t *columns, *data;
 	const char *cursor;
+	int commas = 0;
+
+	/* Doing this efficiently is slightly trickier than it may seem.
+	 * Since JSON or XML data will often be one big line, trying to parse
+	 * the first line as one big CSV header can waste a lot of time.
+	 * To avoid this, we do a few simpler tests first.
+	 */
+	if (strchr("{[<", *str))
+		return 0; /* starts with a character typical of JSON or XML */
+	for (cursor = str, commas = 0; cursor < &str[len]; cursor++) {
+		if (cursor >= &str[16384])
+			return 0; /* extremely long line, not typical of CSV */
+		if (!*str)
+			return 0; /* NUL byte, probably binary */
+		if (*cursor == ',')
+			commas++;
+		if (*cursor == '\n')
+			break;
+	}
+	if (commas == 0)
+		return 0; /* No commas in first line */
+	if (commas > 500)
+		return 0; /* Crazy high number of commas */
 
 	/* Read the column headings */
 	cursor = str;
@@ -485,7 +531,7 @@ char *plugincsv()
 
 	/* Register the functions */
 	edj_print_table_hook("csv", csvprint);
-	edj_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, NULL);
+	edj_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, csvupdate);
 
 	/* Success */
 	return NULL;

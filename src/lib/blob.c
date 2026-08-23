@@ -416,7 +416,7 @@ const char *edj_blob_data(edj_t *json, size_t *reflen)
 /* Test whether this is the best parser for the given data */
 int edj_blob_test(const char *str, size_t len)
 {
-	return edj_blob_best(str, len, NULL) == EDJ_BLOB_BYTES;
+	return edj_blob_best(str, len > 1024 ? 1024 : len, NULL) == EDJ_BLOB_BYTES;
 }
 
 

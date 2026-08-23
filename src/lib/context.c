@@ -478,7 +478,7 @@ edj_t *edj_context_file(edjcontext_t *context, const char *filename, int writabl
 	/* Locate the globals context at the bottom of the context stack,
 	 * and also the "this" layer which contains the "data" variable.
 	 */
-	thiscontext = NULL;
+	thiscontext = datacontext = NULL;
 	for (globals = context; globals->older && globals->older->older; globals = globals->older) {
 		/* Also look for the global "this" and "data" layers, which
 		 * store the context for the current file's contents.

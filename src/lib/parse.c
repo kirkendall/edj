@@ -218,15 +218,19 @@ char *edj_append(edj_t *container, edj_t *more)
 
 /* This scans an array's source to determine whether it is worth deferring.
  * It quickly moves past an array without storing it, and returns a pointer to
- * the first character after the array.  If refcount is non-NULL then store
+ * the first character after the array.  Initially, "str" should point to the
+ * "[" at the start of the array.  If refcount is non-NULL then store
  * the count of elements there.  If reftable is non-NULL then it stores a
  * flag indicating whether it is a table (non-empty array of objects).
+ * Returns a pointer to the first character after the "]" marking the end
+ * of the array.
  */
-const char *jskim(const char *str, const char *end, int *refcount, int *reftable)
+const char *jskim(const char *strin, const char *end, int *refcount, int *reftable)
 {
         int     nest = 1;	/* Nesting depth for [] and {} */
         int	count = 0;	/* number of elements */
         int	nonobject = 0;	/* boolean: any non-object elements? */
+        register const char *str = strin;
 
         /* Skip the '[' and trailing whitespace, to find the first element */
         do {
@@ -238,9 +242,7 @@ const char *jskim(const char *str, const char *end, int *refcount, int *reftable
 			nonobject = 1;
 	}
 
-        /* Skip over data, counting array elements.  Initially, "str" should
-         * point to the '[' at the start of an array.
-         */
+        /* Skip over data, counting array elements. */
         for (; nest > 0 && str < end; str++) {
                 switch (*str) {
                   case '"':
@@ -328,6 +330,7 @@ static edj_t *parseJSON(const char *str, size_t len, const char **refend, const 
 
 	/* ... aaaaaand... begin! */
 	jc = NULL;
+	tail = NULL;
 	while (!stack[0]->first || sp > 0) {
 		/* If we hit the end of the string without fully parsing
 		 * anything, then that's an error
