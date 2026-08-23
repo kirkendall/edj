@@ -111,7 +111,7 @@ void edj_free(edj_t *json)
          */
 	assert(json->memslot == 0 || memory_tracker[json->memslot].line != 0);
 
-	/* If ->next points to a EDJ_DEFER, that means this edj_t is an
+	/* If ->next points to an EDJ_DEFER, that means this edj_t is an
 	 * element of a deferred array, currently being scanned.  Free the
 	 * resources used for this scan session.
 	 */
@@ -434,7 +434,10 @@ void edj_debug_free(const char *file, int line, edj_t *json)
 		 */
 		int slot = json->memslot;
 		if (slot != 0 && memory_tracker[slot].count == 0 ) {
-			fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line, slot);
+			if (memory_tracker[slot].line < 0)
+				fprintf(stderr, "%s:%d: Attempt to re-free memory first freed at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, -memory_tracker[slot].line, slot);
+			else
+				fprintf(stderr, "%s:%d: Attempt to re-free memory allocated at %s:%d (slot %d)\n", file, line, memory_tracker[slot].file, memory_tracker[slot].line, slot);
 			abort();
 		}
 		else if (memory_tracker)
