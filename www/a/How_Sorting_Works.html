@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>How Sorting Works</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj How Sorting Works">
+    <meta name="keywords" content="array, edj, article, How Sorting Works">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body class="article">
+    <h1>How Sorting Works</h1>
+    <h4 class="timestamp">2026-08-22</h4>
+    <center>
+    <blockquote class="abstract">
+      Sorting and grouping a table are both implemented using the same internal
+      function.
+      It is reasonably efficient, and surprisingly simple.
+    </blockquote>
+    </center>
+
+    The <a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a>
+    and <a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a>
+    functions are both implemented internally by the <tt>edj_sort()</tt>
+    C function.
+    That function is passed the table to sort,
+    a list of member names to sort by,
+    and a boolean flag to control grouping vs. sorting.
+    <p>
+    This only works on tables (arrays of objects),
+    not arrays of numbers or strings.
+    The code is strongly oriented toward sorting by member values.
+    <p>
+    You can't directly sort deferred arrays either.
+    Deferred arrays always have an implied order to them &mdash;
+    the order in which they appear in the JSON document, usually.
+    Sorting changes the order of array elements, which just can't happen
+    on a deferred array.
+    You <em>can</em> pass a deferred table to <tt>edj_sort()</tt>, but it'll
+    convert it to an in-memory array by calling <tt>edj_undefer()</tt>
+    before doing anything else to it.
+    <p>
+    The actual sorting is done by a function named <tt>jcsort()</tt>.
+    <tt>edj_sort()</tt> inspects its arguments for any problems, does a bit
+    of setup, and then calls <tt>jcsort()</tt> to do the real work.
+
+    <h2>Simple Sorting</h2>
+    Basically, the <tt>jcsort()</tt> function splits the table elements into
+    "buckets" based on the value of their sorting-key member.
+    The buckets reside in a temporary array.
+    Each bucket contains the value that the bucket represents, and an array
+    of elements that have value in their sorting-key member.
+    If the value happens to be a number, the number is converted to binary
+    for easy comparison.
+    <p>
+    The buckets are then sorted via that standard <tt>qsort()</tt> function.
+    Sorting is done by type (booleans first, then strings, numbers, arrays,
+    objects, <tt>null</tt>, or missing) and then by value.
+    String values are compared case-insensitively.
+    <p>
+    For string values, the splitting is case-sensitive because that's faster
+    but we want sorting to be case-insensitive.
+    Sorting will bring together buckets whose value is the same except for
+    uppercase/lowercase differences.
+    To make the sorting be case-insensitive, we just need to merge adjacent
+    buckets when we detect that.
+    <p>
+    The next step is to rejoin the sorted buckets' contents
+    to form a single result array.
+    The head of that array (the edj_t with type=EDJ_ARRAY) is the same as
+    the one that's passed into the sorter; this is why sorting is described
+    as being "in place".
+
+    <h2>Hashing</h2>
+    Sorting via <tt>qsort()</tt> is O(n&nbsp;log&nbsp;n), and rejoining
+    the sorted buckets into a single sorted array is O(n).
+    However, splitting the elements into buckets is O(n<sup>2</sup>)
+    which means for large arrays, splitting becomes the slowest part of the job.
+    <p>
+    A simple hash table is used to make it faster.
+    It generates a hash number from each element's value,
+    and then it only scans the buckets with the same hash value when looking
+    for that value's bucket.
+    This is immensely faster than scanning all buckets.
+    It's still O(n<sup>2</sup>), but its fast enough that you won't notice it
+    until you're sorting million-row tables.
+
+    <h2>Multiple Sort Keys</h2>
+    Multi-keys sorts are handled recursively.
+    <tt>edj_sort()</tt> invokes <tt>jcsort()</tt> with a full list of
+    keys to sort by, but That instance of <tt>jcsort()</tt> only deals with
+    the first key in that list.
+    After the table as been split into buckets, it recursively calls itself
+    on each bucket using the tail of the sorting key list.
+    Thus, each bucket gets sorted by the next key in the list, and when the
+    buckets get joined back together, they're sorted by all keys as intended.
+
+    <h2>How groupBy() Differs From orderBy()</h2>
+    Without grouping, a table is simply an array of objects.
+    Grouping is implemented by using sub-arrays to contain all objects that
+    share the same value for all sorting/grouping members.
+    <p>
+    This is achieved by making <tt>jcsort()</tt> join buckets differently
+    when grouping, for the last sort key only.
+    Instead of joining all of the buckets' arrays together into one long
+    array, it keeps each bucket's array separate.
+    That's literally the only change.
+
+    <h2>This Requires Very Little Memory Allocation</h2>
+    As far as memory is concerned, this is very efficient.
+    All of the array elements are returned entirely unchanged;
+    They aren't copied, reallocated, or anything like that.
+    The <tt>edj_t</tt> with type=EDJ_ARRAY at the head of the array is
+    still used as the head of the sorted array.
+    The buckets are allocated with an edj_t for their array head, so they
+    all get allocated and freed at once.
+    <p>
+    So sorting doesn't need to allocate any new <tt>edj_t</tt> nodes at all.
+    When grouping, each group needs a new EDJ_ARRAY for its sub-array.
+    That's all.
+    <p>
+    Converting a deferred array to a non-deferred array will use a lot of
+    memory though.
+    There's no way around that.
+
+    <h2>Things That Slow Down Sorting</h2>
+    Using the wrong case-sensitive name for a sorting key can slow down
+    sorting.
+    This is because the first time edj goes looking for the member, if it
+    can't find and exact match then it converts the requested member key
+    and each member key in every element to simple keys, and compares them.
+    The simple keys are then cached in the object, so the next search is a
+    bit faster... but still, that's a lot of extra work.
+    <p>
+    Converting a deferred array to an in-memory array before sorting can
+    also take a lot of time.
+    Each item needs to be parsed, and then copied.
+    That can burn noticeable abouts of time and memory.
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?f=orderBy">orderBy()</a></td><td>Table sorting function</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=groupBy">groupBy()</a></td><td>Table sorting and grouping function</td></tr>
+      <tr><td><a target="_PARENT" href="../index.html?op=select">SELECT</a></td><td>SQL "SELECT" with "ORDER BY" and "GROUP BY"</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>
