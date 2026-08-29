@@ -336,14 +336,14 @@ static const char *template_loop(xmlTemplate_t *tmp)
 		return "xmlNoKey:Missing key in template";
 
 	/* If no data, then skip the whole loop */
-	if (!loop || (loop->type == EDJ_ARRAY && !loop->first)) {
+	if (!loop || loop->type == EDJ_NULL || (loop->type == EDJ_ARRAY && !loop->first)) {
 		for (nest = 1; nest > 0; tmp->scan++) {
 			if (tmp->scan[0] == '$' && tmp->scan[1] == '[')
 				nest++;
 			else if (tmp->scan[0] == '$' && tmp->scan[1] == ']')
 				nest--;
 		}
-		tmp->scan += 2; /* for the closing "$]" */
+		tmp->scan++; /* for "]" of the closing "$]" */
 		if (tmp->len > tmp->maxLen)
 			tmp->maxLen = tmp->len;
 		return NULL;
@@ -355,6 +355,7 @@ static const char *template_loop(xmlTemplate_t *tmp)
 	 * simplifies things.
 	 */
 	if (loop->type != EDJ_ARRAY) {
+		assert(loop->next == NULL);
 		array.type = EDJ_ARRAY;
 		array.first = loop;
 		loop = &array;
@@ -370,6 +371,10 @@ static const char *template_loop(xmlTemplate_t *tmp)
 		/* Process the content of the loop */
 		tmp->scan = scan;
 		error = template_content(tmp);
+		if (error) {
+			edj_break(loop);
+			return error;
+		}
 	}
 
 	/* We always expect "$]" at the end of the loop */
@@ -494,6 +499,7 @@ static size_t xml_template(char *buf, edj_t *data, const char *template, const c
 	tmp.scan = template;
 	tmp.build = buf;
 	tmp.len = 0;
+	tmp.maxLen = 0;
 	tmp.nsubs = 0;
 
 	/* Invoke the recursive generator.  Watch for errors. */
