@@ -1869,7 +1869,6 @@ static edjcmdout_t *switch_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 static edjcmd_t *case_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
 	edjcmd_t	*parsed;
-	char	*str;
 	const char *end, *err = NULL;
 	int	len, quote, nest, escape;
 
@@ -1904,7 +1903,7 @@ static edjcmd_t *case_parse(edjsrc_t *src, edjcmdout_t **referr)
 		*referr = edj_cmd_error(src->str, "Missing or malformed \"%s\" expression", "case");
 		return parsed;
 	}
-	str = malloc(len + 1);
+	char str[len + 1];
 	strncpy(str, src->str, len);
 	str[len] = '\0';
 
@@ -1918,7 +1917,6 @@ static edjcmd_t *case_parse(edjsrc_t *src, edjcmdout_t **referr)
 			*referr = edj_cmd_error(src->str, "Syntax error in \"%s\" expression", "case");
 		return parsed;
 	}
-	free(str);
 
 	/* Move past the ":" */
 	src->str += len + 1;
@@ -2188,7 +2186,7 @@ static edjcmdout_t *explain_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 			edj_t *scan, *lag, *next, *key;
 
 			/* Convert the requested key to a "LIKE" pattern */
-			char *like = malloc(strlen(cmd->key) + 3);
+			char like[strlen(cmd->key) + 3];
 			strcpy(like, "%");
 			strcat(like, cmd->key);
 			strcat(like, "%");
@@ -2208,7 +2206,6 @@ static edjcmdout_t *explain_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 					lag = scan;
 				}
 			}
-			free(like);
 		}
 
 		/* Output it */
@@ -2474,7 +2471,7 @@ static edjcmd_t *plugin_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
 	size_t len;
 	char	quote;
-	char	*str, *settings;
+	char	*settings;
 	edj_t	*err, *section;
 
 	/* Find the end of the command */
@@ -2492,7 +2489,7 @@ static edjcmd_t *plugin_parse(edjsrc_t *src, edjcmdout_t **referr)
 	}
 
 	/* Make a temp copy of the arguments */
-	str = malloc(len + 1);
+	char str[len + 1];
 	strncpy(str, src->str, len);
 	str[len] = '\0';
 	src->str += len;
@@ -2513,7 +2510,6 @@ static edjcmd_t *plugin_parse(edjsrc_t *src, edjcmdout_t **referr)
 			*referr = edj_cmd_error((char *)err->first, "%s", err->text);
 		else
 			*referr = edj_cmd_error(src->str, "%s", err->text);
-		free(str);
 		return NULL;
 	}
 
@@ -2524,7 +2520,6 @@ static edjcmd_t *plugin_parse(edjsrc_t *src, edjcmdout_t **referr)
 		section = edj_by_key(section, str);
 		if (!section) {
 			*referr = edj_cmd_error(src->str, "The \"%s\" plugin doesn't use settings", str);
-			free(str);
 			return NULL;
 		}
 
@@ -2535,14 +2530,12 @@ static edjcmd_t *plugin_parse(edjsrc_t *src, edjcmdout_t **referr)
 				*referr = edj_cmd_error((char *)err->first, "%s", err->text);
 			else
 				*referr = edj_cmd_error(src->str, "%s", err->text);
-			free(str);
 			return NULL;
 		}
 
 	}
 
 	/* No action needed at runtime */
-	free(str);
 	return NULL;
 }
 

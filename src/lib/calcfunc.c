@@ -916,7 +916,6 @@ static edj_t *help_pad(edj_t *args, int side, const char *name)
 	int	length;		/* desired length of the output string */
 	const char *padstr;	/* The padding to use */
 	size_t	len, padlen;
-	char	*buf;
 	edj_t	*result;
 
 	/* Check args */
@@ -944,7 +943,7 @@ static edj_t *help_pad(edj_t *args, int side, const char *name)
 	 * never take more than 4 bytes per character, we can allocate allocate
 	 * a buffer big enough for any padded string.
 	 */
-	buf = malloc(length * 4 + 1);
+	char buf[length * 4 + 1];
 	*buf = '\0';
 	length -= len;
 
@@ -968,7 +967,6 @@ static edj_t *help_pad(edj_t *args, int side, const char *name)
 
 	/* Convert it to an edj_t string.  Clean up and return it */
 	result = edj_string(buf, -1);
-	free(buf);
 	return result;
 }
 

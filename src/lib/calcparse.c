@@ -865,7 +865,7 @@ static edjcalc_t *jcalloc(token_t *token)
 	 */
 	if (token->op == EDJOP_REGEX) {
 		int	reflags = 0;
-		char	*tmp, *build;
+		char	*build;
 		const char *scan;
 		int	err;
 
@@ -873,7 +873,7 @@ static edjcalc_t *jcalloc(token_t *token)
 		jc->u.regex.preg = malloc(sizeof(regex_t));
 
 		/* Extract the regex source from the token */
-		tmp = malloc(token->len);
+		char tmp[token->len];
 		for (scan = token->full + 1, build = tmp; *scan && *scan != '/'; ) {
 			if (*scan == '\\' && scan[1] == '/')
 				scan++;
@@ -892,7 +892,6 @@ static edjcalc_t *jcalloc(token_t *token)
 
 		/* Compile the regex */
 		err = regcomp((regex_t *)jc->u.regex.preg, tmp, reflags);
-		free(tmp);
 		if (err) {
 			char	buf[200];
 			/* Fetch the error messaged */

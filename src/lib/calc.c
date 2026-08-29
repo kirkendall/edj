@@ -596,23 +596,20 @@ edj_t *edj_calc(edjcalc_t *calc, edjcontext_t *context, void *agdata)
 		 */
 		assert(calc->LEFT->op == EDJOP_NAME);
 		if (calc->RIGHT) {
-			char	*name, *sub;
 			USE_RIGHT_OPERAND(calc);
 			if (right->type == EDJ_STRING
 			 || right->type == EDJ_BOOLEAN
 			 || (right->type == EDJ_NUMBER && right->text[0])) {
-				name = malloc(strlen(calc->LEFT->u.text) + strlen(right->text) + 1);
+				char name[strlen(calc->LEFT->u.text) + strlen(right->text) + 1];
 				strcpy(name, calc->LEFT->u.text);
 				strcat(name, right->text);
 				str = getenv(name);
-				free(name);
 			} else {
-				sub = edj_serialize(right, NULL);
-				name = malloc(strlen(calc->LEFT->u.text) + strlen(sub) + 1);
+				char *sub = edj_serialize(right, NULL);
+				char name[strlen(calc->LEFT->u.text) + strlen(sub) + 1];
 				strcpy(name, calc->LEFT->u.text);
 				strcat(name, sub);
 				str = getenv(name);
-				free(name);
 				free(sub);
 			}
 		} else {
