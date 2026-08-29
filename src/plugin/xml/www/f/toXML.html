@@ -10,7 +10,7 @@
   <body>
     <h1>toXML - Convert data to an XML string</h1>
     <dl>
-      <dt>toXML(<var>data</var>:object, <var>template</var>?:string):string
+      <dt>toXML(<var>data</var>:object|any, <var>template</var>?:string):string
       <dd>
       This is part of the <a target="_PARENT" href="../../index.html?p=xml">xml</a> plugin.
       You must load the plugin via either -lxml on the shell command line,
@@ -26,7 +26,7 @@
       <p>
       Some quirks are:
       <ul>
-        <li>The data will almost always be an object.
+        <li>The data will always be an object.
             All members of the object are converted into a series of XML tags.
             Usually this will be a single member with data, possibly with a
             "?xml_" member to generate the "&lt;?xml ?&gt;" meta-tag.
@@ -110,7 +110,13 @@
       The template string must have balanced &lt;tag&gt;...&lt;/tag&gt; pairs.
       It knows that &lt;?...&gt; and &lt;!...&gt; don't need closing tags.
       It also allows you to use &lt;tag/&gt; if there is no content.
+      <p>
+      When using a template, the <tt>pretty</tt> and <tt>indent</tt> settings
+      are ignored.
+      If you want newlines and indentation in the generated XML,
+      then you need to put that whitespace in the template.
     </dl>
+
     <details open>
       <summary>Examples</summary>
 
@@ -175,7 +181,7 @@
 	    structure of the resultant XML.
 	    With a template, the <var>data</var> will mostly just contain
 	    assorted values, not necessarily structured the way it's intended
-	    to be output.
+	    to be output; it doesn't even necessarily need to be an object.
 
 	<li>The template syntax is very flexible, but you may still encounter
 	    situations that it can't handle.
@@ -187,6 +193,16 @@
 	<li>There is no way to make edj automatically output its results
 	    in XML instead of JSON.  To display data as XML, you must use
 	    <tt>print toXML(),"\n"</tt>.
+
+	<li>You can convert a string to use XML entities for special characters
+	    by passing it to toXML() with the template "$key".
+	    <div class="example">
+	      <kbd>"cat &amp; mouse".toXML("$this")</kbd>
+	      <samp>"cat &amp;amp; mouse"</samp>
+	      The top level is considered to be "content", so just using
+	      "$this" as the template will return the data (a simple string
+	      in this case) with special characters converted to entities.
+	    </div>
 
       </ul>
     </details>

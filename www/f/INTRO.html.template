@@ -37,9 +37,11 @@
     This is <em>not</em> a list of functions in the <tt>-ljson</tt> library.
 
     <details>
-      <summary>All functions are global.</summary>
-      You can write them using dot notation as though they're member functions,
-      but doing so uses the data to the left of the dot for the first argument.
+      <summary><var>arg1.fname(arg2)</var> is the same as <var>fname(arg1, arg2)</var>.</summary>
+      <strong>edj</strong> has no classes, so it has no member functions.
+      You can write function calls using dot notation as though they're member
+      functions, but doing so simply uses the data to the left of the dot
+      as the first argument.
       All of <strong>edj</strong>'s functions work this way.
       <div class="example">
         <kbd>"Example".toUpperCase()</kbd>
@@ -47,6 +49,13 @@
         <kbd>toUpperCase("Example")</kbd>
         <samp>"EXAMPLE"</samp>
       </div>
+    </details>
+
+    <details>
+      <summary>All functions are global.</summary>
+      Syntactically, you're allowed to define one function inside another,
+      but there isn't any point to it.  The inner function will still have
+      global scope.
     </details>
 
     <details>
