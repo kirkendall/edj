@@ -48,9 +48,9 @@ static edj_t *jfn_toXML(edj_t *args, void *agdata)
 	const char *error;
 	char	*buf;
 
-	/* Only works on objects */
-	if (args->first->type != EDJ_OBJECT)
-		return edj_error_null(NULL, "toXmlObj:The () function only works on objects", "toXML");
+	/* Only works on objects, unless you also pass a template */
+	if (args->first->type != EDJ_OBJECT && !args->first->next)
+		return edj_error_null(NULL, "toXmlObj:The %s() function only works on objects", "toXML");
 	if (args->first->next) {
 		if (args->first->next->type != EDJ_STRING)
 			return edj_error_null("toXmlTmplate:%s() template must be a string", "toXML");
@@ -63,10 +63,9 @@ static edj_t *jfn_toXML(edj_t *args, void *agdata)
 		len = xml_template(NULL, args->first, template, &error);
 		if (error)
 			return edj_error_null("%s", error);
-		buf = malloc(len);  // or "char buf[len];" ?
+		char buf[len];
 		(void)xml_template(buf, args->first, template, &error);
 		result = edj_string(buf, -1);
-		free(buf);
 	} else {
 		/* Without a template */
 		len = xml_unparse(NULL, args->first);
