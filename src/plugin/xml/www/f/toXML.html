@@ -130,13 +130,13 @@
 
       <div class="example">
 	<kbd>print toXML({"?xml_":{version:"1.0"},po_:{number:1106},po:{partno:["CR2032","18650"]})</kbd>
-	<samp>&lt;?php version="1.0" &gt;<br/>&lt;po number="1106"&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;CR2032&lt;/partno&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;18650&lt;/partno&gt;<br/>&lt;/po&gt;</samp>
+	<samp>&lt;?xml version="1.0" &gt;<br/>&lt;po number="1106"&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;CR2032&lt;/partno&gt;<br/>&nbsp;&nbsp;&lt;partno&gt;18650&lt;/partno&gt;<br/>&lt;/po&gt;</samp>
 	This is a more complex example.
 	We use the <a target="_PARENT" href="../../index.html?cmd=print">print</a>
 	command so you can see the formatting
 	(no added quotes, no backslash escapes).
 	The object has three members:
-	"?php_" which generates the <tt>&lt;?php ?&gt;</tt> tag,
+	"?xml_" which generates the <tt>&lt;?xml ?&gt;</tt> tag,
 	and "po_" and "po" which provide the attributes and content of the <tt>&lt;po&gt;</tt> tag.
 	The string is formatted because the <tt>pretty</tt> option is turned on.
 	The content of the <tt>&lt;po&gt;</tt> tag contains single "partno"

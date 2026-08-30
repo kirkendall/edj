@@ -18,14 +18,32 @@
       This allows you modify the settings interactively.
       <p>
       The settings are always available via a global <tt>config</tt> const.
-      You aren't allowed to modify <tt>config</tt> directly because rules
+      You can use that to examine the configuration, but
+      you aren't allowed to modify <tt>config</tt> directly because rules
       must be enforced &mdash; You can't create new options or set a boolean
-      to "maybe", for example.
+      option to "Finland", for example.
       The <tt>set</tt> command lets you modify <tt>config</tt>
       in a controlled manner.
       <p>
       The arguments are basically a comma-delimited list of changes.
-      You don't need to quote the new values of string option, unless you
+      The names are one of the following:
+      <ul>
+        <li>A member of the <tt>config</tt> object, without the "config." part.
+        <li>A member of <tt>config.interactive</tt> if you're running edj
+	    interactively, or <tt>config.batch</tt> for non-interactive scripts.
+	<li>An element of the <tt>config.styles</tt> array, selected via its
+	    <tt>name</tt> member.
+	    For example, "<tt>set normal=</tt><var>changes</var>"
+	    will alter the contents of <tt>config.styles[name:"normal"]</tt>.
+	<li>A series of names starting with any of the above, with "." and
+	    a member name.
+	    For example, "<tt>set common.out=N</tt>" will change the
+	    <tt>config.common.out</tt> option to "N".
+	    Similarly, "<tt>set plugin.csv.crlf</tt>" will change
+	    <tt>config.plugin.csv.crlf</tt> to <tt>true</tt>.
+      </ul>
+      <p>
+      You don't need to quote the new value of a string option, unless you
       want to include whitespace or other funky characters.
       For booleans, you can set them to <tt>true</tt> just by giving their name
       without any "=value", and you can set them to <tt>false</tt> by giving
@@ -40,11 +58,13 @@
       <p>
       Some options are complex objects.
       Text attributes such as <tt>gridhead</tt> are examples of this.
-      For these options, you can give a space-delimited list of settings.
+      For these options, you can give a space-delimited list of settings
+      within that object.
       For example, "<tt>set gridhead=underlined cyan</tt>" will set the
-      <tt>config.gridhead.underlined</tt> boolean option to <tt>true</tt>,
-      and the <tt>config.gridhead.fg</tt> string option to "cyan" because
-      "cyan" appears in the list of values for "fg".
+      <tt>config.styles[name:"gridhead"].underlined</tt> boolean option to
+      <tt>true</tt>, and the <tt>config.styles[name:"gridhead"].fg</tt> string
+      option to "cyan" because "cyan" appears in the list of preferred values
+      for "fg".
       <p>
       You can also give an expression in parentheses to compute the option
       settings at run-time.
@@ -93,12 +113,13 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>The "-s<var>options</var>" and "-S<var>options</var>" command line
-            flag uses the same syntax as the <tt>set</tt> command's arguments.
+        <li>The "-s<var>options</var>", "-S<var>options</var>",
+            "-l<var>plugin</var>,<var>options</var>" and
+            "-L<var>plugin</var>,<var>options</var>" command line
+            flags uses the same option syntax as the <tt>set</tt> command.
 
-        <li>Name completion (the &lt;Tab&gt; key) works differently for the
-            <tt>set</tt> command.
-            You don't need to fully type out "underlined" in the above example.
+	<li>The <a target="_PARENT" href="../index.html?cmd=plugin">plugin</a>
+	    command also uses the same syntax for setting the plugin's options.
 
 	<li>To examine options, use the global constant <tt>config</tt>.
 
