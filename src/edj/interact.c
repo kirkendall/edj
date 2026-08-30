@@ -131,6 +131,13 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 	result = edj_cmd_run(initcmds, contextref);
 	free(result);
 
+	/* Maybe run a "hint" command too */
+	if (edj_is_true(edj_by_key(edj_config, "firsthint"))) {
+		jc = edj_cmd_parse_string("hint");
+		result = edj_cmd_run(jc, contextref);
+		free(result);
+	}
+
 	/* Read an expression */
 	for (running = 0;
 	     (expr = edjreadline(edjprompt("edj:"))) != NULL;

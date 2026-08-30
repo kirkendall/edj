@@ -343,6 +343,9 @@ int main(int argc, char **argv)
 	 */
 	edj_config_load("edj");
 
+	/* Add some features that are specific to the "edj" program. */
+	edjcmds();
+
 	/* The library's default settings don't include an "autoload" directory
 	 * list, "autoscript" script list, or "autoplugin" plugin list because
 	 * the library doesn't support those itself; the edj program does.
