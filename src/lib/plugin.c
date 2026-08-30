@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <edj.h>
 
-/* This is an array of objects describing loaded plugins.  The "plugin"
- * member is name of the plugin.
+/* This is an array of objects describing loaded plugins.  The "name"
+ * member of each element is name of the plugin.
  */
 edj_t *edj_plugins;
 
