@@ -39,36 +39,44 @@
       } edj_t;
     </pre>
     <p>
-    The most important field is <tt>type</tt>.
+    The most important field is <tt>-&gt;type</tt>.
     It identifies the JSON data type that this <tt>edj_t</tt> contains,
     and will be one of the following symbols:
     EDJ_BOOLEAN, EDJ_NULL, EDJ_STRING, EDJ_NUMBER, EDJ_ARRAY, EDJ_DEFER,
     EDJ_OBJECT, or EDJ_KEY.
     <p>
-    The <tt>text</tt> field generally stores string values, and the
-    <tt>first</tt> field points to embedded data.
+    The <tt>-&gt;text</tt> field generally stores string values, and the
+    <tt>-&gt;first</tt> field points to embedded data.
     I'll explain the details of how they're used for each JSON data type later
     in this article.
     Spoiler: For long text, edj allocates a jumbo-sized <tt>edj_t</tt>
-    so the <tt>text</tt> field is big enough.
+    so the <tt>-&gt;text</tt> field is big enough.
     <p>
-    The <tt>next</tt> field is used for representing array elements or object
-    members as a linked list.
-    That makes <tt>next</tt> an unusual field because it's not about this
+    The <tt>-&gt;next</tt> field is used for representing array elements
+    or object members as a linked list.
+    That makes <tt>-&gt;next</tt> an unusual field because it's not about this
     <tt>edj_t</tt>; it's about the outer <tt>edj_t</tt> that contains it.
     Each element of an array, for example, will have a pointer to the next
     element of the array.
-    The array uses each element's <tt>next</tt> to implement the linked list
+    The array uses each element's <tt>->next</tt> to implement the linked list
     that stores the array.
     <p>
-    The <tt>memslot</tt> field is used to track memory usage if you compile
+    The <tt>->memslot</tt> field is used to track memory usage if you compile
     your program with -DEDJ_DEBUG_MEMORY.
     You can ignore it; it takes care of itself.
+    If you're curious though, it is usually the line number where the
+    <tt>edj_t</tt> was allocated, or the negative of the line number where
+    it was freed.
+    The absolute value can be used as an index into a <tt>memory_tracker</tt>
+    C array to obtain the file name and true line number.
+    (The value in <tt>-&gt;memeslot</tt> might not be the actual line number,
+    if some other source file also allocated/freed an <tt>edj</tt> on the
+    same line number.)
 
     <h2>Null</h2>
 
-    A JSON <tt>null</tt> is represented by a <tt>edj_t</tt> with EDJ_NULL
-    stored in its <tt>type</tt> field.
+    A JSON <tt>null</tt> is represented by an <tt>edj_t</tt> with EDJ_NULL
+    stored in its <tt>-&gt;type</tt> field.
     The other fields aren't used.
 
     <h3>Nulls with an error message</h3>
@@ -77,25 +85,25 @@
     for "not a number" where a number would normally be expected.
     Those symbols aren't valid in JSON though, so edj uses <tt>null</tt>
     for all errors.
-    Since a <tt>null edj_t</tt>'s <tt>first</tt> and <tt>text</tt> fields aren't
-    used for a basic NULL, edj will sometimes store error codes and text
-    into those fields. 
+    Since <tt>edj_t</tt>'s <tt>-&gt;text</tt> and <tt>-&gt;first</tt> fields
+    aren't used for a basic <tt>null</tt>, edj will sometimes store error text
+    and location into those fields. 
 
     <h2>Boolean</h2>
 
-    A JSON boolean value is stored in a <tt>edj_t</tt> with EDJ_BOOLEAN stored
-    in its <tt>type</tt> field.
-    The <tt>text</tt> field will contain either "true" or "false".
-    You can use <tt>json-&gt;text[0] == 't'</tt> to test whether a
+    A JSON boolean value is stored in an <tt>edj_t</tt> with EDJ_BOOLEAN stored
+    in its <tt>-&gt;type</tt> field.
+    The <tt>-&gt;text</tt> field will contain either "true" or "false".
+    You can use <var>json</var><tt>-&gt;text[0] == 't'</tt> to test whether a
     boolean <tt>edj_t</tt> is true or not
     (though the <a target="_PARENT" href="../index.html?lib=edj_is_true">edj_is_true()</a> function is preferred).
 
     <h2>String</h2>
 
-    A JSON string value is stored in a <tt>edj_t</tt> with EDJ_STRING stored
-    in its <tt>type</tt> field.
-    If the string is too long to fit in <tt>text</tt> then edj will
-    allocate extra space to extend the size of <tt>text</tt>.
+    A JSON string value is stored in an <tt>edj_t</tt> with EDJ_STRING 
+    in its <tt>-&gt;type</tt> field.
+    If the string is too long to fit in <tt>-&gt;text</tt> then edj will
+    allocate extra space to extend the size of <tt>-&gt;text</tt>.
     <p>
     Strings are always stored in UTF-8 coding,
     with C's traditional \0 terminator.
@@ -111,15 +119,20 @@
     So \uffff is always output as a NUL byte, and using the "\0" escape
     in a string will add 0xef,0xbf,0xbf to the string instead of 0x00.
     <p>
-    The <tt>first</tt> field is unused.
+    The <tt>-&gt;first</tt> field is unused.
+
+    <h3>ISO-8601 Dates, Times, DateTimes, and Periods</h3>
+    These are all stored as strings.
+    As far as <tt>edj_t</tt> is concerned, there's no difference between
+    an ISO-8601 string and any other string.
 
     <h2>Number</h2>
 
-    A JSON number is stored in a <tt>edj_t</tt> that has EDJ_NUMBER stored
-    in its <tt>type</tt>field.
+    A JSON number is stored in an <tt>edj_t</tt> that has EDJ_NUMBER stored
+    in its <tt>-&gt;type</tt> field.
     <p>
     Values parsed from a JSON document are stored as strings in the
-    <tt>text</tt> field.
+    <tt>-&gt;text</tt> field.
     They are <em>not</em> immediately converted to binary for two reasons.
     <p>
     First, conversion between binary and text formats is about the slowest
@@ -141,18 +154,18 @@
     in binary.
     Again, this is done for the sake of speed and precision.
     <p>
-    To store a binary number in a <tt>edj_t</tt>, the first byte of the
-    <tt>text</tt> field is set to '\0' so the text is effectively an empty
+    To store a binary number in an <tt>edj_t</tt>, the first byte of the
+    <tt>-&gt;text</tt> field is set to '\0' so the text is effectively an empty
     string.
-    The second byte (<tt>json-&gt;text[1]</tt>) is set to 'i' for integer
-    values, or 'd' for double-precision floating point values.
+    The second byte (<var>json</var><tt>-&gt;text[1]</tt>) is set to
+    'i' for integer values, or 'd' for double-precision floating point values.
     Two macros, EDJ_INT(json) and EDJ_DOUBLE(json), let you access the
-    last 4 or 8 bytes of the <tt>text</tt> field as an <tt>int</tt> or
+    last 4 or 8 bytes of the <tt>-&gt;text</tt> field as an <tt>int</tt> or
     <tt>double</tt>.
 
     <h2>Arrays</h2>
     Arrays are stored as linked lists.
-    The head of the list is a <strong>edj_t</strong> with -&gt;type=EDJ_ARRAY,
+    The head of the list is an <strong>edj_t</strong> with -&gt;type=EDJ_ARRAY,
     and the -&gt;first field points to the first element of the array.
     Each element's -&gt;next field points to the next element; the last
     element's -&gt;next field is NULL.
@@ -160,7 +173,7 @@
     Except for deferred arrays, described below.
 
     <h3>Optimizations</h3>
-    Since arrays don't use the <tt>text</tt> field,
+    Since arrays don't use the <tt>-&gt;text</tt> field,
     we can use part of it to store a pointer to the end of the array.
     This is desirable because it speeds up appending to an array
     <em>a hell of a lot!</em>
@@ -169,9 +182,9 @@
     with a tail pointer it's just O(n).
     And JSON data often contains large arrays, so this really means something.
     <p>
-    There is a EDJ_END_POINTER(<var>json</var>) macro which lets you access
-    the last 8 bytes of the <tt>text</tt> field as a pointer to the last
-    element.
+    There is an EDJ_END_POINTER(<var>json</var>) macro which lets you access
+    the last 8 bytes of the <var>json</var><tt>-&gt;text</tt> field as a pointer
+    to the last element.
     The edj_append(<var>array</var>, <var>elem</var>) function uses this to
     append a new element without having to scan the whole array each time.
     <p>
@@ -212,8 +225,20 @@
     the parser just does a quick scan to find its end (so it can parse whatever
     comes after the array), count its length, and check whether it is a table
     (array of objects).
-    For deferred arrays, the <tt>array->first->type</tt> will be EDJ_DEFER
+    For deferred arrays, the <var>array</var><tt>-&gt;first-&gt;type</tt> will be EDJ_DEFER
     instead of a normal data type.
+    <p>
+    Technically, the <tt>-&gt;first</tt> pointer points to a larger struct
+    which begins with an <tt>edj_t</tt>.
+    The rest of the struct contains whatever data the deferred array needs
+    to do its thing.
+    Some of this is standard &mdash;
+    there's a place to store the name of the deferring strategy,
+    and some function pointers to do common things like find the first
+    or next member.
+    Usually, some of it is dependent on the deferring strategy though.
+    For example, a deferred array such as <tt>1...1000000</tt> would store
+    the first and last integers somewhere in its struct.
     <p>
     When C code wants to scan an array, it normally does so by calling the
     <a target="_PARENT" href="../index.html?lib=edj_first">edj_first(<var>array</var>)</a>
@@ -246,20 +271,38 @@
     Objects are basically arrays of members.
     Like arrays, their contents are stored in a linked list.
     <p>
-    A <tt>edj_t</tt> containing EDJ_OBJECT in its <tt>type</tt> field
-    represents the object as a whole, and its <tt>first</tt> field points
+    An <tt>edj_t</tt> containing EDJ_OBJECT in its <tt>-&gt;type</tt> field
+    represents the object as a whole, and its <tt>-&gt;first</tt> field points
     to its first member.
     <p>
-    Each member is a <tt>edj_t</tt> that has EDJ_KEY in its <tt>type</tt>
+    Each member is an <tt>edj_t</tt> that has EDJ_KEY in its <tt>-&gt;type</tt>
     field.
-    The member's key (name) is stored in the <tt>text</tt> field, and the
-    value is pointed to by the <tt>first</tt> field.
-    The <tt>next</tt> field is used to implement the linked list.
+    The member's key (name) is stored in the <tt>-&gt;text</tt> field, and the
+    value is pointed to by the <tt>-&gt;first</tt> field.
+    The <tt>-&gt;next</tt> field is used to implement the linked list.
+    <p>
+    Unlike arrays, objects are never deferred.
+    This means you can always just use <var>object</var><tt>-&gt;first</tt>
+    and <var>member</var><tt>-&gt;next</tt> to step through the members.
+    <div class="example">
+      <kbd>/* C code */</kbd>
+      <kbd>edj_t *obj = edj_parse_string("{\"a\":[1,2,3],\"e\":true,\"i\":4,\"o\":{\"z\":null\},\"u\":1.8}");</kbd>
+      <kbd>edj_t *mem;</kbd>
+      <kbd>for (mem = obj->first; mem; mem = mem->next)<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;puts(mem->text);</kbd>
+      <samp>a</br>
+      e</br>
+      i</br>
+      o</br>
+      u</samp>
+      This sets <tt>obj</tt> to be an object, and then uses <tt>mem</tt>
+      to scan its members.  For each one, it outputs the key.
+    </div>
 
     <h3>Classes</h3>
     edj doesn't support class... yet.
     The expectation is that it will some day, and each object's class name
-    will be stored in its <tt>text</tt> field.
+    will be stored in its <tt>-&gt;text</tt> field.
     <p>
     It's important to note that objects from a JSON document are always
     generic objects.  No Class.
@@ -274,16 +317,30 @@
     That isn't an issue when parsing a JSON document though.
     <p>
     Since objects parsed from a JSON document never have a class,
-    they never use the <tt>text</tt> field to store a class name,
+    they never use the <tt>-&gt;text</tt> field to store a class name,
     leaving it free to store the EDJ_END_POINTER(json).
-    Objects elsewhere don't use EDJ_END_POINTER(json) so <tt>text</tt> is
+    Objects elsewhere don't use EDJ_END_POINTER(json) so <tt>-&gt;text</tt> is
     available to store a class name.
     Hence, there is never a conflict there.
+    <p>
+    The members' EDJ_KEY <tt>edj_t</tt>'s also have an optimization.
+    When initially parsed, the key is stored in the <tt>-&gt;text</tt> field
+    unchanged... but the size of the allocated <tt>-&gt;text</tt> field is
+    twice what we need to store the key.  Later, if a case-insensitive key
+    search is ever performed on the object, the simplified version of the
+    key is generated once and stored in the extra space.
 
     <details>
       <summary>See Also</summary>
       <table>
-        <tr><td>link here</td><td>Quick description here</td></tr>
+        <tr><th colspan="2" style="text-align:left">edj scripting functions</th></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=length">length</a></td><td>Returns number of elements in an array</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=sizeOf">sizeOf()</a></td><td>Counts the bytes of RAM that a value is using</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=isTable">isTable()</a></td><td>Tests whether a value is a table (non-empty array of objects)</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=deferTypeOf">deferTypeOf()</a></td><td>For deferred arrays, this returns a string identifying the defer strategy</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?f=simpleKey">simpleKey()</a></td><td>Returns the simplified, case-insensitive version of a key</td></tr>
+        <tr><th colspan="2" style="text-align:left">C functions in -ledj</th></tr>
+        <tr><td>edj_simple()</td><td>Low-level allocator for <tt>edj_t</tt>'s</td></tr>
       </table>
     </details>
 

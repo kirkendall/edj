@@ -111,6 +111,19 @@
     are shared across contexts, but global vars/consts are tied to a specific
     context.
 
+    <h2>Key Registry</h2>
+    Currently, member keys (and all names really) are stored as text.
+    When you look up a member, the search compares member names as strings.
+    This is rather slow!
+    The alternative is to create a registry that maps name strings to integers,
+    and then search by comparing those integers.
+    That change alone would probably make scripts run about 5% faster.
+    <p>
+    This could also improve name completion, since the registry would contain
+    every known name.
+    I'd still want it to be context-aware, but as a desperation move it could
+    still look across all names when trying for a completion.
+
     <h2>Pre-Command Hook</h2>
     I have plans for a hook that will allow a C function to be called before
     each script command is executed.
@@ -172,19 +185,6 @@
     I've deliberately avoided giving any edj scripting functions the same name
     as a POSIX function, just to keep this potential alive.
 
-    <h2>Key Registry</h2>
-    Currently, member keys (and all names really) are stored as text.
-    When you look up a member, the search compares member names as strings.
-    This is rather slow!
-    The alternative is to create a registry that maps name strings to integers,
-    and then search by comparing those integers.
-    That change alone would probably make scripts run about 5% faster.
-    <p>
-    This could also improve name completion, since the registry would contain
-    every known name.
-    I'd still want it to be context-aware, but as a desperation move it could
-    still look across all names when trying for a completion.
-
     <h2>Template Strings</h2>
     Template strings are a JavaScript feature that lets you embed expressions
     within plain text.
@@ -206,22 +206,6 @@
     string to use a different parser.
     I <em>might</em> support that, because it'd offer a way for SQL query
     arguments to be automatically quoted.
-
-    <h2>XML Templates</h2>
-    The XML plugin already has an XML serializer that reverses the effect of
-    its parser, allowing you to rewrite XML that you've previously read.
-    That doesn't help when you're trying to generate a new XML document,
-    such as a request to a SOAP server.
-    XML tends to be very picky about formats, so there's a good chance you'll
-    need to painstakingly construct the string.
-    <p>
-    I plan to add a template-driven XML serializer.
-    This is much more complex than JavaScript template strings.
-    It'll have the ability to loop over arrays, and
-    to eliminate tags or attributes for which no data is available.
-    <p>
-    The next step would probably be a utility that
-    converts a WSDL specification into a set of XML templates.
 
     <h2>Complex Blobs</h2>
     Blobs are compact arrays of bytes.

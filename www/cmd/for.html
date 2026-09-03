@@ -51,20 +51,11 @@
       <summary>Notes</summary>
       <ul>
 
-        <li>If you want to loop over a range of integers, consider using
-	    the <a target="_PARENT" href="../index.html?op=dot">i...j</a>
-	    operator.
-	    <div class="example">
-	      <kbd>for (var i = 1 ... 5) i</kbd>
-	      <samp>1
-	        <br/>2
-	        <br/>3
-	        <br/>4
-	        <br/>5
-	      </samp>
-	      The <tt>1...5</tt> expression returns the array
-	      <tt>[1,2,3,4,5]</tt>, so the statement loops over that.
-	    </div>
+        <li>Using the <a target="_PARENT" href="../index.html?op=dot">i...j</a>
+	    operator is a great way to loop over a range of integer values.
+	    It is efficient, because <tt>...</tt> uses a deferred array for
+	    the integers instead of creating all of the array elements before
+	    the loop even begins.
 
 	<li>The "=" and "of" symbols both do exactly the same thing here.
 	    Most C-like languages (other than C itself) use "in" to loop over
@@ -76,6 +67,11 @@
 
 	<li>The traditional <tt>for(</tt><var>initialize; test; increment</var><tt>)</tt>
 	    version of the for-loop is not supported by edj at this time.
+	    The big obstacle here is that <var>initialize</var> and
+	    <var>increment</var> would need to be comma-delimited lists of
+	    statements (which just isn't done anywhere else in <tt>edj</tt>),
+	    and even then there's no "++" operator.
+	    Lots of pieces missing.
 
       </ul>
     </details>

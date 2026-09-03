@@ -52,7 +52,7 @@
     If the value happens to be a number, the number is converted to binary
     for easy comparison.
     <p>
-    The buckets are then sorted via that standard <tt>qsort()</tt> function.
+    The buckets are then sorted via the standard <tt>qsort()</tt> function.
     Sorting is done by type (booleans first, then strings, numbers, arrays,
     objects, <tt>null</tt>, or missing) and then by value.
     String values are compared case-insensitively.
@@ -87,7 +87,7 @@
     <h2>Multiple Sort Keys</h2>
     Multi-keys sorts are handled recursively.
     <tt>edj_sort()</tt> invokes <tt>jcsort()</tt> with a full list of
-    keys to sort by, but That instance of <tt>jcsort()</tt> only deals with
+    keys to sort by, but that instance of <tt>jcsort()</tt> only deals with
     the first key in that list.
     After the table as been split into buckets, it recursively calls itself
     on each bucket using the tail of the sorting key list.
@@ -126,7 +126,7 @@
     Using the wrong case-sensitive name for a sorting key can slow down
     sorting.
     This is because the first time edj goes looking for the member, if it
-    can't find and exact match then it converts the requested member key
+    can't find and exact match then it converts the requested sorting key
     and each member key in every element to simple keys, and compares them.
     The simple keys are then cached in the object, so the next search is a
     bit faster... but still, that's a lot of extra work.
