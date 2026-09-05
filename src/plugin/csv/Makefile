@@ -9,8 +9,8 @@ SRC=	csv.c
 OBJ=	csv.o
 LIBS=	
 CFLAGS=	-I$(INC) -DEDJ_DEBUG_MEMORY
-#CC=	gcc -g -fpic
-CC=	gcc -O -fpic
+CC=	gcc -g -fpic
+#CC=	gcc -O -fpic
 
 $(ALL): plugincsv.so
 	cp plugincsv.so $(PLUGIN)/plugincsv.so

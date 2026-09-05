@@ -283,6 +283,46 @@ static void jcag(edjag_t *ag, edjcontext_t *context, void *agdata)
 	}
 }
 
+/* Free/close anything that this aggregate function needs freed/closed */
+static void cleanag(edjfunc_t *jf, void *agdata)
+{
+	void	**doomed = agdata;
+
+	/* Supposed to free anything?  We could potentially need to free an
+	 * (edj_t*) via edj_free(), a (void*) via free(), and a (FILE*) via
+	 * fclose(), in that order, using pointers at the start of the ag
+	 * data.  "doomed" points to the next pointer to free.
+	 *
+	 * NOTE: I tried doing each free/increment as a one-liner but got
+	 * compiler error messages, probably because with -DEDJ_DEBUG_MEMORY,
+	 * those freeing functions are actually macros.
+	 */
+
+	/* Maybe free an edj_t via edj_free() */
+	if (jf->jfoptions & EDJFUNC_EDJFREE) {
+		edj_t **doomed_edj = (edj_t**)doomed;
+		edj_free(*doomed_edj);
+		doomed_edj++;
+		doomed = (void *)doomed_edj;
+		/*edj_free(* (((edj_t **)doomed)++) );*/
+	}
+
+	/* Maybe free something via free() */
+	if ((jf->jfoptions & EDJFUNC_FREE)) {
+		void **doomed_void = (void**)doomed;
+		free(*doomed_void);
+		doomed_void++;
+		doomed = (void *)doomed_void;
+		/* free(*(((void **)doomed)++));*/
+	}
+
+	/* Maybe close a file stream via fclose() */
+	if ((jf->jfoptions & EDJFUNC_FCLOSE)) {
+		FILE *fp = *(FILE **)doomed;
+		if (fp && fp != stdout && fp != stderr)
+			fclose(fp);
+	}
+}
 /* If calc uses aggregates, then allocate storage space for them and return
  * a pointer to that... or if existingag is non-NULL then reset it and return
  * it.  Otherwise return NULL to indicate that no aggregates are used.
@@ -302,22 +342,11 @@ void *edj_calc_ag(edjcalc_t *calc, void *existingag)
 		edjcalc_t *ag = ((edjcalc_t **)existingag)[-1];
 		int	i;
 		char	*data;
-		void	*toFree;
 
 		/* For each function call... */
 		for (i = 0, data = (char *)existingag; i < ag->u.ag->nags; data += ag->u.ag->ag[i++]->u.func.jf->agsize) {
 			edjfunc_t *jf = ag->u.ag->ag[i]->u.func.jf;
-			/* Supposed to free anything? */
-			if (jf->jfoptions & EDJFUNC_EDJFREE) {
-				edj_t *doomed = *(edj_t **)data;
-				edj_free(doomed);
-				toFree = *(void **)(data + sizeof(edj_t *));
-
-			} else
-				toFree = *(void **)data;
-			if ((jf->jfoptions & EDJFUNC_FREE) && toFree) {
-				free(toFree);
-			}
+			cleanag(jf, data);
 		}
 	}
 
@@ -785,7 +814,6 @@ edj_t *edj_calc(edjcalc_t *calc, edjcontext_t *context, void *agdata)
 		 */
 		if (left->first->type == EDJ_ARRAY && calc->u.func.jf->agfn) {
 			edjfunc_t *jf = calc->u.func.jf;
-			void **toFree;
 
 			/* Allocate storage for the function */
 			localag = malloc(jf->agsize);
@@ -820,13 +848,7 @@ edj_t *edj_calc(edjcalc_t *calc, edjcontext_t *context, void *agdata)
 			result = (*jf->fn)(left, localag);
 
 			/* Clean up */
-			if (jf->jfoptions & EDJFUNC_EDJFREE) {
-				edj_free(*(edj_t **)localag);
-				toFree = (void **)((edj_t **)localag + 1);
-			} else
-				toFree = (void **)localag;
-			if (jf->jfoptions & EDJFUNC_FREE && *toFree != NULL)
-				free(*toFree);
+			cleanag(jf, localag);
 			free(localag);
 		} else {
 			/* Non-aggregate built-in functions may take a regular

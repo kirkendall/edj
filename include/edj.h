@@ -497,6 +497,8 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 
 /* Plugins */
 edj_t *edj_plugins;
+void edj_plugin_repl_hook(const char *pluginname, int priority, void (*repl)(edjcontext_t *));
+int edj_plugin_repl(edjcontext_t *);
 edj_t *edj_plugin_load(const char *name);
 
 
@@ -528,6 +530,7 @@ typedef struct edjfunc_s {
 } edjfunc_t;
 #define EDJFUNC_EDJFREE 1	/* Call edj_free() on the agdata afterward */
 #define EDJFUNC_FREE 2		/* Call free() on the agdata afterward */
+#define EDJFUNC_FCLOSE 4	/* Call fclose() on the agdata afterward */
 
 /* For non-aggregate functions, this is used to pass other information that
  * they might need.

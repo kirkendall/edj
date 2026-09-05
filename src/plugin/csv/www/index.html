@@ -119,7 +119,9 @@
     </table>
 
     <h2 id="functions">Functions</h2>
-    The <tt>csv</tt> plugin doesn't add any functions.
+    <table class="referencelist">
+      <tr><td><a target="_PARENT" href="../index.html?f=csv/writeCSV">writeCSV()</a></td><td>Write a table to a file in CSV format</td</tr>
+    </table>
 
     <h2 id="commands">Commands</h2>
     The <strong>csv</strong> plugin doesn't add any commands.
@@ -129,7 +131,9 @@
     If data looks like CSV instead of JSON, then it'll be parsed via the CSV
     parser instead of the JSON parser.
     <p>
-    To write CSV data, you need to set the "table" formatting option to "csv".
+    To write CSV data, you need to either use the
+    <a target="_PARENT" href="../index.html?f=csv/writeCSV">writeCSV()</a>
+    function or set the "table" formatting option to "csv".
     When you load this plugin, it adds "csv" to the list of preferred values
     for that option, so just saying <tt>-lcsv -scsv</tt> will load the CSV
     plugin and then use it for output.

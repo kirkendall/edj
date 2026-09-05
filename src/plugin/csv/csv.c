@@ -168,6 +168,120 @@ static int csvupdate(edj_t *data, const char *filename)
 	return 1;
 }
 
+/* Aggregate function for writing to a file */
+typedef struct {
+	char **column;	/* Array of column headers -- must be first */
+	FILE *fp;	/* File pointer to write to -- must be second */
+	int ncolumns;	/* number of columns in column[] */
+	int nrows;	/* number of rows */
+	const char *error; /* Error message (NULL if none) */
+} agcsv_t;
+static edj_t *jfn_writeCSV(edj_t *args, void *agdata)
+{
+	agcsv_t *ag = (agcsv_t *)agdata;
+	if (ag->error)
+		return edj_error_null(NULL, "%s", ag->error);
+	return edj_from_int(ag->nrows);
+	/* NOTE: edj will automatically free ag->columns and close ag->fp */
+}
+static void   jag_writeCSV(edj_t *args, void *agdata)
+{
+	agcsv_t *ag = (agcsv_t *)agdata;
+	size_t	totallen;
+	int	col;
+	edj_t	*member;
+	char	*str;
+	edjformat_t format;
+
+	/* Not entirely empty */
+	ag->nrows++;
+
+	/* We expect two arguments: The a data row (an object) and the
+	 * name of the file to write to.
+	 */
+	if (args->first->type != EDJ_OBJECT
+	 || !args->first->next
+	 || args->first->next->type != EDJ_STRING) {
+		ag->error = "writeCSVArgs:writeCSV() requires a data object and a filename as arguments";
+		return;
+	}
+
+	/* First time, allocate column headers and output them */
+	if (!ag->column) {
+		/* Fetch options */
+		backslash = edj_is_true(edj_config_get("plugin.csv", "backslash"));
+		crlf = edj_is_true(edj_config_get("plugin.csv", "crlf"));
+		headless = 0;
+
+		/* Open the file */
+		if (!strcmp(args->first->next->text, "-"))
+			ag->fp = stdout;
+		else {
+			ag->fp = fopen(args->first->next->text, "w");
+			if (!ag->fp) {
+				ag->error = "writeCSVOpen:writeCSV() could not open file";
+				return;
+			}
+		}
+
+		/* Count the memory needed to store the keys */
+		for (totallen = 0, col = 0, member = args->first->first;
+		     member;
+		     member = member->next) {
+			if (member->first->type != EDJ_STRING
+			 && member->first->type != EDJ_NUMBER
+			 && member->first->type != EDJ_BOOLEAN)
+				continue;
+			totallen += strlen(member->text) + 1;
+			col++;
+		}
+		ag->ncolumns = col;
+
+		/* Allocate memory for the columns */
+		ag->column = malloc(ag->ncolumns * sizeof(char *) + totallen);
+
+		/* Store the column names */
+		for (col = 0, member = args->first->first, str = (char *)&ag->column[ag->ncolumns];
+		     member;
+		     member = member->next, str += strlen(str) + 1) {
+			if (member->first->type != EDJ_STRING
+			 && member->first->type != EDJ_NUMBER
+			 && member->first->type != EDJ_BOOLEAN)
+				continue;
+			strcpy(str, member->text);
+			ag->column[col++] = str;
+		}
+
+		/* Output the column headers.  We can't use csvsingle() for
+		 * this because the ag->columns just stores text, not edj_t's
+		 */
+		for (col = 0; col < ag->ncolumns; col++) {
+			putc('"', ag->fp);
+			fputs(ag->column[col], ag->fp);
+			putc('"', ag->fp);
+			if (col + 1 < ag->ncolumns)
+				putc(',', ag->fp);
+		}
+		if (crlf)
+			putc('\r', ag->fp);
+		putc('\n', ag->fp);
+	}
+
+	/* Output this row's data.  Note that we MUST output them in the same
+	 * order every time, so we loop over the column names in ag->column[]
+	 */
+	format = edj_format_default;
+	format.fp = ag->fp;
+	for (col = 0; col < ag->ncolumns; col++) {
+		csvsingle(edj_by_key(args->first, ag->column[col]), &format);
+		if (col + 1 < ag->ncolumns)
+			putc(',', ag->fp);
+	}
+		if (crlf)
+			putc('\r', ag->fp);
+	putc('\n', ag->fp);
+}
+
 /*****************************************************************************/
 /* CSV Parser                                                                */
 
@@ -529,7 +643,8 @@ char *plugincsv()
 	settings = edj_parse_string(csvsettings);
 	edj_append(section, edj_key("csv", settings));
 
-	/* Register the functions */
+	/* Register the functions, table format, and parser */
+	edj_calc_aggregate_hook("writeCSV", "row:object, filename:string", "number", jfn_writeCSV, jag_writeCSV, sizeof(agcsv_t), EDJFUNC_FCLOSE|EDJFUNC_FREE);
 	edj_print_table_hook("csv", csvprint);
 	edj_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, csvupdate);
 
