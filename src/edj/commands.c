@@ -72,6 +72,7 @@ static edjcmdout_t *hint_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 	edj_user_printf(&tweaked, "normal", "You can use %s to exit.", "<Ctrl-D>");
 	if (help && line)
 		edj_user_printf(&tweaked, "normal", "  Run \"%s\" for more keystrokes.", "help fineline");
+	edj_user_ch('\n');
 	return NULL;
 }
 
