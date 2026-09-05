@@ -192,7 +192,7 @@ edj_t *edj_plugin_load(const char *name)
 		*(void **)(&initfn) = dlsym(dlhandle, initname);
 		if (!initfn) {
 			char *error = dlerror();
-			info = edj_error_null(0, "The \"%s\" plugin has no %s() function (%s)", initname, error);
+			info = edj_error_null(0, "The \"%s\" plugin has no %s() function (%s)", name, initname, error);
 			dlclose(dlhandle);
 			return info;
 		}
