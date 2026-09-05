@@ -119,33 +119,33 @@ static edj_t *jfn_writeJSON(edj_t *args, void *agdata);
 
 /* Forward declarations of the built-in aggregate functions */
 static edj_t *jfn_count(edj_t *args, void *agdata);
-static void    jag_count(edj_t *args, void *agdata);
+static void   jag_count(edj_t *args, void *agdata);
 static edj_t *jfn_rowNumber(edj_t *args, void *agdata);
-static void    jag_rowNumber(edj_t *args, void *agdata);
+static void   jag_rowNumber(edj_t *args, void *agdata);
 static edj_t *jfn_min(edj_t *args, void *agdata);
-static void    jag_min(edj_t *args, void *agdata);
+static void   jag_min(edj_t *args, void *agdata);
 static edj_t *jfn_max(edj_t *args, void *agdata);
-static void    jag_max(edj_t *args, void *agdata);
+static void   jag_max(edj_t *args, void *agdata);
 static edj_t *jfn_avg(edj_t *args, void *agdata);
-static void    jag_avg(edj_t *args, void *agdata);
+static void   jag_avg(edj_t *args, void *agdata);
 static edj_t *jfn_sum(edj_t *args, void *agdata);
-static void    jag_sum(edj_t *args, void *agdata);
+static void   jag_sum(edj_t *args, void *agdata);
 static edj_t *jfn_product(edj_t *args, void *agdata);
-static void    jag_product(edj_t *args, void *agdata);
+static void   jag_product(edj_t *args, void *agdata);
 static edj_t *jfn_any(edj_t *args, void *agdata);
-static void    jag_any(edj_t *args, void *agdata);
+static void   jag_any(edj_t *args, void *agdata);
 static edj_t *jfn_all(edj_t *args, void *agdata);
-static void    jag_all(edj_t *args, void *agdata);
+static void   jag_all(edj_t *args, void *agdata);
 static edj_t *jfn_explain(edj_t *args, void *agdata);
-static void    jag_explain(edj_t *args, void *agdata);
+static void   jag_explain(edj_t *args, void *agdata);
 static edj_t *jfn_writeArray(edj_t *args, void *agdata);
-static void    jag_writeArray(edj_t *args, void *agdata);
+static void   jag_writeArray(edj_t *args, void *agdata);
 static edj_t *jfn_arrayAgg(edj_t *args, void *agdata);
-static void    jag_arrayAgg(edj_t *args, void *agdata);
+static void   jag_arrayAgg(edj_t *args, void *agdata);
 static edj_t *jfn_objectAgg(edj_t *args, void *agdata);
-static void    jag_objectAgg(edj_t *args, void *agdata);
+static void   jag_objectAgg(edj_t *args, void *agdata);
 static edj_t *jfn_join(edj_t *args, void *agdata);
-static void    jag_join(edj_t *args, void *agdata);
+static void   jag_join(edj_t *args, void *agdata);
 
 /* A linked list of the built-in functions */
 static edjfunc_t toUpperCase_jf = {NULL,            "toUpperCase", "str:string", "string",	jfn_toUpperCase};
@@ -240,7 +240,7 @@ static edjfunc_t product_jf     = {&sum_jf,         "product",     "num:number",
 static edjfunc_t any_jf         = {&product_jf,     "any",         "bool:boolean", "boolean",		jfn_any,   jag_any, sizeof(int)};
 static edjfunc_t all_jf         = {&any_jf,         "all",         "bool:boolean", "boolean",		jfn_all,   jag_all, sizeof(int)};
 static edjfunc_t explain_jf     = {&all_jf,         "explain",     "tbl:table, depth:?number", "table",		jfn_explain,jag_explain, sizeof(edj_t *), EDJFUNC_EDJFREE};
-static edjfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:any, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *)};
+static edjfunc_t writeArray_jf  = {&explain_jf,     "writeArray",  "data:any, filename:?string", "null",	jfn_writeArray,jag_writeArray, sizeof(FILE *), EDJFUNC_FCLOSE};
 static edjfunc_t arrayAgg_jf    = {&writeArray_jf,  "arrayAgg",    "data:any", "array",		jfn_arrayAgg,jag_arrayAgg, sizeof(edj_t *), EDJFUNC_EDJFREE};
 static edjfunc_t objectAgg_jf   = {&arrayAgg_jf,    "objectAgg",   "key:string, value:any", "object",	jfn_objectAgg,jag_objectAgg, sizeof(edj_t *), EDJFUNC_EDJFREE};
 static edjfunc_t join_jf        = {&objectAgg_jf,   "join",        "str:string, delim?:string", "string",	jfn_join,  jag_join, sizeof(agjoindata_t),	EDJFUNC_FREE};
@@ -2995,7 +2995,7 @@ static edj_t *jfn_gap(edj_t *args, void *agdata)
 			mingap = edj_int(result);
 			edj_free(result);
 		} else
-			return edj_error_null(NULL, "gapmin:Minimum gap for %s() must be a number or period");
+			return edj_error_null(NULL, "gapmin:Minimum gap for %s() must be a number or period", "gap");
 
 	} else {
 		switch (gaptype) {
@@ -3096,7 +3096,7 @@ static edj_t *jfn_sleep(edj_t *args, void *agdata)
 		args->first->next = oldnext; /* undeferred */
 		edj_free(jseconds);
 	} else {
-		return edj_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string");
+		return edj_error_null(NULL, "sleep:The %s() function should be passed a number of seconds on an ISO-8601 period string", "sleep");
 	}
 
 	/* Sanity check */
@@ -3456,10 +3456,9 @@ static edj_t *jfn_writeArray(edj_t *args, void *agdata)
 	if (fp) {
 		fputs("\n]\n", fp);
 		size = ftell(fp);
-		if (fp != stdout)
-			fclose(fp);
 		*(FILE **)agdata = NULL;
 		return edj_from_int((int)size);
+		/* Note: fp will be closed automatically via EDJFUNC_FCLOSE */
 	}
 	return edj_from_int(0);
 }
