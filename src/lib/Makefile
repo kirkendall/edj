@@ -13,9 +13,9 @@ LIBOBJ=	by.o blob.o calc.o calcfunc.o calcparse.o common.o compare.o config.o \
 	memory.o parse.o print.o serialize.o sort.o text.o user.o walk.o
 #STATIC= -DSTATICCACHE -DSTATICCSV -DSTATICCURL -DSTATICLOG -DSTATICMATH -DSTATICXML
 STATIC=	-DSTATICCACHE -DSTATICCSV -DSTATICLOG -DSTATICMATH -DSTATICXML
-CC=gcc -g -pg -fpic -Wall
+#CC=gcc -g -pg -fpic -Wall
 #CC=gcc -O -fpic -Wall
-#CC=gcc -g -fpic -Wall
+CC=gcc -g -fpic -Wall
 CFLAGS=-Wall -DEDJ_DEBUG_MEMORY -I$(INCLUDE)
 #CFLAGS=-Wall -I$(INCLUDE)
 

@@ -130,7 +130,7 @@ void edj_grid(edj_t *json, edjformat_t *format)
 			for (i = 0; i < (width - wdata + 1) / 2; i++)
 				edj_user_ch(hdrpad);
 			if (size > 0)
-				edj_user_printf(format, cellface, "%.*s", size, text);
+				edj_user_printf(format, cellface, "%.*s", (int)size, text);
 			for (; i < (width - wdata); i++)
 				edj_user_ch(hdrpad);
 
@@ -214,7 +214,7 @@ void edj_grid(edj_t *json, edjformat_t *format)
 				if (cell && cell->type == EDJ_STRING) {
 					/* left-justify strings */
 					if (size > 0)
-						edj_user_printf(format, cellface, "%.*s", size, text);
+						edj_user_printf(format, cellface, "%.*s", (int)size, text);
 					if (width - wdata > 0)
 						edj_user_printf(format, cellface, "%*c", width - wdata, ' ');
 				} else if (cell && cell->type == EDJ_NUMBER) {

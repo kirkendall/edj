@@ -130,7 +130,7 @@ Error:
 		free(key);
 	if (calc)
 		edj_calc_free(calc);
-	*referr = edj_cmd_error(start.str, "xmlEntity:The %s command expects an entity=value argument");
+	*referr = edj_cmd_error(start.str, "xmlEntity:The %s command expects an entity=value argument", "xmlentity");
 	return NULL;
 }
 

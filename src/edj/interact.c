@@ -104,12 +104,26 @@ static char *edjprompt(const char *prompt)
 	return buf;
 }
 
-
 void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 {
 	char	*expr;
 	edjcmd_t *jc;
 	edjcmdout_t *result;
+
+	/* Run the initcmds once.  (Not once for each file.) */
+	result = edj_cmd_run(initcmds, contextref);
+	free(result);
+
+	/* Maybe run a "hint" command too */
+	if (edj_is_true(edj_by_key(edj_config, "firsthint"))) {
+		jc = edj_cmd_parse_string("hint");
+		result = edj_cmd_run(jc, contextref);
+		free(result);
+	}
+
+	/* If there's a custom REPL function, use it */
+	if (edj_plugin_repl(context))
+		return;
 
 	/* Enable the use of history and name completion while
 	 * inputting expressions.
@@ -126,17 +140,6 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 	signal(SIGINT, catchinterrupt);
 	rl_catch_signals = 1;
 	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterrupt;
-
-	/* Run the initcmds once.  (Not once for each file.) */
-	result = edj_cmd_run(initcmds, contextref);
-	free(result);
-
-	/* Maybe run a "hint" command too */
-	if (edj_is_true(edj_by_key(edj_config, "firsthint"))) {
-		jc = edj_cmd_parse_string("hint");
-		result = edj_cmd_run(jc, contextref);
-		free(result);
-	}
 
 	/* Read an expression */
 	for (running = 0;

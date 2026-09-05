@@ -153,7 +153,8 @@ console.log(namevalue[1] + "=" + namevalue[2]);
 		    $("#main").prop("src", "quick.html");
 		    break;
 		case 'main': // Other top-level topics (download, examples, etc)
-		    $("#main").prop("src", namevalue[2] + ".html");
+		    var sanitized = namevalue[2].replaceAll(":", "");
+		    $("#main").prop("src", sanitized + ".html");
 		    break;
 		}
 	    }

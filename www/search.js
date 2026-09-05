@@ -6,7 +6,7 @@ function searchInput(jqElement)
     // Return a version of text where <>&" are replaced with entities
     function htmlsafe(text)
     {
-	return text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;");
+	return text.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
     }
 
     // Respond to a click in the list of possible matches

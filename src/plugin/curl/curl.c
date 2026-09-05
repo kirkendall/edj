@@ -170,9 +170,9 @@ static size_t urlencode(edj_t *data, char *buf, int component)
 		/* Convert to a string, and convert it recursively */
 		scan = edj_string("", 40);
 		if (data->text[1] == 'i')
-			snprintf(scan->text, 40, "%d", EDJ_INT(data));
+			snprintf((char *)scan->text, 40, "%d", EDJ_INT(data));
 		else
-			snprintf(scan->text, 40, "%g", EDJ_DOUBLE(data));
+			snprintf((char *)scan->text, 40, "%g", EDJ_DOUBLE(data));
 		len = urlencode(scan, buf, 1);
 		edj_free(scan);
 		return len;
@@ -720,7 +720,7 @@ static edj_t *jfn_uuid(edj_t *args, void *agdata)
 	/* Because this is version 4 (all random), the version digit should
 	 * always be '4'.  That's the first digit in the third grouping.
 	 */
-	result->text[14] = '4';
+	((char *)result->text)[14] = '4';
 
 	/* Return it */
 	return result;

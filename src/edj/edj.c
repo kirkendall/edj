@@ -235,10 +235,6 @@ int isscript(char *filename)
 	FILE	*fp;
 	size_t	nbytes;
 
-	/* If it doesn't exist, then it isn't a script */
-	if (access(filename, F_OK) < 0)
-		return 0;
-
 	/* If it has a well known filename extension, trust it */
 	if (ext) {
 		if (!strcasecmp(ext, ".json")

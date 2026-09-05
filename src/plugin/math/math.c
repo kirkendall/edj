@@ -114,7 +114,7 @@ static edj_t *common(edj_t *args, char *name)
 	return edj_from_double(d);
 
 InvalidName:
-	fprintf(stderr, "Invalid Math.function named \"%s\" encountered in the math plugin");
+	fprintf(stderr, "Invalid Math.function named \"%s\" encountered in the math plugin", name);
 	abort();
 }
 
@@ -237,7 +237,7 @@ static edj_t *jfn_atan2(edj_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != EDJ_NUMBER || !arg->next || arg->next->type != EDJ_NUMBER || arg->next->next)
-		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", atan2);
+		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", "atan2");
 
 	/* Convert to binary */
 	y = edj_double(arg);

@@ -112,7 +112,7 @@ static edjcmdout_t *shell_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 	if (!fp)
 		return edj_cmd_error(cmd->where, "shellpipe:Could not open pipe for %s()", "readShell");
 	while ((chunk = fread(buf, 1, sizeof buf, fp)) > 0)
-		edj_user_printf(NULL, "result", "%.*s", chunk, buf);
+		edj_user_printf(NULL, "result", "%.*s", (int)chunk, buf);
 	pclose(fp);
 
 	/* Return NULL to continue to next command */

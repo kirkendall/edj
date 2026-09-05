@@ -13,3 +13,5 @@ void format_usage(void);
 void color_usage(void);
 void debug_usage(void);
 void run(edjcmd_t *jc, edjcontext_t **refcontext);
+
+void edjprog_repl_hook(const char *pluginname, int priority, void (*repl)(edjcontext_t *));

@@ -6,6 +6,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <locale.h>
+#include <errno.h>
 #include <regex.h>
 #include <assert.h>
 #include <edj.h>
@@ -2424,14 +2425,12 @@ static edjcmd_t *import_parse(edjsrc_t *src, edjcmdout_t **referr)
 	}
 
 	/* If the file doesn't exist or is unreadable, fail */
-	if (access(filename, F_OK) < 0) {
-		*referr = edj_cmd_error(start.str, "impnoex:Import file \"%s\" does not exist", filename);
-		free(filename);
-		return NULL;
-	}
 	fp = fopen(filename, "r");
 	if (!fp) {
-		*referr = edj_cmd_error(start.str, "impunrd:Import file \"%s\" is unreadable", filename);
+		if (errno == ENOENT)
+			*referr = edj_cmd_error(start.str, "impnoex:Import file \"%s\" does not exist", filename);
+		else
+			*referr = edj_cmd_error(start.str, "impunrd:Import file \"%s\" is unreadable", filename);
 		free(filename);
 		return NULL;
 	}
