@@ -102,6 +102,30 @@ char *dlerror(void)
 
 #endif /* defined(STATICPLUGINS) */
 
+/* The edj_plugin_repl_hook() function just lets a plugin request a custom
+ * Read-Evaluate-Print-Loop function.  The "edj" program uses this.  Probably
+ * nothing else ever will, but at least it's tiny.
+ */
+static void (*edjrepl)(edjcontext_t *context) = NULL;
+static int edjrepl_priority;
+void edj_plugin_repl_hook(const char *name, int priority, void (*repl)(edjcontext_t *)){
+	if (priority > edjrepl_priority) {
+		edjrepl_priority = priority;
+		edjrepl = repl;
+	}
+}
+/* If a custom REPL handler is installed by a plugin, then call it and return 1
+ * otherwise return 0.  Returning 0 means the application should call its
+ * default REPL code.
+ */
+int edj_plugin_repl(edjcontext_t *context)
+{
+	if (!edjrepl)
+		return 0;
+	(*edjrepl)(context);
+	return 1;
+}
+
 
 /* Load a plugin.  Returns NULL on success, or an error null on failure */
 edj_t *edj_plugin_load(const char *name)
