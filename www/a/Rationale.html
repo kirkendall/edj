@@ -94,10 +94,17 @@
 
     <h3>Why don't batch scripts support persistent settings, like interactive edj?</h3>
     <ul>
-      <li>This is intended to give batch scripts a consistent run-time
+      <li>This is intended to give batch scripts a predictable run-time
           environment.  If a script needs a particular plugin or setting,
           then it should use the "plugin" or "set" command to ensure that
           it's there.
+    </ul>
+
+    <h3>Why is it single-threaded?</h3>
+    <ul>
+      <li>I often run edj on a live host.
+          I don't want to tie up all CPU cores, not even for a few seconds.
+      <li>A single thread is fast enough for interactive use.
     </ul>
 
     <h3>Why use fineline instead of GNU readline?</h3>
@@ -111,7 +118,7 @@
           to enter syntactically correct queries.
       <li>Fineline supports asynchronous "chat" display and code extraction,
 	  allowing for a decent AI interface.
-      <li>Fineline uses common text editor conventions such as ^V for "paste".
+      <li>Fineline uses common text editor keystrokes such as ^V for "paste".
 	  Users are more likely to be able to guess the correct key commands.
     </ul>
 
