@@ -221,6 +221,35 @@ static void xml_parse_name(xml_parse_state_t *state)
 	xml_parse_space(state);
 }
 
+/* Test whether a value looks like a number. */
+static int looks_like_a_number(const char *str, size_t len)
+{
+	/* Allow a leading "-" */
+	if (len > 0 && *str == '-') {
+		len--;
+		str++;
+	}
+
+	/* Check digits and decimal */
+	if (len == 0 || *str < '0' || *str > '9')
+		return 0; /* Numbers must start with a digit */
+	if (len >= 2 && *str == '0' && isdigit(str[1]))
+		return 0; /* Numbers starting with 0 can't have another digit */
+	while (len > 0 && isdigit(*str)) {
+		len--;
+		str++;
+	}
+	if (*str != '.')
+		return 0; /* found a non-digit other than '.', not a number */
+	len--;
+	str++;
+	while (len > 0 && isdigit(*str)) {
+		len--;
+		str++;
+	}
+	return len == 0; /* if finished with only digits, that's a number */
+}
+
 /* Parse a single tag.  Recursively call xml_parse_helper to parse the contents.
  * If an error is detected, the state->err field will contain an error message.
  */
@@ -287,15 +316,26 @@ static xml_parse_tag_t xml_parse_tag(xml_parse_state_t *state)
 				state->cursor++;
 				for (len = 0; state->cursor[len] != '"'; len++) {
 				}
-				plainlen = xml_entities_to_plain(NULL, state->cursor, len);
-				value = edj_string("", plainlen);
-				(void)xml_entities_to_plain(value->text, state->cursor, len);
+
+				if (state->parseNumber
+				 && looks_like_a_number(state->cursor, len)) {
+					value = edj_number(state->cursor, len);
+				} else {
+					plainlen = xml_entities_to_plain(NULL, state->cursor, len);
+					value = edj_string("", plainlen);
+					(void)xml_entities_to_plain(value->text, state->cursor, len);
+				}
 				state->cursor += len + 1;
 			} else {
 				/* Unquoted */
 				for (len = 0; !isspace(state->cursor[len]) && !strchr("/?>", state->cursor[len]); len++) {
 				}
-				value = edj_string(state->cursor, len);
+				if (state->parseNumber
+				 && looks_like_a_number(state->cursor, len)) {
+					value = edj_number(state->cursor, len);
+				} else {
+					value = edj_string(state->cursor, len);
+				}
 				state->cursor += len;
 			}
 
@@ -417,6 +457,7 @@ static edj_t *xml_parse_helper(xml_parse_state_t *state)
 	edj_t	*parsed, *attr, *content, *scan;
 	xml_parse_tag_t tag;
 	size_t	len, entitylen;
+	char	type;
 
 	/* Skip leading whitespace */
 	xml_parse_space(state);
@@ -434,39 +475,19 @@ static edj_t *xml_parse_helper(xml_parse_state_t *state)
 			len--;
 
 
-		/* Expand entities, and store it in a string */
-		entitylen = xml_entities_to_plain(NULL, state->cursor, len);
-		parsed = edj_string("", entitylen);
-		(void)xml_entities_to_plain(parsed->text, state->cursor, len);
-
-		/* Are we supposed to parse numbers? */
-		if (state->parseNumber) {
-			/* Does it look like a number? */
-			char *n = parsed->text;
-			if (*n == '-')
-				n++;
-			if (isdigit(*n)) {
-				do {
-					n++;
-				} while (isdigit(*n));
-				if (*n == '.' && isdigit(n[1])) {
-					do {
-						n++;
-					} while (isdigit(*n));
-					if (!*n) {
-						/* Yes, it looks like a number!
-						 * Convert to number.
-						 */
-						parsed->type = EDJ_NUMBER;
-					}
-				}
-			}
+		if (state->parseNumber && looks_like_a_number(state->cursor, len)) {
+			parsed = edj_number(state->cursor, len);
+		} else {
+			/* Expand entities, and store it in a string */
+			entitylen = xml_entities_to_plain(NULL, state->cursor, len);
+			parsed = edj_string("", entitylen);
+			(void)xml_entities_to_plain(parsed->text, state->cursor, len);
 		}
 
 		/* Move cursor past the value */
 		state->cursor += len;
 
-		/* Return the number */
+		/* Return the value */
 		return parsed;
 	}
 
