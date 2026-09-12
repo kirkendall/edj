@@ -336,7 +336,10 @@ static const char *template_loop(xmlTemplate_t *tmp)
 		return "xmlNoKey:Missing key in template";
 
 	/* If no data, then skip the whole loop */
-	if (!loop || loop->type == EDJ_NULL || (loop->type == EDJ_ARRAY && !loop->first)) {
+	if (!loop
+	 || loop->type == EDJ_NULL
+	 || (loop->type == EDJ_BOOLEAN && loop->text[0] != 't')
+	 || (loop->type == EDJ_ARRAY && !loop->first)) {
 		for (nest = 1; nest > 0; tmp->scan++) {
 			if (tmp->scan[0] == '$' && tmp->scan[1] == '[')
 				nest++;

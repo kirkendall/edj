@@ -91,16 +91,17 @@
 
 	<tr><td>$[<var>key</var> ... $]</td><td>
 	  Loop over <var>data.key</var>, assuming that value is an array.
-	  If it is missing or <tt>null</tt> then treat it like an empty
-	  array; i.e. skip the content entirely.  If it is an object, string,
-	  number, or boolean then treat it like a single-element array.
+	  If it is missing, <tt>null</tt>, or <tt>false</tt> then treat it
+	  like an empty array; i.e. skip the content entirely.
+	  If it is an object, string, number, or <tt>true</tt> then treat it
+	  like a single-element array.
 	  <p>
 	  For elements that are objects, any substitutions within the loop
 	  will look for <var>key</var> first in that element.  If you use
 	  nested loops, it'll look in the innermost first, then the next
 	  innermost, and so on, using <var>data</var> as the final fallback.
 	  <p>
-	  For elements that are strings, numbers, or booleans, you can use
+	  For elements that are strings, numbers, or <tt>true</tt>, you can use
 	  $this to access the element's value, or $that to access the next
 	  nested non-object.
 	</td></tr>
@@ -189,6 +190,15 @@
 	    <strong>edj</strong> logic necessary to create chunks of XML,
 	    and then use <tt>toXML()</tt> one final time with $$<var>key</var>
 	    in the template to say where those chunks should be inserted.
+
+	<li>The reason <tt>$[</tt> treats <tt>false</tt> like <tt>[]</tt> but
+	    <tt>true</tt> like <tt>[true]</tt> is so you can use it like an
+	    "if" test.
+	    <div class="example">
+	      <kbd>const template="[?male&lt;blue&gt;It's a boy&lt;/blue&gt;?][?female&lt;pink&gt;It's a girl&lt;/pink&gt;?]";
+	      <kbd>{female:true}.toXML(template)</kbd>
+	      <samp>"&lt;pink&gt;It's a girl&lt;/pink&gt;"</samp>
+	    </div>
 
 	<li>There is no way to make edj automatically output its results
 	    in XML instead of JSON.  To display data as XML, you must use

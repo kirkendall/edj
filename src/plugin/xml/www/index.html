@@ -134,6 +134,8 @@
           <td>Unlike JSON, XML does not directly support numbers.
               This option controls whether strings that look like numbers
               should be converted to actual numbers.
+              The contents of <?xml> is immune to number conversion so that
+              &lt;?xml version="1.0"&gt; won't result in version=1.
 	  </td>
 	</tr>
         <tr>
