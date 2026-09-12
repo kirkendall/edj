@@ -127,10 +127,10 @@ static void jcsort(edj_t *array, edj_t *orderby, int grouping)
 			dvalue = edj_double(value);
 
 		/* Generate a hash number */
-		if (value->type == EDJ_STRING) {
+		if (value && value->type == EDJ_STRING) {
 			for (hash = 1022, s = value->text; *s; s++)
 				hash = ((hash << 3) ^ (*s & 0x1f) ^ (hash >> 7)) & 0x3ff;
-		} else if (value->type == EDJ_NUMBER) {
+		} else if (value && value->type == EDJ_NUMBER) {
 			hash = ((int)dvalue % 1024) ^ ((int)(dvalue * 1024) % 1024) ;
 		} else {
 			hash = 1023;
