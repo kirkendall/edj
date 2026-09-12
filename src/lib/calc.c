@@ -989,14 +989,7 @@ edj_t *edj_calc(edjcalc_t *calc, edjcontext_t *context, void *agdata)
 		if (left->type == EDJ_NUMBER && right->type == EDJ_NUMBER) {
 			il = edj_int(left);
 			ir = edj_int(right);
-#if 0
-			result = edj_array();
-			for (; il <= ir; il++) {
-				edj_append(result, edj_from_int(il));
-			}
-#else
 			result = edj_defer_ellipsis(il, ir);
-#endif
 		}
 		break;
 

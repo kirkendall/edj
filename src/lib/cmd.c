@@ -1222,7 +1222,7 @@ static edjcmd_t *try_parse(edjsrc_t *src, edjcmdout_t **referr)
 	if (*referr)
 		goto CleanUpAfterError;
 
-	/* !!! I supposed I could test for a "finally" statement */
+	/* !!! I suppose I could test for a "finally" statement */
 
 	/* Return it */
 	return parsed;

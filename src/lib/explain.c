@@ -214,12 +214,9 @@ edj_t *edj_explain(edj_t *columns, edj_t *row, int depth)
 			edj_append(stats, edj_key("width", edj_from_int(newwidth)));
 			edj_append(stats, edj_key("nullable", edj_boolean(!strcmp(newtype, "null") || !firstrow)));
 			edj_append(columns, stats);
-#if 0
-			oldtype = newtype;
-#endif
 		}
 
-		/* Do we want to recurse for opjects/tables? */
+		/* Do we want to recurse for objects/tables? */
 		if (depth != 0) {
 			if (!strcmp(newtype, "object") && col->first->type == EDJ_OBJECT) {
 				t = edj_by_key(stats, "explain");
