@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>writeXML</title>
+    <link rel="stylesheet" type="text/css" href="../../edj.css">
+    <meta name="description" content="edj writeXML - Write data to a file in XML format">
+    <meta name="keywords" content="string, object, function reference, writeXML">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>writeXML - Write data to a file in XML format</h1>
+    <dl>
+      <dt>writeXML(<var>data</var>:object, <var>filename</var>:string):null
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=xml">xml</a> plugin.
+      You must load the plugin via either -lxml on the shell command line,
+      or a <tt>plugin xml;</tt> line in a script.
+      <p>
+      The <tt>writeXML()</tt> function writes data to a file in XML format.
+      It always returns <tt>null</tt>.
+    </dl>
+
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>{foo:"bar"}.writeXML("foo.xml")</kbd>
+	<samp>null</samp>
+        The simplest possible example.  The key "foo" becomes a tag name,
+        and the value "bar" becomes the content.
+        The <tt>null</tt> return value means it was written successfully;
+        if there were any errors then it would return an error message instead.
+      </div>
+
+      <div class="example">
+	<kbd>{`?xml_`:{version:"1.0"},config}.writeXML("config.xml")</kbd>
+	<samp>null</samp>
+        Here we're writing edj's <tt>config</tt> object out as XML.
+        Each member of the object passed to <tt>writeXML()</tt> gets written
+        separately, so most objects have just one member containing all of
+        the actual content, and maybe also a <tt>`?xml_`</tt> member to
+        generate a <tt>&lt;?xml version="1.0"&gt;</tt> header tag.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>The text that's written to the file is basically the same as
+            the string returned by
+            <a target="_PARENT" href="../../index.html?f=xml/toXML">toXML()</a>
+            when used without a template.
+            A newline is added at the end to keep text editors happy.
+
+	<li>This respects the same<tt>pretty</tt> and <tt>tab</tt> settings
+	    that affect JSON.
+	    Usually the <tt>pretty</tt> option is set, but running
+	    <a target="_PARENT" href="../../index.html?cmd=set">set nopretty</a>
+	    before calling <tt>writeXML()</tt> will cause the generated XML
+	    to be compact instead of prettified.
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=xml">plugin xml</a></td><td>Overview of the xml plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=xml/toXML">toXML()</a></td><td>Convert data to an XML string</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

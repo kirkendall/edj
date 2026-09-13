@@ -531,6 +531,7 @@ typedef struct edjfunc_s {
 #define EDJFUNC_EDJFREE 1	/* Call edj_free() on the agdata afterward */
 #define EDJFUNC_FREE 2		/* Call free() on the agdata afterward */
 #define EDJFUNC_FCLOSE 4	/* Call fclose() on the agdata afterward */
+#define EDJ_NOFILE ((FILE *)1)	/* Special file pointer indicating an error */
 
 /* For non-aggregate functions, this is used to pass other information that
  * they might need.

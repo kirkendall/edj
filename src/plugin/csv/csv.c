@@ -181,7 +181,7 @@ static edj_t *jfn_writeCSV(edj_t *args, void *agdata)
 	agcsv_t *ag = (agcsv_t *)agdata;
 	if (ag->error)
 		return edj_error_null(NULL, "%s", ag->error);
-	return edj_from_int(ag->nrows);
+	return edj_null(); /* ... or edj_from_int(ag->nrows); */
 	/* NOTE: edj will automatically free ag->columns and close ag->fp */
 }
 static void   jag_writeCSV(edj_t *args, void *agdata)
@@ -192,6 +192,10 @@ static void   jag_writeCSV(edj_t *args, void *agdata)
 	edj_t	*member;
 	char	*str;
 	edjformat_t format;
+
+	/* If we already tried & failed to open a file, then do nothing */
+	if (ag->fp == EDJ_NOFILE)
+		return;
 
 	/* Not entirely empty */
 	ag->nrows++;
@@ -220,6 +224,7 @@ static void   jag_writeCSV(edj_t *args, void *agdata)
 			ag->fp = fopen(args->first->next->text, "w");
 			if (!ag->fp) {
 				ag->error = "writeCSVOpen:writeCSV() could not open file";
+				ag->fp = EDJ_NOFILE;
 				return;
 			}
 		}
@@ -644,7 +649,7 @@ char *plugincsv()
 	edj_append(section, edj_key("csv", settings));
 
 	/* Register the functions, table format, and parser */
-	edj_calc_aggregate_hook("writeCSV", "row:object, filename:string", "number", jfn_writeCSV, jag_writeCSV, sizeof(agcsv_t), EDJFUNC_FCLOSE|EDJFUNC_FREE);
+	edj_calc_aggregate_hook("writeCSV", "row:object, filename:string", "null", jfn_writeCSV, jag_writeCSV, sizeof(agcsv_t), EDJFUNC_FCLOSE|EDJFUNC_FREE);
 	edj_print_table_hook("csv", csvprint);
 	edj_parse_hook("csv", "csv", ".csv", "text/csv", csvtest, csvparse, csvupdate);
 

@@ -76,9 +76,46 @@ static edj_t *jfn_toXML(edj_t *args, void *agdata)
 	return result;
 }
 
-/* Generates an XML document from a template. */
-static edj_t *jfn_toTemplateXML(edj_t *args, void *agdata)
+/* Write XML to a file */
+static edj_t *jfn_writeXML(edj_t *args, void *agdata)
 {
+	FILE	*fp;
+	char	*buf;
+	size_t	len;
+	char	*filename;
+	edj_t	*data;
+
+	/* Check arguments */
+	data = args->first;
+	if (data->type != EDJ_OBJECT || !args->first->next || args->first->next->type != EDJ_STRING)
+		return edj_error_null(NULL, "writeXML:The %s() function reqires data and a filename as arguments as arguments", "writeXML");
+	filename = args->first->next->text;
+
+	/* Open and lock the file */
+	fp = edj_file_update(filename);
+	if (!fp)
+		return edj_error_null(NULL, "writeFile:Failed to open \"%s\" for writing", filename);
+
+	/* Get the size of the XML */
+	len = xml_unparse(NULL, data);
+
+	/* Some day I should rewrite this to map the file into memory for
+	 * writing, and generate the XML directly into that.  But for now
+	 * we'll allocate a big string and write that in the conventional way.
+	 */
+	buf = malloc(len + 1);
+	(void)xml_unparse(buf, data);
+	if (fwrite(buf, 1, len, fp) != len) {
+		fclose(fp);
+		free(buf);
+		return edj_error_null(NULL, "shortWrite:Failed to write all data to \"%s\"", filename);
+	}
+	if (edj_config_get_boolean("plugin.xml", "generateCRLF"))
+		putc('\r', fp);
+	putc('\n', fp);
+	free(buf);
+	fclose(fp);
+
 	return NULL;
 }
 
@@ -197,7 +234,7 @@ char *pluginxml()
 
 	/* Register the functions */
 	edj_calc_function_hook("toXML", "document:object", "string", jfn_toXML);
-	edj_calc_function_hook("toTemplateXML", "data:any, template:string", "string", jfn_toTemplateXML);
+	edj_calc_function_hook("writeXML", "data:any, filename:string", "null", jfn_writeXML);
 
 	/* Register the commands */
 	jcn_xmlEntity = edj_cmd_hook(NULL, "xmlEntity", xmlEntity_parse, xmlEntity_run);

@@ -3153,8 +3153,8 @@ static edj_t *jfn_writeJSON(edj_t *args, void *agdata)
 	/* close the file */
 	fclose(fp);
 
-	/* Return true */
-	return edj_boolean(1);
+	/* Return null */
+	return edj_null();
 }
 
 
@@ -3452,15 +3452,14 @@ static void jag_explain(edj_t *args, void *agdata)
 static edj_t *jfn_writeArray(edj_t *args, void *agdata)
 {
 	FILE *fp = *(FILE **)agdata;
-	long int size;
+	if (fp == EDJ_NOFILE)
+		return edj_error_null(NULL, "writeArrayFile:%s() could not open file for writing", "writeArray");
 	if (fp) {
 		fputs("\n]\n", fp);
-		size = ftell(fp);
-		*(FILE **)agdata = NULL;
-		return edj_from_int((int)size);
+		return edj_null();
 		/* Note: fp will be closed automatically via EDJFUNC_FCLOSE */
 	}
-	return edj_from_int(0);
+	return edj_null();
 }
 
 static void jag_writeArray(edj_t *args, void *agdata)
@@ -3468,6 +3467,12 @@ static void jag_writeArray(edj_t *args, void *agdata)
 	FILE *fp = *(FILE **)agdata;
 	edj_t	*item;
 	char    *ser;
+
+	/* If we tried to open the file but failed, do nothing.  Later we'll
+	 * return an error message about that.
+	 */
+	if (fp == EDJ_NOFILE)
+		return;
 
 	/* For "null" or "false", do nothing.  For "true" we'd *like* to
 	 * substitute "this" but unfortunately we don't have access to the
@@ -3479,11 +3484,15 @@ static void jag_writeArray(edj_t *args, void *agdata)
 			return;
 	}
 	if (!fp) {
-		if (args->first->next && args->first->next->type == EDJ_STRING) /* undeferred */
+		if (args->first->next && args->first->next->type == EDJ_STRING) /* undeferred */ {
 			fp = fopen(args->first->next->text, "w"); /* undeferred */
-		else
+			if (fp == NULL)
+				fp = EDJ_NOFILE;
+		} else
 			fp = stdout;
 		*(FILE **)agdata = fp;
+		if (fp == EDJ_NOFILE)
+			return;
 		fputs("[\n  ", fp);
 	} else {
 		fputs(",\n  ", fp);

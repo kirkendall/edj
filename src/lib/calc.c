@@ -319,7 +319,7 @@ static void cleanag(edjfunc_t *jf, void *agdata)
 	/* Maybe close a file stream via fclose() */
 	if ((jf->jfoptions & EDJFUNC_FCLOSE)) {
 		FILE *fp = *(FILE **)doomed;
-		if (fp && fp != stdout && fp != stderr)
+		if (fp && fp != stdout && fp != stderr && fp != EDJ_NOFILE)
 			fclose(fp);
 	}
 }
