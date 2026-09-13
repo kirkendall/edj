@@ -12,6 +12,10 @@
     <dl>
       <dt>shell <var>commandline</var>
       <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=shell">shell</a> plugin.
+      You must load the plugin via either -lshell on the command line,
+      or a <tt>plugin shell;</tt> line in a script.
+      <p>
       The <tt>shell</tt> command passes its arguments to the system shell,
       and displays the output.
     </dl>
@@ -37,17 +41,18 @@
             this means run can run anything that doesn't require a ";" or "}"
             very conveniently.
 
+	<li>If you want to compute the command string
+	    instead of using literal text, or you need to include ";" or "}"
+	    characrters, consider using the
+	    <a target="_PARENT" href="../index.html?f=shell/readShell">readShell()</a>
+	    function.
+
 	<li>The external program's stdout is redirected to a pipe,
-	    which <tt>edj</tt> reads and displays it.
+	    which <tt>edj</tt> reads and displays.
 	    The good news is that this means the <tt>shell</tt> command works
 	    even when run in a window, e.g. with the <tt>-lscreen</tt> plugin.
 	    The bad news is that interactive programs such as text editors
 	    might have issues.
-
-	<li>If you want to compute the command string
-	    instead of using literal text, consider using the
-	    <a target="_PARENT" href="../index.html?f=shell/readShell">readShell()</a>
-	    function.
       </ul>
     </details>
 
