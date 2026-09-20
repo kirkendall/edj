@@ -76,36 +76,42 @@ static edjcmdout_t *set_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 static edjcmd_t    *delete_parse(edjsrc_t *src, edjcmdout_t **referr);
 static edjcmdout_t *delete_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 static edjcmdout_t *calc_run(edjcmd_t *cmd, edjcontext_t **refcontext);
+static edjcmdout_t *fncall_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 
 /* Linked list of command names */
-static edjcmdname_t jcn_if =       {NULL,	"if",		if_parse,	if_run};
-static edjcmdname_t jcn_while =    {&jcn_if,	"while",	while_parse,	while_run};
-static edjcmdname_t jcn_for =      {&jcn_while,	"for",		for_parse,	for_run};
-static edjcmdname_t jcn_break =    {&jcn_for,	"break",	break_parse,	break_run};
-static edjcmdname_t jcn_continue = {&jcn_break,	"continue",	continue_parse,	continue_run};
+static edjcmdname_t jcn_if =       {NULL,	  "if",		if_parse,	if_run};
+static edjcmdname_t jcn_while =    {&jcn_if,	  "while",	while_parse,	while_run};
+static edjcmdname_t jcn_for =      {&jcn_while,	  "for",	for_parse,	for_run};
+static edjcmdname_t jcn_break =    {&jcn_for,	  "break",	break_parse,	break_run};
+static edjcmdname_t jcn_continue = {&jcn_break,	  "continue",	continue_parse,	continue_run};
 static edjcmdname_t jcn_switch =   {&jcn_continue,"switch",	switch_parse,	switch_run};
-static edjcmdname_t jcn_case =     {&jcn_switch,	"case",		case_parse,	case_run};
-static edjcmdname_t jcn_default =  {&jcn_case,	"default",	default_parse,	default_run};
-static edjcmdname_t jcn_try =      {&jcn_default,"try",		try_parse,	try_run};
-static edjcmdname_t jcn_throw =    {&jcn_try,	"throw",	throw_parse,	throw_run};
-static edjcmdname_t jcn_var =      {&jcn_throw,	"var",		var_parse,	var_run};
-static edjcmdname_t jcn_const =    {&jcn_var,	"const",	const_parse,	const_run};
-static edjcmdname_t jcn_function = {&jcn_const,	"function",	function_parse,	function_run};
+static edjcmdname_t jcn_case =     {&jcn_switch,  "case",	case_parse,	case_run};
+static edjcmdname_t jcn_default =  {&jcn_case,	  "default",	default_parse,	default_run};
+static edjcmdname_t jcn_try =      {&jcn_default, "try",	try_parse,	try_run};
+static edjcmdname_t jcn_throw =    {&jcn_try,	  "throw",	throw_parse,	throw_run};
+static edjcmdname_t jcn_var =      {&jcn_throw,	  "var",	var_parse,	var_run};
+static edjcmdname_t jcn_const =    {&jcn_var,	  "const",	const_parse,	const_run};
+static edjcmdname_t jcn_function = {&jcn_const,	  "function",	function_parse,	function_run};
 static edjcmdname_t jcn_return =   {&jcn_function,"return",	return_parse,	return_run};
-static edjcmdname_t jcn_void =     {&jcn_return,	"void",		void_parse,	void_run};
-static edjcmdname_t jcn_explain =  {&jcn_void,	"explain",	explain_parse,	explain_run};
-static edjcmdname_t jcn_file =     {&jcn_explain,"file",		file_parse,	file_run};
-static edjcmdname_t jcn_import =   {&jcn_file,	"import",	import_parse,	import_run};
-static edjcmdname_t jcn_plugin =   {&jcn_import,	"plugin",	plugin_parse,	plugin_run};
-static edjcmdname_t jcn_print =    {&jcn_plugin,	"print",	print_parse,	print_run};
-static edjcmdname_t jcn_set =	  {&jcn_print,	"set",		set_parse,	set_run};
-static edjcmdname_t jcn_delete =	  {&jcn_set,	"delete",	delete_parse,	delete_run};
+static edjcmdname_t jcn_void =     {&jcn_return,  "void",	void_parse,	void_run};
+static edjcmdname_t jcn_explain =  {&jcn_void,	  "explain",	explain_parse,	explain_run};
+static edjcmdname_t jcn_file =     {&jcn_explain, "file",	file_parse,	file_run};
+static edjcmdname_t jcn_import =   {&jcn_file,	  "import",	import_parse,	import_run};
+static edjcmdname_t jcn_plugin =   {&jcn_import,  "plugin",	plugin_parse,	plugin_run};
+static edjcmdname_t jcn_print =    {&jcn_plugin,  "print",	print_parse,	print_run};
+static edjcmdname_t jcn_set =	   {&jcn_print,   "set",	set_parse,	set_run};
+static edjcmdname_t jcn_delete =   {&jcn_set,	  "delete",	delete_parse,	delete_run};
 static edjcmdname_t *names = &jcn_delete;
 
 /* A command name struct for assignment/output.  This isn't part of the "names"
  * list because assignment/output has no name -- you just give the expression.
  */
 static edjcmdname_t jcn_calc = {NULL, "<<calc>>", NULL, calc_run};
+
+/* A command name struct for function-as-command.  This isn't part of the
+ * "names" list because it uses any function name, not a specific command name.
+ */
+static edjcmdname_t jcn_fncall = {NULL, "<<fncall>>", NULL, fncall_run};
 
 /* These are used to indicate special results from a series of commands.
  * Their values are irrelevant; their unique addresses are what matters.
@@ -452,9 +458,86 @@ void edj_cmd_free(edjcmd_t *cmd)
 	free(cmd);
 }
 
-/* Parse a single statement and return it.  If it can't be parsed, then issue
- * an error message and return NULL.  If it is a function definition, return
- * it instead of processing it immediately.
+/* Try to parse a function name like a command name. The name may be followed
+ * by a comma-delimited list of expressions to use as parameters; if there are
+ * no parameters then "true" is used as a parameter by default.  If there's
+ * any trouble parsing it this way, then return NULL without any error message
+ * because it probably wasn't intended to be a command then.
+ */
+static edjcmd_t *parse_function_as_command(edjsrc_t *src)
+{
+	char	*name;
+	edjcalc_t *args = NULL, *arg, *fcall;
+	edjfunc_t *func;
+	const char *err;
+	edjsrc_t localsrc = *src;
+	edjcmd_t *cmd;
+
+	/* Parse the name.  If not a name, then fail */
+	name = edj_cmd_parse_key(&localsrc, 0);
+	if (!name)
+		return NULL;
+
+	/* If name is followed by '(' then fail.  It's a normal function call */
+	if (*src->str == '(') {
+		free(name);
+		return NULL;
+	}
+
+	/* If name is not a function name, then fail */
+	func = edj_calc_function_by_name(name);
+	free(name);
+	if (!func)
+		return NULL;
+
+	/* If aggregate function, then fail */
+	if (func->agfn)
+		return NULL;
+
+	/* If no arguments, then assume "true".  Else parse arguments */
+	if (!*localsrc.str || *localsrc.str == ';' || *localsrc.str == '}') {
+		args = edj_calc_list(args, edj_calc_parse("true", NULL, NULL, 0));
+	} else {
+		/* Parse a comma-delimited list of arguments, building an
+		 * array generator to use as the function argument list.
+		 */
+		do {
+			/* Parse an argument.  If error, quit. */
+			arg = edj_calc_parse(localsrc.str, &localsrc.str, &err, 0);
+			if (err) {
+				edj_calc_free(args);
+				return NULL;
+			}
+
+			/* Add it to the argument list */
+			args = edj_calc_list(args, arg);
+
+		} while (*localsrc.str++ == ',');
+		localsrc.str--; /* don't want to move past that non-comma! */
+
+		/* If extra text after the last argument, fail */
+		if (*localsrc.str && *localsrc.str != ';' && *localsrc.str != '}') {
+			edj_calc_free(args);
+			return NULL;
+		}
+	}
+
+	/* Construct a function call */
+	fcall = edj_calc_fncall(func, args);
+
+	/* Wrap it in a command, and return it.  The command is special because
+	 * we don't want to display null return values, but do want to display
+	 * anything else.
+	 */
+	cmd = edj_cmd(src, &jcn_fncall);
+	cmd->calc = fcall;
+	*src = localsrc;
+	return cmd;
+}
+
+/* Parse a single statement and return it.  If it can't be parsed, then stuff
+ * an error message into *referr and return NULL.  If it is a function
+ * definition, return it instead of processing it immediately.
  */
 edjcmd_t *edj_cmd_parse_single(edjsrc_t *src, edjcmdout_t **referr)
 {
@@ -462,6 +545,7 @@ edjcmd_t *edj_cmd_parse_single(edjsrc_t *src, edjcmdout_t **referr)
 	size_t 		len;
 	edjcalc_t	*calc;
 	const char	*where, *end, *err;
+	char		*name;
 	edjcmd_t	*cmd;
 
 	/* Skip leading whitespace */
@@ -495,11 +579,19 @@ edjcmd_t *edj_cmd_parse_single(edjsrc_t *src, edjcmdout_t **referr)
 	if (sn && *end == '(' && edj_calc_function_by_name(sn->name))
 		sn = NULL;
 
-	/* If it's a statement, use the statement's parser */
+	/* If it's a command, use the command's parser */
 	if (sn) {
 		src->str += len;
 		return sn->argparser(src, referr);
 	}
+
+	/* It might be a function invocation masquerading as a command.
+	 * Try parsing it that way, but if that fails then fall through to
+	 * parsing it like an assignment or output expression.
+	 */
+	cmd = parse_function_as_command(src);
+	if (cmd)
+		return cmd;
 
 	/* Hopefully it is an assignment or an output expression.  Parse it. */
 	end = err = NULL;
@@ -2574,6 +2666,7 @@ static edjcmd_t *print_parse(edjsrc_t *src, edjcmdout_t **referr)
 		}
 		list = edj_calc_list(list, item);
 	} while (*src->str++ == ',');
+	src->str--; /* don't want to move past that non-comma! */
 
 	/* Build the command */
 	cmd = edj_cmd(&start, &jcn_print);
@@ -2838,6 +2931,39 @@ static edjcmdout_t *calc_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 		 */
 		edj_free(result);
 	}
+
+	return NULL;
+}
+
+/* Handle a function-as-command statement */
+static edjcmdout_t *fncall_run(edjcmd_t *cmd, edjcontext_t **refcontext)
+{
+	/* Calculate the result of the expression.   If it's an assignment,
+	 * then this will do the assignment too.
+	 */
+	edj_t *result = edj_calc(cmd->calc, *refcontext, NULL);
+
+	/* If we got an error ("null" with text), then convert to edjcmdout_t */
+	if (edj_is_error(result)) {
+		edjcmdout_t *err = edj_cmd_error(result->first ? (const char *)result->first : cmd->where, "%s", result->text);
+		edj_free(result);
+		return err;
+	}
+
+	/* Ignore null */
+	if (edj_is_null(result)) {
+		edj_free(result);
+		return NULL;
+	}
+
+	/* Print the result */
+	edj_print(result, NULL);
+
+	/* Give the user interface a chance to save the result.  If
+	 * it doesn't want to do that, then free it.
+	 */
+	if (!edj_user_result(result))
+		edj_free(result);
 
 	return NULL;
 }

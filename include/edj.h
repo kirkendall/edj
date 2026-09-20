@@ -643,6 +643,7 @@ edjfunc_t *edj_calc_function_by_name(const char *name);
 char *edj_calc_op_name(edjop_t op);
 void edj_calc_dump(edjcalc_t *calc);
 edjcalc_t *edj_calc_parse(const char *str, const char **refend, const char **referr, int canassign);
+edjcalc_t *edj_calc_fncall(edjfunc_t *fn, edjcalc_t *args);
 edjcalc_t *edj_calc_list(edjcalc_t *list, edjcalc_t *item);
 void edj_calc_free(edjcalc_t *calc);
 void *edj_calc_ag(edjcalc_t *calc, void *agdata);
