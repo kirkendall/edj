@@ -233,7 +233,7 @@ char *pluginxml()
 	edj_append(section, edj_key("xml", settings));
 
 	/* Register the functions */
-	edj_calc_function_hook("toXML", "document:object", "string", jfn_toXML);
+	edj_calc_function_hook("toXML", "document:object, template?:string", "string", jfn_toXML);
 	edj_calc_function_hook("writeXML", "data:any, filename:string", "null", jfn_writeXML);
 
 	/* Register the commands */
