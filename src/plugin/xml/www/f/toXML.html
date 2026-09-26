@@ -195,7 +195,7 @@
 	    <tt>true</tt> like <tt>[true]</tt> is so you can use it like an
 	    "if" test.
 	    <div class="example">
-	      <kbd>const template="[?male&lt;blue&gt;It's a boy&lt;/blue&gt;?][?female&lt;pink&gt;It's a girl&lt;/pink&gt;?]";
+	      <kbd>const template="$[male&lt;blue&gt;It's a boy&lt;/blue&gt;$]$[female&lt;pink&gt;It's a girl&lt;/pink&gt;$]";</kbd>
 	      <kbd>{female:true}.toXML(template)</kbd>
 	      <samp>"&lt;pink&gt;It's a girl&lt;/pink&gt;"</samp>
 	    </div>
@@ -205,7 +205,7 @@
 	    <tt>print toXML(),"\n"</tt>.
 
 	<li>You can convert a string to use XML entities for special characters
-	    by passing it to toXML() with the template "$key".
+	    by passing it to toXML() with the template "$this".
 	    <div class="example">
 	      <kbd>"cat &amp; mouse".toXML("$this")</kbd>
 	      <samp>"cat &amp;amp; mouse"</samp>
