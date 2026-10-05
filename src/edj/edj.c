@@ -858,6 +858,14 @@ int main(int argc, char **argv)
 	 */
 	if (!interactive && !initcmd)
 	{
+		/* Except! If stdin is a tty and no files were named, then
+		 * the user probably wants to force interactive running via -i.
+		 */
+		if (!anyfiles && isatty(0)) {
+			fprintf(stderr, "edj: Try running with -i to force interactive mode\n");
+			goto CleanExit;
+		}
+
 		args = edj_config_get("batch", "table");
 		if (args && (!strcmp(args->text, "grid") || !strcmp(args->text, "sh") || !strcmp(args->text, "csv")))
 			initcmd = edj_cmd_parse_string("select");
