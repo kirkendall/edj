@@ -285,7 +285,7 @@ void edj_calc_aggregate_hook(
 	size_t  agsize,
 	int	jfoptions)
 {
-	edjfunc_t *f;
+	edjfunc_t *f, *scan, *lag;
 
 	/* Round agsize up to a multiple of 8 bytes */
 	if (agsize > 0)
@@ -302,6 +302,12 @@ void edj_calc_aggregate_hook(
 		}
 	}
 
+	/* Skip past any user-defined functions.  We want to keep user-defined
+	 * functions separate from compiled functions.
+	 */
+	for (lag = NULL, scan = funclist; scan->user; lag = scan, scan = scan->other) {
+	}
+
 	/* Add it */
 	f = malloc(sizeof(edjfunc_t));
 	memset(f, 0, sizeof *f);
@@ -312,12 +318,22 @@ void edj_calc_aggregate_hook(
 	f->agfn = agfn;
 	f->agsize = agsize;
 	f->jfoptions = jfoptions;
-	f->other = funclist;
-	funclist = f;
+	f->other = scan;
+	if (!lag)
+		funclist = f;
+	else
+		lag->other = f;
 }
 
 /* Register a non-aggregate function.  "name" is the name of the function,
- * and "fn" is a pointer to the actual C function that implements it.
+ * and "fn" is a pointer to the actual C function that implements it.  It
+ * should look like...
+ *
+ *    edj_t *myFunction(edj_t *myargs, void *agdata).
+ *
+ * ... where myargs will be an array of actual argument values, and agdata
+ * is mostly ignored, but could be a regular expression or a context pointer.
+ * 
  * The "args" and "type" strings are the argument names and types, and the
  * return type; these are basically just comments.
  */
@@ -369,6 +385,8 @@ static void free_user_functions()
 /* Define or redefine a user function -- one that's defined in edj's
  * command syntax instead of C code.  Returns 0 normally, or 1 if the
  * function name matches a built-in function (and hence can't be refined).
+ * The function has already been parsed by this point, so there are no other
+ * errors that can occur here.
  *
  * The name, paramstr, and returntype arguments are expected to be
  * dynamically-allocated strings.  Use strdup() if necessary.
@@ -457,7 +475,7 @@ edjfunc_t *edj_calc_function_by_name(const char *name)
 }
 
 /***************************************************************************
- * Everything below this is C functions that implement edj functions.       *
+ * Everything below this is C functions that implement edj functions.      *
  * We'll start with the non-aggregate functions.  These are jfn_xxxx() C   *
  * functions.  They're passed an agdata parameter but they ignore it.      *
  * The aggregate functions are defined later in this file.                 *
