@@ -479,7 +479,7 @@ static edjcmd_t *parse_function_as_command(edjsrc_t *src)
 		return NULL;
 
 	/* If name is followed by '(' then fail.  It's a normal function call */
-	if (*src->str == '(') {
+	if (*localsrc.str == '(') {
 		free(name);
 		return NULL;
 	}
