@@ -69,7 +69,7 @@ static edjcmdout_t *hint_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 	edj_user_printf(&tweaked, "normal", "\nSome good commands: %s%s%s\n", help ? "help, " : "", "set, explain, file, function, plugin, import", line ? ", edit":"");
 	edj_user_printf(&tweaked, "normal", "Some good functions: %s%s%s\n", "common(), diff(), gap(), grep(), find()", xml ? ", toXML()" : "", curl ? ", curlGet()":"");
 	edj_user_printf(&tweaked, "normal", "Some good operators: %s\n", "in, like, select, values, #, #=, @");
-	edj_user_printf(&tweaked, "normal", "You can use %s to exit.", "<Ctrl-D>");
+	edj_user_printf(&tweaked, "normal", "%s exits. To disable this message, invoke with %s\n", "<Ctrl-D>", "-Snofirsthint");
 	if (help && line)
 		edj_user_printf(&tweaked, "normal", "  Run \"%s\" for more keystrokes.", "help fineline");
 	edj_user_ch('\n');
