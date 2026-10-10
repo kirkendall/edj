@@ -881,10 +881,18 @@ static edjcalc_t *jcalloc(token_t *token)
 		}
 		*build = '\0';
 
-		/* Scan flags for "i", "e" and/or "g" */
+		/* Choose the default syntax (basic or extended) from the
+		 * config.regex option
+		 */
+		if (edj_by_key(edj_config, "regex")->text[0] == 'e')
+			reflags |= REG_EXTENDED;
+
+		/* Scan flags for "i", "b", "e" and/or "g" */
 		while (++scan < &token->full[token->len]) {
 			if (*scan == 'i')
 				reflags |= REG_ICASE;
+			if (*scan == 'b')
+				reflags &= ~REG_EXTENDED;
 			if (*scan == 'e')
 				reflags |= REG_EXTENDED;
 			jc->u.regex.global |= (*scan == 'g');

@@ -30,7 +30,7 @@
       <table class="referencelist">
         <tr><th>Symbol</th><th>What it's replaced by</th></tr>
         <tr><td>$&amp; or $0</td><td>Copy of the matching text in <var>str</var></td></tr>
-        <tr><td>$1 to $9</td><td>Text matching 1st to 9th \(\)-wrapped portion of <var>regex</var></td></tr>
+        <tr><td>$1 to $9</td><td>Text matching 1st to 9th subexpression in the <var>regex</var></td></tr>
         <tr><td>$$</td><td>A single dollar sign</td></tr>
       </table>
     </dl>
@@ -64,7 +64,7 @@
       </div>
 
       <div class="example">
-	<kbd>"8005551212".replace(/\(...\)\(...\)\(....\)/, "($1) $2-$3")</kbd>
+	<kbd>"8005551212".replace(/(...)(...)(....)/, "($1) $2-$3")</kbd>
 	<samp>"(800) 555-1212"</samp>
 	Here we're dividing a 10-digit phone number into segments, and then adding
 	punctuation around those segments to make it pretty.

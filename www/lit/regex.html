@@ -38,14 +38,6 @@
 	</td>
       </tr>
       <tr>
-        <td>e</td>
-        <td>
-          Uses the POSIX "extended" syntax for the regular expression,
-          instead of the normal "basic" syntax.
-          Mostly this affects when you need to use backslash characters.
-	</td>
-      </tr>
-      <tr>
         <td>g</td>
         <td>
           Applies the expression globally instead of just finding the first
@@ -54,6 +46,14 @@
           and <a target="_PARENT" href="../index.html?f=match">match()</a> functions,
           effectively turning them into <a target="_PARENT" href="../index.html?f=replaceAll">replaceAll()</a>
           and <a target="_PARENT" href="../index.html?f=matchAll">matchAll()</a>.
+	</td>
+      </tr>
+      <tr>
+        <td>b<br>e</td>
+        <td>
+          Forces the use of POSIX "basic" or "extended" syntax for this
+          regular expression, overriding the "regex" setting.
+          Mostly this affects when you need to use backslash characters.
 	</td>
       </tr>
     </table>
@@ -83,20 +83,22 @@
           For <tt>*</tt> it can be repeated zero or more times.  One common
 	  example is <tt>.*</tt> which matches any text at all.
 	  (That means any character, repeated any number of times).
-      <li><tt>\+</tt> is a closure operator that means the preceding expression
+      <li><tt>+</tt> is a closure operator that means the preceding expression
           should repeat 1 or more times.
-      <li><tt>\?</tt> is a closure operator that means the preceding expression 	  should occur 0 or 1 times; i.e. that it is optional.
-      <li><tt>\( \)</tt> marks subexpressions.
-          These affect closure operators like <tt>*</tt> and <tt>\+</tt>,
+      <li><tt>?</tt> is a closure operator that means the preceding expression
+          should occur 0 or 1 times; i.e. that it is optional.
+      <li><tt>( )</tt> marks subexpressions.
+          These affect closure operators like <tt>*</tt> and <tt>+</tt>,
           allowing them to match multi-character expressions.
           Also, the <a target="_PARENT" href="../index.html?f=replace">replace()</a> function can access the
           text that matched each subexpression and use it when constructing
           replacement text.
-      <li>Normally edj uses POSIX "basic" regular expressions, but appending an
-          "e" flag makes it use "extended" regular expression syntax.
-          The main difference is that metacharacters that require a backslash
-          for "basic" regular expressions do not require them for "extended"
-          regular expressions.
+      <li>POSIX defines "basic" and "extended" syntax for regular expressions.
+          edj has a "regex" option to control which syntax it uses, when no
+          explicit "b" or "e" flag is given.  The option defaults to "extended"
+          because that's closer to JavaScript.
+          However, "basic" is closer to what the <b>grep</b> and <b>vi</b>
+          programs use so you may be more familiar with that.
     </ul>
 
     <details open>
