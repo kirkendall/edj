@@ -35,6 +35,7 @@ static void catchRLinterrupt()
 }
 
 
+/* Return the full pathname of the history file */
 static char *historyfile(void)
 {
 	static char	*buf = NULL;
