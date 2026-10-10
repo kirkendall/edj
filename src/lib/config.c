@@ -378,6 +378,11 @@ void edj_config_load(const char *name)
 		edj_append(edj_system, edj_key("configdir", edj_string(pathname, -1)));
 		free(pathname);
 
+		/* For interactive use, the default read-evaluate-print loop
+		 * is "edj".  It may be replaced by plugins.
+		 */
+		edj_append(edj_system, edj_key("repl", edj_string("edj", -1)));
+
 		/* Add an empty list of plugins.  As plugins are loaded,
 		 * this will become populated.
 		 */
