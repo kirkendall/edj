@@ -20,11 +20,13 @@
       This rarely matters.
       Deferred arrays, regardless of their origin, are treated almost exactly
       like non-deferred arrays.
-      Altering an array, for example by appending a new element to it, will
-      cause the array to be converted to a non-deferred array which can take
-      a noticeable amount of time and memory, so maybe in some very rare cases
-      you might want to see if <tt>deferTypeOf()</tt> returns a
+      Altering a deferred array, for example by appending a new element to it,
+      will cause the array to be converted to a non-deferred array.
+      Since that can take a noticeable amount of time and memory, in some
+      very rare cases you might want to see if <tt>deferTypeOf()</tt> returns a
       non-<tt>null</tt> value.
+    </dl>
+
     <details open>
       <summary>Examples</summary>
 
@@ -48,11 +50,11 @@
             <table class="reference">
               <tr>
                 <td>"Blob"</td>
-                <td>Binary data, presented as an array of byte values.</td>
+                <td>Binary data, presented as an array of byte values, often from the <a target="_PARENT" href="../index.html?f=blob">blob()</a> or <a target="_PARENT" href="../index.html?f=unmime64">unmime64()</a> functions.</td>
 	      </tr>
 	      <tr>
 	        <td>"Ellipsis"</td>
-	        <td>An array of integers over a given range.</td>
+	        <td>An array of integers over a given range, from the <a target="_PARENT" href="../index.html?op=ellipsis">...</a> operator.</td>
 	      </tr>
 	      <tr>
 	        <td>"Dummy"</td>
@@ -73,6 +75,7 @@
       <table>
         <tr><td><a target="_PARENT" href="../index.html?op=ellipsis">...</a></td><td>Returns a array of integers over a range.</td></tr>
         <tr><td><f target="_PARENT" href="../index.html?op=curl/unmime64">unmime64()<a></td><td>Converts MIME base64 text to a string or blob</td></tr>
+        <tr><td><f target="_PARENT" href="../index.html?op=curl/blob">blob()<a></td><td>Converts MIME base64 text to a string or blob</td></tr>
       </table>
     </details>
 

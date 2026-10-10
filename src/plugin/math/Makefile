@@ -8,8 +8,8 @@ SRC=	math.c
 OBJ=	math.o
 LIBS=	-lm
 CFLAGS=	-I$(INC)
-#CC=	gcc -fpic -g
-CC=	gcc -fpic -O
+CC=	gcc -fpic -g
+#CC=	gcc -fpic -O
 
 $(ALL): pluginmath.so
 	cp pluginmath.so $(PLUGIN)/pluginmath.so

@@ -18,7 +18,7 @@
     process each one individually via the expression of the right argument, and
     collect the results in a new array.
     For <tt>#</tt> and <tt>##</tt>, this result array is then returned.
-    For <tt>#?</tt>, only the array's first element is returned.
+    For <tt>#^</tt>, only the array's first element is returned.
     <p>
     The only difference between <tt>#</tt> and <tt>##</tt> is that if you divide
     the array into groups (by embedding sub-arrays within the array e.g. via the
@@ -34,7 +34,7 @@
     giving their name; you don't need to say <tt>this.name</tt>
     (although that works too).
     <p>
-    The <tt>#?</tt> operator returns only the first element of the result array.
+    The <tt>#^</tt> operator returns only the first element of the result array.
     This can be handy when you're using aggregate functions to collect
     statistics across a table, but only want one copy of those statistics
     to be returned.
@@ -97,7 +97,7 @@
 	<samp>{"max":11,"min":2}</samp>
 	<kbd>[2,3,5,7,11] #^ {max:max(this), min:min(this)}</kbd>
 	<samp>{"max":11,"min":2}</samp>
-	Find the maximum and minumum values, and construct an object with their values.
+	Find the maximum and minimum values, and construct an object with their values.
 	<a target="_PARENT" href="../index.html?f=max">max()</a> and
 	<a target="_PARENT" href="../index.html?f=min">min()</a> are aggregate
 	functions, and aggregate functions usually return the same value for all
@@ -233,6 +233,7 @@
 	  </table>
 	</samp>
 	Here's a rather extreme example that I've used in real life.
+	(Names changed to protect the innocent.)
 	First we use
 	<a target="_PARENT" href="../index.html?f=find">find()</a>
 	to search for a value in the default table
