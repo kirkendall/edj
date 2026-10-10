@@ -545,7 +545,6 @@ edjcmd_t *edj_cmd_parse_single(edjsrc_t *src, edjcmdout_t **referr)
 	size_t 		len;
 	edjcalc_t	*calc;
 	const char	*where, *end, *err;
-	char		*name;
 	edjcmd_t	*cmd;
 
 	/* Skip leading whitespace */
