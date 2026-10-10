@@ -1880,7 +1880,16 @@ static edj_t *help_match(edj_t *args, regex_t *preg, int globally)
 
 		/* For each match... */
 		while (0 == regexec(preg, subject, 10, matches, 0)) {
+			/* Append the match to the result list.  If not doing
+			 * it globally then also append and subexpression
+			 * matches 
+			 */
 			edj_append(result, edj_string(subject + matches[0].rm_so, matches[0].rm_eo - matches[0].rm_so));
+			if (!globally) {
+				for (in = 1; in < 10 && matches[in].rm_so >= 0; in++)
+					edj_append(result, edj_string(subject + matches[in].rm_so, matches[in].rm_eo - matches[in].rm_so));
+
+			}
 
 			/* Move past this match */
 			subject += matches[0].rm_eo;
