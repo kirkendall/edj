@@ -110,6 +110,7 @@ static void (*edjrepl)(edjcontext_t *context) = NULL;
 static int edjrepl_priority;
 void edj_plugin_repl_hook(const char *name, int priority, void (*repl)(edjcontext_t *)){
 	if (priority > edjrepl_priority) {
+		edj_append(edj_system, edj_key("repl", edj_string(name, -1)));
 		edjrepl_priority = priority;
 		edjrepl = repl;
 	}
