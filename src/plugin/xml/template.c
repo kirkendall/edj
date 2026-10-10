@@ -29,7 +29,7 @@ static edj_t *template_key(xmlTemplate_t *tmp, int arrayOk)
 	edj_t	*found;
 
 	/* Collect characters.  Can be anything except ":<>=. '\"\0".  */
-	for (symlen = 0; tmp->scan[symlen] > ' ' && !strchr(":<>=.'\"", tmp->scan[symlen]); symlen++) {
+	for (symlen = 0; tmp->scan[symlen] > ' ' && !strchr(":<>=. '\"", tmp->scan[symlen]); symlen++) {
 	}
 
 	/* If length is 0, return NULL */
@@ -310,9 +310,13 @@ static const char *template_tag(xmlTemplate_t *tmp)
 		tmp->len = lenBeforeTag;
 	}
 
-	/* Consume any whitespace after the tag */
-	while (*tmp->scan && isspace(*tmp->scan))
+	/* Copy any whitespace after the tag */
+	while (*tmp->scan && isspace(*tmp->scan)) {
+		if (tmp->build)
+			*tmp->build++ = *tmp->scan;
+		tmp->len++;
 		tmp->scan++;
+	}
 	return NULL;
 }
 
@@ -329,6 +333,7 @@ static const char *template_loop(xmlTemplate_t *tmp)
 	const char *error;
 
 	/* Look for the value we're looping over */
+	assert(tmp->scan[0] == '$' && tmp->scan[1] == '[');
 	tmp->scan += 2; /* to skip "$[" */
 	scan = tmp->scan;
 	loop = template_key(tmp, 1);
@@ -400,8 +405,10 @@ static const char *template_content(xmlTemplate_t *tmp)
 	edj_t	*value;
 	size_t	len;
 
-	/* Copy bytes up to the end of template or "</" */
-	while (*tmp->scan && (tmp->scan[0] != '<' || tmp->scan[1] != '/')) {
+	/* Copy bytes up to the end of template or "</" or "$]" */
+	while (*tmp->scan
+	    && (tmp->scan[0] != '<' || tmp->scan[1] != '/')
+	    && (tmp->scan[0] != '$' || tmp->scan[1] != ']')) {
 		if (tmp->scan[0] == '$' && tmp->scan[1] == '[') {
 			/* Process the loop */
 			error = template_loop(tmp);
@@ -473,6 +480,12 @@ static const char *template_content(xmlTemplate_t *tmp)
 			error = template_tag(tmp);
 			if (error)
 				return error;
+		} else {
+			/* Copy a content byte */
+			if (tmp->build)
+				*tmp->build++ = *tmp->scan;
+			tmp->scan++;
+			tmp->len++;
 		}
 	}
 	if (tmp->len > tmp->maxLen)
