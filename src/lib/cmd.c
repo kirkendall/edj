@@ -121,7 +121,7 @@ edj_t edj_cmd_continue;	/* "continue" statement */
 edj_t edj_cmd_case_mismatch;	/* "case" that doesn't match switchcase */
 
 /* Add a new statement name, and its argument parser and runner. */
-edjcmdname_t *edj_cmd_hook(char *pluginname, char *cmdname, edjcmd_t *(*argparser)(edjsrc_t *src, edjcmdout_t **referr), edjcmdout_t *(*run)(edjcmd_t *cmd, edjcontext_t **refcontext))
+edjcmdname_t *edj_cmd_hook(const char *pluginname, const char *cmdname, edjcmd_t *(*argparser)(edjsrc_t *src, edjcmdout_t **referr), edjcmdout_t *(*run)(edjcmd_t *cmd, edjcontext_t **refcontext))
 {
 	/* Allocate an edjcmdname_t for it */
 	edjcmdname_t *sn = malloc(sizeof(edjcmdname_t));
@@ -139,6 +139,20 @@ edjcmdname_t *edj_cmd_hook(char *pluginname, char *cmdname, edjcmd_t *(*argparse
 	/* Return it.  The command parser will likely need to know it. */
 	return sn;
 }
+
+/* Look up a command, given its name.  If found, then return the struct
+ * describing it; otherwise return NULL.
+ */
+edjcmdname_t *edj_cmd_by_name(const char *name)
+{
+	edjcmdname_t	*sn;
+	for (sn = names; sn; sn = sn->other) {
+		if (!edj_mbs_casecmp(sn->name, name))
+			return sn;
+	}
+	return NULL;
+}
+
 
 /* Generate an error message */
 edjcmdout_t *edj_cmd_error(const char *where, const char *fmt, ...)
@@ -176,7 +190,7 @@ edjcmdout_t *edj_cmd_error(const char *where, const char *fmt, ...)
  * {cmdname}_parse functions can call these as they see fit.
  *****************************************************************************/
 
-/* Skip past whitespace and comments.  This may include newlines. */
+/* Skip past whitespace and optionally comments.  This may include newlines. */
 void edj_cmd_parse_whitespace(edjsrc_t *src)
 {
 	do {
@@ -185,7 +199,7 @@ void edj_cmd_parse_whitespace(edjsrc_t *src)
 			src->str++;
 
 		/* Comments */
-		if (src->str[0] == '/' && src->str[1] == '/') {
+		if (!src->nocomment && src->str[0] == '/' && src->str[1] == '/') {
 			while (*src->str && *src->str != '\n')
 				src->str++;
 		}
@@ -753,6 +767,7 @@ edjcmd_t *edj_cmd_parse_string(char *text)
 	srcbuf.buf = text;
 	srcbuf.str = text;
 	srcbuf.size = strlen(text);
+	srcbuf.nocomment = 0;
 
 	/* Parse it */
 	return edj_cmd_parse(&srcbuf);
@@ -784,6 +799,7 @@ edjcmd_t *edj_cmd_parse_file(const char *filename)
 	srcbuf.buf = jf->base;
 	srcbuf.str = jf->base;
 	srcbuf.size = jf->size;
+	srcbuf.nocomment = 0;
 
 	/* Parse it */
 	cmd = edj_cmd_parse(&srcbuf);
@@ -1101,6 +1117,7 @@ static edjcmd_t *for_parse(edjsrc_t *src, edjcmdout_t **referr)
 	}
 
 	/* Parse the attributes: (var key of expr), (key of expr), or (expr) */
+	parensrc = *src;
 	parensrc.str = str;
 	if (!strncasecmp(parensrc.str, "var", 3) && isspace(parensrc.str[3])) {
 		parsed->var = 1;
@@ -1296,6 +1313,7 @@ static edjcmd_t *try_parse(edjsrc_t *src, edjcmdout_t **referr)
 		str = edj_cmd_parse_paren(src);
 
 		/* It should be a single name */
+		parensrc = *src;
 		parensrc.str = str;
 		parsed->key = edj_cmd_parse_key(&parensrc, 1);
 		if (*parensrc.str) {
@@ -1675,6 +1693,7 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 	edjcmd_t *body = NULL;
 	char	*returntype = NULL;;
 
+	paren = *src;
 	paren.buf = NULL;
 
 	/* Function name */
@@ -1690,6 +1709,7 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 	}
 
 	/* Parameter list (the parenthesized text) */
+	paren = *src;
 	paren.buf = paren.str = edj_cmd_parse_paren(src);
 	if (!paren.buf) {
 		/* No parameter list, so just describe the named function and
@@ -1717,7 +1737,7 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 		edj_t	*defvalue;
 
 		/* Parameter name */
-		pname = edj_cmd_parse_key(&paren, 0);
+		pname = edj_cmd_parse_key(&paren, 1);
 		if (!pname) {
 			*referr = edj_cmd_error(src->str, "Missing parameter name");
 			goto Error;
@@ -2474,7 +2494,7 @@ static edjcmd_t *import_parse(edjsrc_t *src, edjcmdout_t **referr)
 	}
 	while (end > src->str && end[-1] == ' ')
 		end--;
-	filename = malloc(end - src->str + 4);
+	filename = malloc(end - src->str + 5);
 	strncpy(filename, src->str, end - src->str);
 	filename[end - src->str] = '\0';
 	src->str = end;

@@ -105,7 +105,7 @@ int isdirectory(const char *filename)
  * sampledata directory.  If it is the name of one of those files, then it
  * loads the file into memory and returns that.
  */
-edj_t *autoload(char *key)
+edj_t *autoload(const char *key)
 {
 	char    filename[1000];
 	edj_t  *dir, *parser, *ext;

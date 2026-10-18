@@ -661,7 +661,7 @@ edj_t *edj_context_file(edjcontext_t *context, const char *filename, int writabl
  * Also, a non-NULL reflayer implies that we're trying to assign, so only
  * contexts marked with EDJ_CONTEXT_VAR or EDJ_CONTEXT_CONST will be checked.
  */
-edj_t *edj_context_by_key(edjcontext_t *context, char *key, edjcontext_t **reflayer)
+edj_t *edj_context_by_key(edjcontext_t *context, const char *key, edjcontext_t **reflayer)
 {
         edj_t  *val;
 	int	firstthis;

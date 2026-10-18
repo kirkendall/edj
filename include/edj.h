@@ -277,7 +277,7 @@ typedef enum {
 typedef struct edjcontext_s {
     struct edjcontext_s *older;/* link list of edjcontext_t contexts */
     edj_t *data;     /* a used item */
-    edj_t *(*autoload)(char *key); /* called from edj_context_by_key() */
+    edj_t *(*autoload)(const char *key); /* called from edj_context_by_key() */
     void   (*modified)(struct edjcontext_s *layer, edjcalc_t *lvalue);
     edjcontextflags_t flags;
 } edjcontext_t;
@@ -567,8 +567,9 @@ typedef struct edjag_s {
  */
 typedef struct {
 	const char	*buf;	/* buffer, contains entire source text */
-	const char	*str;	/* current parse position within "base" */
-	size_t	size;		/* size of "buf" */
+	const char	*str;	/* current parse position within "buf" */
+	size_t		size;	/* size of "buf" */
+	int		nocomment; /* Boolean: skip comments as whitespace? */
 } edjsrc_t;
 
 /* This is used for returning the result of a command.  A NULL pointer means
@@ -592,10 +593,10 @@ extern edj_t edj_cmd_break, edj_cmd_continue;
  */
 typedef struct edjcmdname_s {
 	struct edjcmdname_s *other;
-	char	*name;
+	const char	*name;
 	struct edjcmd_s *(*argparser)(edjsrc_t *src, edjcmdout_t **referr);
 	edjcmdout_t *(*run)(struct edjcmd_s *cmd, edjcontext_t **refcontext);
-	char	*pluginname;
+	const char	*pluginname;
 } edjcmdname_t;
 
 /* This stores a parsed statement. */
@@ -656,14 +657,15 @@ edjcontext_t *edj_context_insert(edjcontext_t **refcontext, edjcontextflags_t fl
 edjcontext_t *edj_context_std(edj_t *data);
 edj_t *edj_context_file(edjcontext_t *context, const char *filename, int writable, int *refcurrent);
 edjcontext_t *edj_context_func(edjcontext_t *context, edjfunc_t *fn, edj_t *args);
-edj_t *edj_context_by_key(edjcontext_t *context, char *key, edjcontext_t **reflayer);
+edj_t *edj_context_by_key(edjcontext_t *context, const char *key, edjcontext_t **reflayer);
 edj_t *edj_context_assign(edjcalc_t *lvalue, edj_t *rvalue, edjcontext_t *context);
 edj_t *edj_context_append(edjcalc_t *lvalue, edj_t *rvalue, edjcontext_t *context);
 edj_t *edj_context_delete(edjcalc_t *lvalue, edjcontext_t *context);
 int edj_context_declare(edjcontext_t **refcontext, char *key, edj_t *value, edjcontextflags_t flags);
 edj_t *edj_context_default_table(edjcontext_t *context, char **refexpr);
 
-void edj_user_printf(edjformat_t *format, const char *face, const char *fmt, ...);
+void edj_user_write(edjformat_t *format, const char *style, const char *text, size_t len);
+void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ...);
 void edj_user_ch(int ch);
 int edj_user_result(edj_t *result);
 void edj_user_hook(int (*handler)(edj_t *jface, int newface, const char *text, size_t len));
@@ -676,11 +678,13 @@ void edj_user_result_hook(int (*handler)(edj_t *result));
  */
 extern edjcmd_t EDJ_CMD_ERROR[];
 
-edjcmdname_t *edj_cmd_hook(char *pluginname, char *cmdname, edjcmd_t *(*argparser)(edjsrc_t *src, edjcmdout_t **referr), edjcmdout_t *(*run)(edjcmd_t *cmd, edjcontext_t **refcontext));
+edjcmdname_t *edj_cmd_hook(const char *pluginname, const char *cmdname, edjcmd_t *(*argparser)(edjsrc_t *src, edjcmdout_t **referr), edjcmdout_t *(*run)(edjcmd_t *cmd, edjcontext_t **refcontext));
+edjcmdname_t *edj_cmd_by_name(const char *cmdname);
 int edj_cmd_lineno(edjsrc_t *src);
 edjcmdout_t *edj_cmd_error(const char *where, const char *fmt, ...);
 edjcmdout_t *edj_cmd_src_error(edjsrc_t *src, int code, char *fmt, ...);
 void edj_cmd_parse_whitespace(edjsrc_t *src);
+void edj_cmd_parse_whitespace_or_type(edjsrc_t *src, char **refstr);
 char *edj_cmd_parse_key(edjsrc_t *src, int quotable);
 char *edj_cmd_parse_paren(edjsrc_t *src);
 edjcmd_t *edj_cmd(edjsrc_t *src, edjcmdname_t *name);

@@ -52,8 +52,10 @@ static char *esccode(char *esc, const char *color)
 	} colors[] = {
 		{"bold","1"},{"dim","2"},{"italic","3"},{"underlined","4"},
 		{"blinking","5"},{"boxed","7"},{"strike","9"},
-		{"black","30"},{"red","31"},{"green","32"},{"yellow","33"},
+		{"black","30"},{"red","31"},{"green","32"},{"brown","33"},
 		{"blue","34"},{"magenta","35"},{"cyan","36"},{"white","37"},
+		{"gray","90"},{"light red","91"},{"light green","92"},{"yellow","93"},
+		{"light blue","94"},{"light magenta","95"},{"light cyan","96"},{"bright white","97"},
 		{"on black","40"},{"on red","41"},{"on green","42"},
 		{"on yellow","43"},{"on blue","44"},{"on magenta","45"},
 		{"on cyan","46"},{"on white","47"},
@@ -126,51 +128,17 @@ static void esc(char *buf, edj_t *style, int nounderlined)
 		*wholebuf = '\0';
 }
 
-/* Write text to the user. "format" is the general format info, including the
- * format->fp field for writing to files.  "style" is the name of a member of
- * edj_config * that defines the colors and other attributes of the text; you
- * can prefix it with "_" to inhibit underlining. "fmt" is a printf-style
- * formatting string.
- */
-void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ...)
+/* Write text in a given style. */
+void edj_user_write(edjformat_t *format, const char *style, const char *text, size_t len)
 {
-	static char *buf;
-	static size_t buflen;
-	size_t len;
-	va_list ap;
 	int	newstyle;
 	int	nounderline = 0;
 	char	escbuf[32];
 
-	/* If no format specified, use default */
-	if (!format)
-		format = &edj_format_default;
-
 	/* If writing to a file/pipe, then just do it */
-	if (format->fp && !isatty(fileno(format->fp))) {
-#if 0
-		if (didesc) {
-			fwrite("\033[m", 1, 3, outfp);
-			didesc = 0;
-		}
-#endif
-		outfp = format->fp;
-		va_start(ap, fmt);
-		vfprintf(format->fp, fmt, ap);
-		va_end(ap);
+	if (format && format->fp && !isatty(fileno(format->fp))) {
+		fwrite(text, 1, len, format->fp);
 		return;
-	}
-
-	/* Initial buffer size guess is fairly modest */
-	if (!buf) {
-		buflen = 1024;
-		buf = malloc(buflen);
-
-		/* While we're at it, let's figure out whether stdout and
-		 * stderr refer to ttys or files/pipes.
-		 */
-		stdout_tty = isatty(fileno(stdout));
-		stderr_tty = isatty(fileno(stderr));
 	}
 
 	/* If given a style name, and it's different from what we have now,
@@ -209,6 +177,72 @@ void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ..
 		outfp = (edj_is_true(edj_by_key(jstyle, "stderr"))) ? stderr : stdout;
 	}
 
+	/* If there's a hook, give it a shot */
+	if (user_hook && (*user_hook)(jstyle, newstyle, text, len))
+		return;
+
+	/* Nope, we need to do this the old-school way */
+
+	/* If connected to a tty, then maybe output an escape sequence to
+	 * set attributes.
+	 */
+	if ((!format || format->color) && (outfp == stdout ? stdout_tty : stderr_tty)) {
+		/* Generate the escape sequence */
+		esc(escbuf, jstyle, nounderline);
+
+		/* Send it, unless empty */
+		if (*escbuf) {
+			fputs(escbuf, outfp);
+			didesc = 1;
+		} else if (didesc) {
+			fputs("\033[m", outfp);
+			didesc = 0;
+		}
+	}
+
+	/* Send the text */
+	if (len > 0)
+		fwrite(text, 1, len, outfp);
+}
+
+/* Write text to the user. "format" is the general format info, including the
+ * format->fp field for writing to files.  "style" is the name of a member of
+ * edj_config * that defines the colors and other attributes of the text; you
+ * can prefix it with "_" to inhibit underlining. "fmt" is a printf-style
+ * formatting string.
+ */
+void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ...)
+{
+	static char *buf;
+	static size_t buflen;
+	size_t len;
+	va_list ap;
+
+	/* If no format specified, use default */
+	if (!format)
+		format = &edj_format_default;
+
+	/* If writing to a file/pipe, then just do it */
+	if (format->fp && !isatty(fileno(format->fp))) {
+		outfp = format->fp;
+		va_start(ap, fmt);
+		vfprintf(format->fp, fmt, ap);
+		va_end(ap);
+		return;
+	}
+
+	/* Initial buffer size guess is fairly modest */
+	if (!buf) {
+		buflen = 1024;
+		buf = malloc(buflen);
+
+		/* While we're at it, let's figure out whether stdout and
+		 * stderr refer to ttys or files/pipes.
+		 */
+		stdout_tty = isatty(fileno(stdout));
+		stderr_tty = isatty(fileno(stderr));
+	}
+
 	/* Try to print the text into the buffer. */
 	if (!fmt || *fmt == '\0')
 		len = 0;
@@ -228,32 +262,8 @@ void edj_user_printf(edjformat_t *format, const char *style, const char *fmt, ..
 		}
 	}
 
-	/* If there's a hook, give it a shot */
-	if (user_hook && (*user_hook)(jstyle, newstyle, buf, len))
-		return;
-
-	/* Nope, we need to do this the old-school way */
-
-	/* If connected to a tty, then maybe output an escape sequence to
-	 * set attributes.
-	 */
-	if (format->color && (outfp == stdout ? stdout_tty : stderr_tty)) {
-		/* Generate the escape sequence */
-		esc(escbuf, jstyle, nounderline);
-
-		/* Send it, unless empty */
-		if (*escbuf) {
-			fputs(escbuf, outfp);
-			didesc = 1;
-		} else if (didesc) {
-			fputs("\033[m", outfp);
-			didesc = 0;
-		}
-	}
-
-	/* Send the text */
-	if (len > 0)
-		fputs(buf, outfp);
+	/* Write it to the user's display */
+	edj_user_write(format, style, buf, len);
 }
 
 /* Write a single character to the user.  If you pass a byte from a multibyte
@@ -318,7 +328,7 @@ void edj_user_hook(int (*handler)(edj_t *jstyle, int newstyle, const char *text,
 }
 
 /* Register a function to handle the result of stand-alone expressions.  The
- * edj_user_result() function calls thisto give the user interface a chance
+ * edj_user_result() function calls this to give the user interface a chance
  * to save the result in a data viewer window or something.  The handler
  * function should return 0 if the result will not be used and should be freed,
  * or 1 if the user interface is using it and wants to be responsible for
