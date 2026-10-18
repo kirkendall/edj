@@ -85,6 +85,7 @@ static void line_repl(edjcontext_t *context)
 
 	/* Allocate a TTY version of fineline */
 	line_fine = fineline_tty_alloc();
+	line_fine->context = (void *)context;
 
 	/* Load the settings */
 

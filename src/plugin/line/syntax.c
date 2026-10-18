@@ -17,8 +17,10 @@
 #include <edj.h>
 #include <fineline.h>
 #include <ctype.h>
-#include <mcheck.h>
+#include <assert.h>
 #include "pluginline.h"
+
+#define set_style(fine, src, len, style) set_style_line(fine, src, len, style, __LINE__)
 
 /* These stores the parsing state. */
 typedef struct varconst_s {
@@ -85,12 +87,16 @@ static void slog(const char *fmt, ...)
  *
  * Returns the style name that was passed in.
  */
+#if 0
 static const char *set_style(fineline_t *fine, edjsrc_t *src, size_t len, const char *style)
+#else
+static const char *set_style_line(fineline_t *fine, edjsrc_t *src, size_t len, const char *style, int line)
+#endif
 {
 	/* Find the offset of src, so we know the index into fine->style */
 	size_t i = (src->str - src->buf), j;
 
-slog("set_style: \"%.*s\" is %s\n", len, src->str, style);
+slog("set_style: \"%.*s\" is %s at line %d\n", len, src->str, style, line);
 	/* If the new style is "error" and the span contains the cursor,
 	 * then don't do it.  Mostly this is so that a partially entered
 	 * string isn't flagged as an error before the user even has a
@@ -316,9 +322,9 @@ static const char *parse_token(syntaxstate_t *state, edjsrc_t *src, char **refna
 			}
 
 			/* Some are only special after "select" */
-			if (match("select", src) && state->selectnest < state->nest)
+slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest, state->nest);
+			if (!strcmp("select", longop[i]) && state->selectnest < state->nest)
 				break;
-
 		}
 	}
 
@@ -436,7 +442,8 @@ slog("parse_expression(state, \"%.15s\")\n", src->str);
 
 	/* Parse a series of tokens.  A few have special meaning */
 	skip(fine, src);
-	while (state->nest > 0 || !end_cmd(*src->str)) {
+assert(*src->str != ';' && *src->str != '}');
+	while ((state->nest > 0 && *src->str) || !end_cmd(*src->str)) {
 		/* Fetch and style the next token */
 		start = src->str;
 		token = parse_token(state, src, &name);
@@ -450,6 +457,10 @@ slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)l
 		if (*start == '(') {
 			state->nest++;
 		} else if (*start == ')') {
+			if (state->nest == 0) {
+				src->str = start;
+				return;
+			}
 			state->nest--;
 			if (state->nest < state->selectnest)
 				state->selectnest = -1;
@@ -481,6 +492,7 @@ slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)l
 		 * they can be used as quoted keys.
 		 */
 		if (name) {
+slog("Looking up \"%s\" in expression\n", name);
 			if (*src->str == '(' && !strcmp(token, "key")) {
 				/* Name followed by '(' is a function.  If not
 				 * a known function, that's an error.
@@ -509,7 +521,7 @@ slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)l
 					/* It's a var or const */
 					token = vc->isvar ? "var" : "const";
 					src->str = start;
-					set_style(fine, src, len, "key");
+					set_style(fine, src, len, token);
 				}
 				/* else it should remain a key */
 			}
@@ -541,7 +553,7 @@ static int var_const(syntaxstate_t *state, edjsrc_t *src, int isvar)
 		name = edj_cmd_parse_key(src, 0);
 		if (!name)
 			return 1; /* No variable name */
-		set_style(fine, &start, src->str - start.str, isvar ? "var" : "cost");
+		set_style(fine, &start, src->str - start.str, isvar ? "var" : "const");
 
 		/* Add the name to the list of known names */
 		vc = malloc(sizeof *vc + strlen(name) * 2);
@@ -601,7 +613,10 @@ slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 /* Parse a single command, or a {...} series of commands */
 static void parse_block(syntaxstate_t *state, edjsrc_t *src)
 {
+	edjsrc_t start;
 	skip(state->fine, src);
+	start = *src;
+slog("parse_block(\"%.*s...\")\n", 20, src->str);
 	if (*src->str == '{') {
 		/* Do a block */
 		set_style(state->fine, src, 1, "normal");
@@ -616,6 +631,7 @@ static void parse_block(syntaxstate_t *state, edjsrc_t *src)
 		/* Do a single command */
 		parse_command(state, src);
 	}
+slog("parse_block(...) found <<%.*s>>\n", src->str - start.str, start.str);
 }
 
 /* Parse a single command.  Most commands start with a command name; the only
@@ -638,7 +654,12 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 	name = edj_cmd_parse_key(src, 0);
 	if (!name) {
 		*src = start;
-		parse_expression(state, src);
+
+		/* Empty commands are allowed too */
+		if (!end_cmd(*src->str))
+			parse_expression(state, src);
+		if (*src->str == ';')
+			set_style(fine, src, 1, "normal");
 		return;
 	}
 
@@ -655,7 +676,10 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 	/* When all else fails, assume it's an expression */
 	if (!cmd) {
 		*src = start;
-		parse_expression(state, src);
+		if (!end_cmd(*src->str))
+			parse_expression(state, src);
+		if (*src->str == ';')
+			set_style(fine, src, 1, "normal");
 		return;
 	}
 
@@ -755,8 +779,11 @@ slog("Doing command \"%s\"\n", cmd->name);
 		parse_expression(state, src);
 
 		/* Expect ")" */
+		skip(fine, src);
 		if (*src->str != ')')
 			goto Recover;
+		set_style(fine, src, 1, "normal");
+		skip(fine, src);
 
 		/* Expect the body of the loop */
 		parse_block(state, src);
@@ -814,6 +841,7 @@ slog("Doing command \"%s\"\n", cmd->name);
 		parse_expression(state, src);
 		if (*src->str != ')')
 			goto Recover;
+		set_style(fine, src, 1, "normal");
 
 		/* Single command or block */
 		parse_block(state, src);
