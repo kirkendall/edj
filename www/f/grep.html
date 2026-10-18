@@ -79,6 +79,15 @@
 	and find it in two rows.
 	The value is actually found somewhere inside the "contact" tables
 	within those two rows.
+	<p>
+	You can also use <a target="_PARENT" href="../index.html?f=unroll">unroll("contact")</a>
+	to expand the "contact" column, replacing "[table]" with the actual
+	columns from that table.
+	Where you place the <tt>unroll("contect")</tt> matters &mdash;
+	placed after the <tt>grep()</tt>, it'll expand all rows of "contact"
+	so you'll see all forms of contact for Peter and Ziggy, but placed
+	before the <tt>grep()</tt> it'll list only the contact methods that
+	actually contain "Portland".
       </div>
 
     <details>
