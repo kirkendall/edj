@@ -77,30 +77,23 @@
     </details>
 
     <details>
-      <summary>For convenience, you can use a function like a command.</summary>
+      <summary>If you define a function using <a target="_PARENT" href="../index.html?cmd=command">command</a> instead of <a target="_PARENT" href="../index.html?cmd=function">function</a>, you can use it like a command.</summary>
       When a function name appears at the start of a command, and isn't
       followed by a "(", then the rest of the command is interpreted as a
       comma-delimited list of parameters <em>without requiring parentheses</em>.
-      This works for user-defined functions, and for built-in functions
-      listed here that aren't aggregate functions.
+      You have to define the function using <a target="_PARENT" href="../index.html?cmd=command">command</a> instead of <a target="_PARENT" href="../index.html?cmd=function">function</a>, but either way you're really defining a function.
       If the function returns <tt>null</tt> (or nothing), then the result isn't
       printed.
 
       <div class="example">
-        <kbd>date now</kbd>
-        <samp>"2026-09-22"</samp>
-        This is equivalent to "<tt>date(now)</tt>".  It prints the current date.
-      </div>
-
-      <div class="example">
-        <kbd>function menu(){print "reload Reload the data\nquit &nbsp; Exit edj\n"}</kbd>
+        <kbd>command menu {print "reload Reload the data\nquit &nbsp; Exit edj\n"}</kbd>
         <kbd>menu</kbd>
         <samp>reload Reload the data<br/>quit &nbsp; Exit edj</samp>
         This prints a simple menu.
-        The function doesn't return anythinga
+        The function doesn't return anything
         (effectively returning <tt>null</tt>)
         so no value is printed after the menu.
-        Presumably there would also be functions defined named "reload" and
+        Presumably there would also be commands defined named "reload" and
         "quit", so if the user typed their names then they'd do their thing.
       </div>
 

@@ -467,7 +467,7 @@ static int parsetime(const char *str, edjdatetime_t *dt)
 			&dt->hour, ampm);
 	if (fields < 2)
 		return 1;
-	if (strncasecmp(ampm, "AM", 2) && strncasecmp(ampm, "PM", 2))
+	if (*ampm && strncasecmp(ampm, "AM", 2) && strncasecmp(ampm, "PM", 2))
 		return 1;
 
 	/* If we got an am/pm indicator, then tweak the hour accordingly */

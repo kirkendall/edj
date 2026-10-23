@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>command</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj command - Define a function that can be used like a command">
+    <meta name="keywords" content="command, command reference, command">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>command - Define a function that can be used like a command</h1>
+    <dl>
+      <dt>command <var>name</var> { <var>cmds</var> }
+      <br/>command <var>name</var> (<var>args</var>) { <var>cmds</var> }
+      <dd>
+      This defines a function.
+      It is basically the same as the
+      <a target="_PARENT" href="../index.html?cmd=function">function</a>
+      command except for two big differences:
+      <ul>
+        <li>You can use the defined function like a command.
+            If the function name appears at the start of a command and
+            isn't immediately followed by a "(" then the rest of the command
+            line is used as the function parameters.  If the function returns
+            <tt>null</tt> (or doesn't use
+            <a target="_PARENT" href="../index.html?cmd=return">return</a>
+            at all), that will be suppressed but other return values will
+            be shown.
+	<li>You can define commands without a parameter list.
+	    Later, when you invoke the function as a command, the rest of the
+	    command line is used as literal text and is passed to the function.
+	    You can use the "<tt>this</tt>" variable to access the text.
+      </ul>
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>command area(width, height) { return width * height; }</kbd>
+	<kbd>area 2+2, 3</kbd>
+	<samp>12</samp>
+	<kbd>1 + area(2+2, 3)</kbd>
+	<samp>13</samp>
+	We define a simple "area" command/function which returns the area
+	of a rectangle.  Then we invoke it like a command.  Note that the
+	arguments are still parsed as a comma-delimited list of expressions
+	to evaluate before being passed to the function.
+	<p>
+	After that, we also call it like a normal function, just to show
+	that it really is a function.
+      </div>
+
+      <div class="example">
+	<kbd>command echo { print this, "\n"; }</kbd>
+	<kbd>echo Hello, world!</kbd>
+	<samp>Hello, world!</samp>
+	<kbd>echo(42)</kbd>
+	<samp>42<br/>null</samp>
+        First we define an "echo" command which prints its argument.
+        Then we invoke it with the command-line arguments "Hello, world!"
+        which are passed into it as a literal string, since we defined
+        <tt>echo</tt> without a parameter list.
+        And since the function doesn't use
+        <a target="_PARENT" href="../index.html?cmd=return">return</a>,
+        it effectively returns <tt>null</tt>, which is suppressed so we
+        only see the output that the body of the function explicitly printed.
+        <p>
+        And again we follow that with a more normal function invocation
+        just to show that this too is still truly a function.  The <tt>null</tt>
+        that it returns is not suppressed when used as a normal expression.
+      </div>
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+	<li>Just to be clear: Functions defined via
+	    <a target="_PARENT" href="../index.html?cmd=function">function</a>
+	    and functions defined via <tt>command</tt> share the same
+	    namespace.
+	    You can't define a function <em>and</em> a command with the same name.
+
+        <li>The <a target="_PARENT" href="../index.html?cmd=function">function</a>
+	    command can describe functions, but the <tt>command</tt> command
+	    can't.
+	    Happily, you can use <tt>function</tt> to describe functions that
+	    were defined with <tt>command</tt>
+	    <div class="example">
+	      <kbd>function echo</kbd>
+	      <samp>command echo</samp>
+	      Not much to say about "echo" except that it's a command.
+	    </div>
+
+	<li>Why not simply allow all functions to be used as commands?
+	    Because it could get confusing.
+	    <div class="example">
+	      <kbd>const pi=3.14</kbd>
+	      <kbd>pi</kbd>
+	      <samp>null</samp>
+	      <em>Pretending that all functions are useable as commands!</em>
+	      Here we define <tt>pi</tt> and try to output it,
+	      but "pi" could refer to the
+	      <a target="_PARENT" href="../index.html?f=parseInt">parseInt()</a>
+	      function because the first letter and all uppercase letters match,
+	      so edj would would think you were invoking <tt>parseInt()</tt>
+	      without an argument, so it returns <tt>null</tt> as a gentle
+	      error result.
+	      You'd expect 3.14 but you'd get <tt>null</tt>.
+	      This is why edj doesn't do that.
+	    </div>
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=function">function</a></td><td>The "normal" function definer.</td></tr>
+        <tr><td><a target="_PARENT" href="../index.html?cmd=return">return</a></td><td>Used in functions to return a value.</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>

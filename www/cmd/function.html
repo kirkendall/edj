@@ -89,21 +89,16 @@
       </div>
 
       <div class="example">
-	<kbd>function factorial(n);<br/>
-	function factorial(n) { if (n&lt;2) return 1; return n * factorial(n-1);}<br/>
-	factorial(5)</kbd>
-	<samp>120</samp>
+	<kbd>function fibonacci(n);<br/>
+	function fibonacci(n) { if (n&lt;=1) return n; return fibonacci(n-1) + factorial(n-2);}<br/>
+	fibonacci(8)</kbd>
+	<samp>21</samp>
         Here's an example of a recursive function.
-        First we declare the <tt>factorial()</tt> function without a body.
+        First we declare the <tt>fibonacci()</tt> function without a body.
         The function has to exist before we can use it,
         even for a self-reference in a recursive function.
         Once the function exists (albeit in a do-nothing state)
         we can use it in the actual recursive definition.
-        <p>
-        Again, please forgive the ugly formatting.
-        And yes, a simple <tt>product(1...n)</tt> computes the factorial in
-        a cleaner, more intuitive way.
-        This is only an example.
       </div>
 
     </details>

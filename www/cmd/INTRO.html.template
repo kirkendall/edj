@@ -41,6 +41,7 @@
 <tr><td><a target="_PARENT" href="../index.html?cmd=assign"><var>lvalue</var> = <var>expr</var></a></td><td>Change the value of a variable, or part of a variable.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=break"><b>break</b></a></td><td>Exit the body of a <b>switch</b>, <b>while</b>, or <b>for</b> command.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=case"><b>case</b> <var>literal</var>:</a></td><td>Define a case label for a <b>switch</b> command.</td></tr>
+<tr><td><a target="_PARENT" href="../index.html?cmd=command"><b>command</b> <var>name</var> <var>cmds</var></a></td><td>Define a function that can be used like a command.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=const"><b>const</b> <var>name</var> = <var>expr</var></a></td><td>Define a constant.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=continue"><b>continue</b></a></td><td>Skip the rest of the body of a <b>while</b> or <b>for</b> command, and continue with the next iteration of the loop.</td></tr>
 <tr><td><a target="_PARENT" href="../index.html?cmd=default"><b>default</b>:</a></td><td>Define the default case for a <b>switch</b> command.</td></tr>

@@ -402,6 +402,8 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 	*refname = edj_cmd_parse_key(src, 0);
 	len = src->str - start;
 	src->str = start;
+	while (len > 0 && src->str[len - 1] == ' ')
+		len--;
 	if (*refname)
 		return set_style(fine, src, len, "key");
 
@@ -448,6 +450,8 @@ assert(*src->str != ';' && *src->str != '}');
 		start = src->str;
 		token = parse_token(state, src, &name);
 		len = src->str - start;
+		while (len > 0 && start[len - 1] == ' ')
+			len--;
 slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)len, start, name, state->nest);
 
 		/* Regex can happen after "(" or "," */

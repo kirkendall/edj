@@ -198,7 +198,7 @@ edjcontext_t *edj_context_insert(edjcontext_t **refcontext, edjcontextflags_t fl
  * time hasn't changed since the last call, it simply returns NULL so the
  * cached value can be reused.
  */
-static edj_t *stdcurrent(char *key)
+static edj_t *stdcurrent(const char *key)
 {
 	static time_t lastnow;
 	static struct tm localtm, utctm;
@@ -402,12 +402,23 @@ edjcontext_t *edj_context_func(edjcontext_t *context, edjfunc_t *fn, edj_t *args
 	edj_t	*cargs, *name, *value;
 	edj_t	*vars, *consts;
 
-	/* Build an object containing the actual arguments */
-	cargs = edj_copy(fn->userparams);
-	for (name = fn->userparams->first, value = edj_first(args);
-	     name && value;
-	     name = name->next, value = edj_next(value)) { /* object */
-		edj_append(cargs, edj_key(name->text, edj_copy(value)));
+	/* Was this function defined with an parameter list? */
+	if (fn->userparams) {
+		/* Build an object containing the actual arguments */
+		cargs = edj_copy(fn->userparams);
+		for (name = fn->userparams->first, value = edj_first(args);
+		     name && value;
+		     name = name->next, value = edj_next(value)) { /* object */
+			edj_append(cargs, edj_key(name->text, edj_copy(value)));
+		}
+	} else {
+		/* We should have a literal string as the only argument.
+		 * Since we don't have a parameter list but need a name for
+		 * this argument, use the function name.  Later, it'll also
+		 * be made available as "this".
+		 */
+		cargs = edj_object();
+		edj_append(cargs, edj_key(fn->name, edj_copy(args->first)));
 	}
 
 	/* It's possible that we hit the end of names before values or
@@ -417,7 +428,7 @@ edjcontext_t *edj_context_func(edjcontext_t *context, edjfunc_t *fn, edj_t *args
 	edj_break(name);
 	edj_break(value);
 
-	/* Also "vars" and "consts" to the arguments object */
+	/* Also add "vars" and "consts" to the arguments object */
 	vars = edj_object();
 	edj_append(cargs, edj_key("vars", vars));
 	consts = edj_object();

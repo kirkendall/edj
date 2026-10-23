@@ -57,6 +57,8 @@ static edjcmd_t    *const_parse(edjsrc_t *src, edjcmdout_t **referr);
 static edjcmdout_t *const_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 static edjcmd_t    *function_parse(edjsrc_t *src, edjcmdout_t **referr);
 static edjcmdout_t *function_run(edjcmd_t *cmd, edjcontext_t **refcontext);
+static edjcmd_t    *command_parse(edjsrc_t *src, edjcmdout_t **referr);
+static edjcmdout_t *command_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 static edjcmd_t    *return_parse(edjsrc_t *src, edjcmdout_t **referr);
 static edjcmdout_t *return_run(edjcmd_t *cmd, edjcontext_t **refcontext);
 static edjcmd_t    *void_parse(edjsrc_t *src, edjcmdout_t **referr);
@@ -92,7 +94,8 @@ static edjcmdname_t jcn_throw =    {&jcn_try,	  "throw",	throw_parse,	throw_run}
 static edjcmdname_t jcn_var =      {&jcn_throw,	  "var",	var_parse,	var_run};
 static edjcmdname_t jcn_const =    {&jcn_var,	  "const",	const_parse,	const_run};
 static edjcmdname_t jcn_function = {&jcn_const,	  "function",	function_parse,	function_run};
-static edjcmdname_t jcn_return =   {&jcn_function,"return",	return_parse,	return_run};
+static edjcmdname_t jcn_command  = {&jcn_function,"command",	command_parse,	command_run};
+static edjcmdname_t jcn_return =   {&jcn_command, "return",	return_parse,	return_run};
 static edjcmdname_t jcn_void =     {&jcn_return,  "void",	void_parse,	void_run};
 static edjcmdname_t jcn_explain =  {&jcn_void,	  "explain",	explain_parse,	explain_run};
 static edjcmdname_t jcn_file =     {&jcn_explain, "file",	file_parse,	file_run};
@@ -498,19 +501,40 @@ static edjcmd_t *parse_function_as_command(edjsrc_t *src)
 		return NULL;
 	}
 
-	/* If name is not a function name, then fail */
+	/* If name is not a function name, or not flagged as a command, then
+	 * silently fail
+	 */
 	func = edj_calc_function_by_name(name);
 	free(name);
-	if (!func)
+	if (!func || (func->jfoptions & EDJFUNC_COMMAND) == 0)
 		return NULL;
 
 	/* If aggregate function, then fail */
 	if (func->agfn)
 		return NULL;
 
-	/* If no arguments, then assume "true".  Else parse arguments */
-	if (!*localsrc.str || *localsrc.str == ';' || *localsrc.str == '}') {
-		args = edj_calc_list(args, edj_calc_parse("true", NULL, NULL, 0));
+	/* Were any parenthesized arguments defined? */
+	args = NULL;
+	if (!func->args) {
+		size_t len;
+		edj_t	*literal;
+
+		/* Skip whitespace other than newline */
+		while (*localsrc.str == ' ' || *localsrc.str == '\t') {
+			localsrc.str++;
+		}
+
+		/* Count the length of the remaining command line */
+		for (len = 0; &localsrc.str[len] < &localsrc.buf[src->size] && !strchr("\n;}", localsrc.str[len]); len++) {
+		}
+
+		/* Pass it as a string literal */
+		literal = edj_string(localsrc.str, len);
+		localsrc.str += len;
+		args = edj_calc_list(args, edj_calc_literal(literal));
+	} else if (!*localsrc.str || *localsrc.str == ';' || *localsrc.str == '}') {
+		/* Args expected but not given, assume "true" */
+		args = edj_calc_list(args, edj_calc_literal(edj_boolean(1)));
 	} else {
 		/* Parse a comma-delimited list of arguments, building an
 		 * array generator to use as the function argument list.
@@ -1671,10 +1695,10 @@ static void describefn(edjfunc_t *f)
 		edj_user_printf(NULL, "normal", "builtin ");
 	if (f->agfn)
 		edj_user_printf(NULL, "normal", "aggregate ");
-	edj_user_printf(NULL, "normal", "function %s", f->name);
+	edj_user_printf(NULL, "normal", "%s %s", (f->jfoptions & EDJFUNC_COMMAND) ? "command" : "function", f->name);
 	if (f->args)
 		edj_user_printf(NULL, "normal", "(%s)", f->args);
-	else {
+	else if (f->userparams) {
 		edj_user_ch('(');
 		for (params = f->userparams->first; params; params = params->next) /* undeferred */
 			edj_user_printf(NULL, "normal", "%s%s", params->text, params->next ? ", " : ""); /* undeferred */
@@ -1685,13 +1709,18 @@ static void describefn(edjfunc_t *f)
 	edj_user_ch('\n');
 }
 
-static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
+/* This parses both "function" (flags=0) and "command" (flags=EDJFUNC_COMMAND)
+ * commands.  The only difference is that commands are marked with the
+ * EDJFUNC_COMMAND flag, and the argument list and return type are optional.
+ */
+static edjcmd_t *cmdfunc_parse(edjsrc_t *src, edjcmdout_t **referr, int flags)
 {
 	char	*fname;
 	edjsrc_t paren; /* Used for scanning parameter source */
 	edj_t	*params = NULL;
 	edjcmd_t *body = NULL;
 	char	*returntype = NULL;;
+	edjfunc_t *func;
 
 	paren = *src;
 	paren.buf = NULL;
@@ -1711,13 +1740,13 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 	/* Parameter list (the parenthesized text) */
 	paren = *src;
 	paren.buf = paren.str = edj_cmd_parse_paren(src);
-	if (!paren.buf) {
+	if (!paren.buf && (flags & EDJFUNC_COMMAND) == 0) {
 		/* No parameter list, so just describe the named function and
 		 * return NULL.
 		 */
 		edjfunc_t *f = edj_calc_function_by_name(fname);
 		if (!f) {
-			*referr = edj_cmd_error(src->str, "Unknown function \"%s\"", fname);
+			*referr = edj_cmd_error(src->str, "unkfunc:Unknown function \"%s\"", fname);
 			goto Error;
 		}
 
@@ -1726,75 +1755,78 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 
 		free(fname);
 		return NULL;
-	}
-	paren.size = strlen(paren.buf);
+	} else if (paren.buf) {
 
-	/* Parameters within the parenthesized text */
-	params = edj_object();
-	edj_cmd_parse_whitespace(&paren);
-	while (*paren.str) {
-		char	*pname;
-		edj_t	*defvalue;
+		/* Parameters within the parenthesized text */
+		paren.size = strlen(paren.buf);
+		params = edj_object();
+		edj_cmd_parse_whitespace(&paren);
+		while (*paren.str) {
+			char	*pname;
+			edj_t	*defvalue;
 
-		/* Parameter name */
-		pname = edj_cmd_parse_key(&paren, 1);
-		if (!pname) {
-			*referr = edj_cmd_error(src->str, "Missing parameter name");
-			goto Error;
-		}
-
-		/* Possibly a type declaration */
-		edj_cmd_parse_whitespace_or_type(&paren, NULL);
-
-		/* If followed by = then use a default */
-		if (*paren.str == '=') {
-			edjcalc_t *calc;
-			const char	*end, *err;
-
-			/* Move past the '=' */
-			paren.str++;
-
-			/* Parse the expression */
-			err = NULL;
-			calc = edj_calc_parse(paren.str, &end, &err, 0);
-			if (err) {
-				*referr = edj_cmd_error(src->str, "%s in default value", err);
-				goto Error;
-			}
-			if (*end && *end != ',') {
-				*referr = edj_cmd_error(src->str, "Syntax error near %.10s", end);
-				goto Error;
-			}
-			paren.str = end;
-
-			/* Evaluate the expression */
-			defvalue = edj_calc(calc, NULL, NULL);
-			if (edj_is_error(defvalue)) {
-				if (defvalue->first)
-					*referr = edj_cmd_error((const char *)defvalue->first, "%s", defvalue->text);
-				else
-					*referr = edj_cmd_error(src->str, "%s", defvalue->text);
+			/* Parameter name */
+			pname = edj_cmd_parse_key(&paren, 1);
+			if (!pname) {
+				*referr = edj_cmd_error(src->str, "Missing parameter name");
 				goto Error;
 			}
 
-			/* Free the expression */
-			edj_calc_free(calc);
-		} else {
-			/* Use null as the default value */
-			defvalue = edj_null();
+			/* Possibly a type declaration */
+			edj_cmd_parse_whitespace_or_type(&paren, NULL);
+
+			/* If followed by = then use a default */
+			if (*paren.str == '=') {
+				edjcalc_t *calc;
+				const char	*end, *err;
+
+				/* Move past the '=' */
+				paren.str++;
+
+				/* Parse the expression */
+				err = NULL;
+				calc = edj_calc_parse(paren.str, &end, &err, 0);
+				if (err) {
+					*referr = edj_cmd_error(src->str, "%s in default value", err);
+					goto Error;
+				}
+				if (*end && *end != ',') {
+					*referr = edj_cmd_error(src->str, "Syntax error near %.10s", end);
+					goto Error;
+				}
+				paren.str = end;
+
+				/* Evaluate the expression */
+				defvalue = edj_calc(calc, NULL, NULL);
+				if (edj_is_error(defvalue)) {
+					if (defvalue->first)
+						*referr = edj_cmd_error((const char *)defvalue->first, "%s", defvalue->text);
+					else
+						*referr = edj_cmd_error(src->str, "%s", defvalue->text);
+					goto Error;
+				}
+
+				/* Free the expression */
+				edj_calc_free(calc);
+			} else {
+				/* Use null as the default value */
+				defvalue = edj_null();
+			}
+
+			/* Add the parameter to the params object */
+			edj_append(params, edj_key(pname, defvalue));
+
+			/* Free the name */
+			free(pname);
+
+			/* If followed by comma, skip the comma */
+			if (*paren.str == ',') {
+				paren.str++;
+				edj_cmd_parse_whitespace(&paren);
+			}
 		}
-
-		/* Add the parameter to the params object */
-		edj_append(params, edj_key(pname, defvalue));
-
-		/* Free the name */
-		free(pname);
-
-		/* If followed by comma, skip the comma */
-		if (*paren.str == ',') {
-			paren.str++;
-			edj_cmd_parse_whitespace(&paren);
-		}
+	} else {
+		params = NULL;
 	}
 
 	/* Parentheses may be followed by a return type declaration */
@@ -1821,6 +1853,10 @@ static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
 			goto Error;
 		}
 
+		/* Copy the flags into the function */
+		func = edj_calc_function_by_name(fname);
+		func->jfoptions |= flags;
+
 		/* We're done.  Nothing more will be required at runtime.
 		 * The fname, params, and body remain allocated since the
 		 * function needs them.
@@ -1842,12 +1878,27 @@ Error:
 	return NULL;
 }
 
+static edjcmd_t *function_parse(edjsrc_t *src, edjcmdout_t **referr)
+{
+	return cmdfunc_parse(src, referr, 0);
+}
+
 static edjcmdout_t *function_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 {
 	/* Can't happen */
 	return NULL;
 }
 
+static edjcmd_t *command_parse(edjsrc_t *src, edjcmdout_t **referr)
+{
+	return cmdfunc_parse(src, referr, EDJFUNC_COMMAND);
+}
+
+static edjcmdout_t *command_run(edjcmd_t *cmd, edjcontext_t **refcontext)
+{
+	/* Can't happen */
+	return NULL;
+}
 static edjcmd_t *return_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
 	edjcalc_t *calc;

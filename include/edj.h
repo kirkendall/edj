@@ -517,8 +517,8 @@ edj_t *edj_plugin_load(const char *name);
  * fields as "const" here.
  */
 typedef struct edjfunc_s {
-        struct edjfunc_s *other;
-        char    *name;
+	struct edjfunc_s *other;
+	char	*name;
         char	*args;		/* Argument list, as text */
         char	*returntype;	/* Return value type, as text */
         edj_t *(*fn)(edj_t *args, void *agdata);
@@ -531,6 +531,7 @@ typedef struct edjfunc_s {
 #define EDJFUNC_EDJFREE 1	/* Call edj_free() on the agdata afterward */
 #define EDJFUNC_FREE 2		/* Call free() on the agdata afterward */
 #define EDJFUNC_FCLOSE 4	/* Call fclose() on the agdata afterward */
+#define EDJFUNC_COMMAND 8	/* Function can be used as a command */
 #define EDJ_NOFILE ((FILE *)1)	/* Special file pointer indicating an error */
 
 /* For non-aggregate functions, this is used to pass other information that
@@ -645,6 +646,7 @@ char *edj_calc_op_name(edjop_t op);
 void edj_calc_dump(edjcalc_t *calc);
 edjcalc_t *edj_calc_parse(const char *str, const char **refend, const char **referr, int canassign);
 edjcalc_t *edj_calc_fncall(edjfunc_t *fn, edjcalc_t *args);
+edjcalc_t *edj_calc_literal(edj_t *value);
 edjcalc_t *edj_calc_list(edjcalc_t *list, edjcalc_t *item);
 void edj_calc_free(edjcalc_t *calc);
 void *edj_calc_ag(edjcalc_t *calc, void *agdata);

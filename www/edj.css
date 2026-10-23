@@ -99,16 +99,6 @@ details {
         margin-top: 0.5em;
         background: #f0f0f0;
 }
-table.examples {
-        margin-left: 2em;
-        border: thin solid gray;
-        border-collapse: collapse;
-        background-color: #e0e0e0;
-}
-table.examples td:first-of-type,table.examples td:nth-of-type(2) {
-        font-family: monospace;
-        vertical-align: top;
-}
 
 div.example {
 	background-color: #e0e0e0;

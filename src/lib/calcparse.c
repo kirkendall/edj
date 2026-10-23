@@ -978,6 +978,21 @@ edjcalc_t *edj_calc_fncall(edjfunc_t *fn, edjcalc_t *args)
 	return jc;
 }
 
+/* Return a calc expression that returns a literal value.  This is sometimes
+ * handy in parsers.
+ */
+edjcalc_t *edj_calc_literal(edj_t *value)
+{
+	edjcalc_t *jc;
+
+	/* Allocate an edjcalc_t for a literal */
+	jc = malloc(sizeof *jc);
+	memset(jc, 0, sizeof *jc);
+	jc->op = EDJOP_LITERAL;
+	jc->u.literal = value;
+	return jc;
+}
+
 /* Build an array generator, one item at a time.  For the first call, "list"
  * should be NULL; in subsequent calls, it should be the value returned by
  * the previous call.  This function is used in some command parsers in cmd.c
