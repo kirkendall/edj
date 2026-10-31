@@ -351,7 +351,12 @@ size_t edj_mbs_simple_key(char *dest, const char *src)
 			dash = NULL;
 
 			/* Convert precomposed diacritics to simple letters */
-			if (wc >= 0xc0 && wc <= 0xd6)
+			if (wc == 0xc6) {
+				/* AE */
+				if (dest)
+					dest[len++] = 'A';
+				wc = 'E';
+			} else if (wc >= 0xc0 && wc <= 0xd6)
 				wc = "AAAAAAECEEEEIIIIDNOOOOO"[wc - 0xc0];
 			else if (wc >= 0xd8 && wc <= 0xdd)
 				wc = "OUUUUY"[wc - 0xd8];
@@ -360,11 +365,6 @@ size_t edj_mbs_simple_key(char *dest, const char *src)
 				if (dest)
 					dest[len++] = 'S';
 				wc = 'S';
-			} else if (wc == 0xc6) {
-				/* AE */
-				if (dest)
-					dest[len++] = 'A';
-				wc = 'E';
 			} else if (wc == 0xe6) {
 				/* ae */
 				if (dest)
