@@ -1035,9 +1035,9 @@ static edjcmd_t *if_parse(edjsrc_t *src, edjcmdout_t **referr)
 static edjcmdout_t *if_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 {
 	edj_t *jsbool = edj_calc(cmd->calc, *refcontext, NULL);
-	int	bool = edj_is_true(jsbool);
+	int	boolval = edj_is_true(jsbool);
 	edj_free(jsbool);
-	if (bool)
+	if (boolval)
 		return edj_cmd_run(cmd->sub, refcontext);
 	else
 		return edj_cmd_run(cmd->more, refcontext);
@@ -1088,11 +1088,11 @@ static edjcmdout_t *while_run(edjcmd_t *cmd, edjcontext_t **refcontext)
 	for (;;) {
 		/* Evaluate the condition */
 		edj_t *jsbool = edj_calc(cmd->calc, *refcontext, NULL);
-		int	bool = edj_is_true(jsbool);
+		int	boolval = edj_is_true(jsbool);
 		edj_free(jsbool);
 
 		/* If the condition is false, then terminate the loop */
-		if (!bool)
+		if (!boolval)
 			return NULL;
 
 		/* Run the loop body.  If it has an error, then return the
@@ -2073,7 +2073,6 @@ static edjcmd_t *case_parse(edjsrc_t *src, edjcmdout_t **referr)
 	/* Parse the case.  */
 	parsed->calc = edj_calc_parse(str, &end, &err, 0);
 	if (err || *end || !parsed->calc) {
-		free(str);
 		if (err)
 			*referr = edj_cmd_error(src->str, "%s", err);
 		else

@@ -285,7 +285,7 @@ typedef struct edjcontext_s {
 BEGIN_C
 
 /* Files */
-char edj_file_new_type;
+extern char edj_file_new_type;
 void edj_file_defer(edjfile_t *jf, edj_t *array);
 void edj_file_defer_free(edj_t *array);
 edjfile_t *edj_file_load(const char *filename);
@@ -479,7 +479,7 @@ extern edj_t *edj_common(const char **keys, edj_t **values, int style);
 
 
 /* Configuration data */
-edj_t *edj_config, *edj_system;
+extern edj_t *edj_config, *edj_system;
 void edj_config_load(const char *name);
 void edj_config_save(const char *name);
 edj_t *edj_config_style(const char *name, edj_t **refstyles);
@@ -496,7 +496,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 #define edj_config_get_boolean(section, key) edj_is_true(edj_config_get(section, key))
 
 /* Plugins */
-edj_t *edj_plugins;
+extern edj_t *edj_plugins;
 void edj_plugin_repl_hook(const char *pluginname, int priority, void (*repl)(edjcontext_t *));
 int edj_plugin_repl(edjcontext_t *);
 edj_t *edj_plugin_load(const char *name);

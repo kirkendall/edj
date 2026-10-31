@@ -1498,7 +1498,7 @@ static edj_t *jfn_charAt(edj_t *args, void *agdata)
 	size_t	size;
 
 	/* The first argument must be a non-empty string */
-	if (args->first->type != EDJ_STRING || !args->first->text)
+	if (args->first->type != EDJ_STRING || !*args->first->text)
 		return NULL;
 
 	/* Single number?  No subscript given? */
