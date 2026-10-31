@@ -78,7 +78,7 @@
 	  (with double dollar signs) like $<var>key</var> except that
 	  $$<var>key</var> will substitute the value of <var>data.key</var>
 	  verbatim, while every variation of $<var>key</var> will replace
-	  XML's special characters with entities to ensure that legal XML.
+	  XML's special characters with entities.
 	  This means that $$<var>key</var> can be used to insert a chunk of
 	  precomposed XML into a template.
 	</td></tr>
@@ -149,7 +149,7 @@
         <kbd>var obj = {a:[{b:1},{b:2}],c:3};</kbd>
         <kbd>var template = "&lt;foo&gt;&lt;test1 *attr=\"$d\"&gt;&lt;/test1&gt;&lt;*test2 attr=\"$d\"&gt;&lt;/test2&gt;$[a&lt;test3 b=\"$b\" c=\"$c\"/&gt;$]&lt;/foo&gt;\n";</kbd>
         <kbd>print obj.toXml(template);</kbd>
-        <samp>&lt;foo&gt;&lt;test1&gt;&lt;/test1&gt;test3 b="1" c="3"/&gt;&lt;test3 b="2" c="3"/&gt;&lt;/foo&gt;</samp>
+        <samp>&lt;foo&gt;&lt;test1&gt;&lt;/test1&gt;&lt;test3 b="1" c="3"/&gt;&lt;test3 b="2" c="3"/&gt;&lt;/foo&gt;</samp>
         Here's a nice meaty example using a template.
         The &lt;foo&gt; tag is copied without change.
         The &lt;test1&gt; tag has its attribute deleted because there's a "*"
