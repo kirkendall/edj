@@ -411,6 +411,13 @@ edjcontext_t *edj_context_func(edjcontext_t *context, edjfunc_t *fn, edj_t *args
 		     name = name->next, value = edj_next(value)) { /* object */
 			edj_append(cargs, edj_key(name->text, edj_copy(value)));
 		}
+
+		/* It's possible that we hit the end of names before values or
+		 * vice-versa.  It's also possible that args is a deferred
+		 * array. We need to clean up.
+		 */
+		edj_break(value);
+
 	} else {
 		/* We should have a literal string as the only argument.
 		 * Since we don't have a parameter list but need a name for
@@ -420,13 +427,6 @@ edjcontext_t *edj_context_func(edjcontext_t *context, edjfunc_t *fn, edj_t *args
 		cargs = edj_object();
 		edj_append(cargs, edj_key(fn->name, edj_copy(args->first)));
 	}
-
-	/* It's possible that we hit the end of names before values or
-	 * vice-versa.  It's also possible that one of the lists is a
-	 * deferred array.  We need to clean up.
-	 */
-	edj_break(name);
-	edj_break(value);
 
 	/* Also add "vars" and "consts" to the arguments object */
 	vars = edj_object();
