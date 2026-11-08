@@ -15,9 +15,10 @@ extern void edjprog_repl_hook(const char *plugin, int priority, void (*repl)(edj
  * command line interface for edj.
  */
 
-/* The default settings */
+/* The default settings.  Basically, we want to mimic everything from
+ * fineline's config.c ... but for now we'll just do a placeholder.
+ */
 #define SETTINGS "{"\
-	"\"prompt\":\"edj: \","\
 	"\"tabstop\":4"\
 	"}"
 
