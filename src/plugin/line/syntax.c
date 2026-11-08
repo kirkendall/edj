@@ -623,14 +623,14 @@ static void parse_block(syntaxstate_t *state, edjsrc_t *src)
 slog("parse_block(\"%.*s...\")\n", 20, src->str);
 	if (*src->str == '{') {
 		/* Do a block */
-		set_style(state->fine, src, 1, "normal");
+		set_style(state->fine, src, 1, "command");
 		skip(state->fine, src);
 		while (*src->str && *src->str != '}') {
 			parse_command(state, src);
 			skip(state->fine, src);
 		}
 		if (*src->str == '}')
-			set_style(state->fine, src, 1, "normal");
+			set_style(state->fine, src, 1, "command");
 	} else {
 		/* Do a single command */
 		parse_command(state, src);
@@ -834,6 +834,42 @@ slog("Doing command \"%s\"\n", cmd->name);
 		}
 		state->isglobal = 1;
 
+	} else if (!strcmp(cmd->name, "command")) {
+		/* Expect a function name.  Style it like a function name even
+		 * if it isn't known yet.
+		 */
+		state->isglobal = 0;
+		skip(fine, src);
+		start = *src;
+		name = edj_cmd_parse_key(src, 0);
+		if (name) {
+			free(name);
+			set_style(fine, &start, src->str - start.str, "function");
+
+			/* Allow parentheses and arguments */
+			skip(fine, src);
+			if (*src->str == '(') {
+				set_style(fine, src, 1, "normal");
+				if (var_const(state, src, 0) || *src->str != ')')
+					goto Recover;
+				set_style(fine, src, 1, "normal");
+
+				/* Allow a return type */
+				skip(fine, src);
+				if (*src->str == ':') {
+					start = *src;
+					edj_cmd_parse_whitespace_or_type(src, NULL);
+					set_style(fine, &start, src->str - start.str, "type");
+				}
+			}
+
+			/* Expect a body */
+			skip(fine, src);
+			if (*src->str == '{')
+				parse_block(state, src);
+		}
+		state->isglobal = 1;
+
 	} else if (!strcmp(cmd->name, "if")
 		|| !strcmp(cmd->name, "while")
 		|| !strcmp(cmd->name, "switch")) {
@@ -862,7 +898,7 @@ slog("Doing command \"%s\"\n", cmd->name);
 			parse_expression(state, src);
 			skip(fine, src);
 			if (*src->str == ',')
-				src->str++;
+				set_style(fine, src, 1, "command");
 			else {
 				for (len = 1; !end_cmd(src->str[len]); len++) {
 				}
