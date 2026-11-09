@@ -22,6 +22,8 @@
 
 #define set_style(fine, src, len, style) set_style_line(fine, src, len, style, __LINE__)
 
+#define CHECKSRC assert(src->str <= src->buf + src->size)
+
 /* These stores the parsing state. */
 typedef struct varconst_s {
 	struct varconst_s *next;
@@ -95,6 +97,7 @@ static const char *set_style_line(fineline_t *fine, edjsrc_t *src, size_t len, c
 {
 	/* Find the offset of src, so we know the index into fine->style */
 	size_t i = (src->str - src->buf), j;
+CHECKSRC;
 
 slog("set_style: \"%.*s\" is %s at line %d\n", len, src->str, style, line);
 	/* If the new style is "error" and the span contains the cursor,
@@ -105,6 +108,7 @@ slog("set_style: \"%.*s\" is %s at line %d\n", len, src->str, style, line);
 	if (i <= fine->cursor && fine->cursor <= i + len && !strcmp(style, "error")) {
 		/* Move src past the segment even though we didn't style it. */
 		src->str += len;
+CHECKSRC;
 		return style;
 	}
 
@@ -112,8 +116,10 @@ slog("set_style: \"%.*s\" is %s at line %d\n", len, src->str, style, line);
 	for (j = len; j-- > 0; )
 		fine->style[i++] = style;
 
+CHECKSRC;
 	/* Move src past the styled segment */
 	src->str += len;
+CHECKSRC;
 	return style;
 }
 
@@ -123,14 +129,19 @@ static void skip(fineline_t *fine, edjsrc_t *src)
 	size_t	len;
 
 	/* Skip whitespace */
+CHECKSRC;
 	edj_cmd_parse_whitespace(src);
+CHECKSRC;
 
 	/* If comment, then style it and skip more whitespace */
 	while (src->str[0] == '/' && src->str[1] == '/') {
 		for (len = 2; src->str[len] && src->str[len] != '\n'; len++) {
 		}
+CHECKSRC;
 		set_style(fine, src, len, "comment");
+CHECKSRC;
 		edj_cmd_parse_whitespace(src);
+CHECKSRC;
 	}
 }
 
@@ -246,10 +257,12 @@ varconst_t *find_var_const(syntaxstate_t *state, const char *key)
 static size_t match(const char *word, edjsrc_t *src)
 {
 	size_t len = strlen(word);
+CHECKSRC;
 	if (strncasecmp(word, src->str, len))
 		return 0;
 	if (isalpha(*word) && isalnum(src->str[len])) /* not UTF-8 safe! */
 		return 0;
+CHECKSRC;
 	return len;
 }
 
@@ -260,12 +273,15 @@ static size_t quote_length(edjsrc_t *src)
 {
 	size_t	len;
 
+CHECKSRC;
 	for (len = 1; src->str[len] >= ' ' && src->str[len] != *src->str; len++) {
 		if (src->str[len] == '\\' && src->str[len + 1] >= ' ')
 			len++;
 	}
+CHECKSRC;
 	if (src->str[len] == *src->str)
 		len++;
+CHECKSRC;
 	return len;
 }
 
@@ -301,6 +317,7 @@ static const char *parse_token(syntaxstate_t *state, edjsrc_t *src, char **refna
 	*refname = NULL;
 
 	/* Maybe check for a regular expression */
+CHECKSRC;
 	if (state->mayberegex && *src->str == '/') {
 		/* Find the end */
 		len = quote_length(src);
@@ -309,15 +326,18 @@ static const char *parse_token(syntaxstate_t *state, edjsrc_t *src, char **refna
 		while (isalpha(src->str[len]))
 			len++;
 
+CHECKSRC;
 		/* Style it and return "regex" */
 		return set_style(fine, src, len, "regex");
 	}
 
 	/* Check for special operators */
+CHECKSRC;
 	if (strchr(".#aionblvsdfwgh", *src->str)) {
 		for (i = 0; longop[i]; i++) {
 			len = match(longop[i], src);
 			if (len > 0) {
+CHECKSRC;
 				return set_style(fine, src, len, "normal");
 			}
 
@@ -327,11 +347,13 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 				break;
 		}
 	}
+CHECKSRC;
 
 	/* Strings */
 	if (*src->str == '"' || *src->str == '\'') {
 		len = quote_length(src);
 
+CHECKSRC;
 		/* We want to store the string's contents at *refname, and then
 		 * style the whole string including quotes.  Easy!  Unless
 		 * it's a partially entered string with no end.
@@ -344,6 +366,7 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 		} else {
 			*refname = strdup("");
 		}
+CHECKSRC;
 		return set_style(fine, src, len, "string");
 	}
 
@@ -356,6 +379,7 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 		(*refname)[len] = '\0';
 		if (src->str[len] == '`')
 			len++;
+CHECKSRC;
 		return set_style(fine, src, len, "key");
 	}
 
@@ -364,7 +388,9 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 		int	decimal = 0, exponent = 0;
 
 		/* Count the length.  Allow one "." and one "e"/"E" */
+CHECKSRC;
 		for (len = 1; isdigit(src->str[len]) || src->str[len] == '.' || src->str[len] == 'e' || src->str[len] == 'E'; len++) {
+CHECKSRC;
 			if (src->str[len] == '.') {
 				if (decimal || exponent)
 					break;
@@ -376,6 +402,7 @@ slog("SELECT: op=\"%s\", selectnest=%d, nest=%d\n", longop[i], state->selectnest
 				exponent = 1;
 			}
 		}
+CHECKSRC;
 
 		/* Style it */
 		return set_style(fine, src, len, "number");
@@ -443,9 +470,12 @@ slog("parse_expression(state, \"%.15s\")\n", src->str);
 	state->mayberegex = 1;
 
 	/* Parse a series of tokens.  A few have special meaning */
+CHECKSRC;
 	skip(fine, src);
 assert(*src->str != ';' && *src->str != '}');
+CHECKSRC;
 	while ((state->nest > 0 && *src->str) || !end_cmd(*src->str)) {
+CHECKSRC;
 		/* Fetch and style the next token */
 		start = src->str;
 		token = parse_token(state, src, &name);
@@ -454,6 +484,7 @@ assert(*src->str != ';' && *src->str != '}');
 			len--;
 slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)len, start, name, state->nest);
 
+CHECKSRC;
 		/* Regex can happen after "(" or "," */
 		state->mayberegex = (*start == '(' || *start == ',');
 
@@ -463,6 +494,7 @@ slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)l
 		} else if (*start == ')') {
 			if (state->nest == 0) {
 				src->str = start;
+CHECKSRC;
 				return;
 			}
 			state->nest--;
@@ -470,6 +502,7 @@ slog("token=%s len=%d start=\"%.*s\" name=%s nest=%d\n", token, (int)len, (int)l
 				state->selectnest = -1;
 		}
 
+CHECKSRC;
 		/* The SELECT token enables other tokens like FROM and WHERE */
 		if (token == "normal" && !strncasecmp(start, "select", 6))
 			state->selectnest = state->nest;
@@ -537,6 +570,7 @@ slog("Looking up \"%s\" in expression\n", name);
 		/* Allow whitespace/comments between tokens */
 		skip(fine, src);
 	}
+CHECKSRC;
 }
 
 /* Parse var/const/args declarations.  Add them to the list of known names.
@@ -550,14 +584,18 @@ static int var_const(syntaxstate_t *state, edjsrc_t *src, int isvar)
 	char	*name;
 
 	/* comma-delimited series of names, :types, and =expr */
+CHECKSRC;
 	skip(fine, src);
+CHECKSRC;
 	while (!end_cmd(*src->str) && *src->str != ')') {
+CHECKSRC;
 		/* Name */
 		start = *src;
 		name = edj_cmd_parse_key(src, 0);
 		if (!name)
 			return 1; /* No variable name */
 		set_style(fine, &start, src->str - start.str, isvar ? "var" : "const");
+CHECKSRC;
 
 		/* Add the name to the list of known names */
 		vc = malloc(sizeof *vc + strlen(name) * 2);
@@ -595,6 +633,7 @@ slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 			skip(fine, src);
 slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 		}
+CHECKSRC;
 
 		/* Optional initial value */
 slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
@@ -605,6 +644,7 @@ slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 		}
 
+CHECKSRC;
 		/* If not a comma, we should be done */
 		if (*src->str != ',')
 			break;
@@ -618,6 +658,7 @@ slog("%d: src->str=\"%s\"\n", __LINE__, src->str);
 static void parse_block(syntaxstate_t *state, edjsrc_t *src)
 {
 	edjsrc_t start;
+CHECKSRC;
 	skip(state->fine, src);
 	start = *src;
 slog("parse_block(\"%.*s...\")\n", 20, src->str);
@@ -625,15 +666,21 @@ slog("parse_block(\"%.*s...\")\n", 20, src->str);
 		/* Do a block */
 		set_style(state->fine, src, 1, "command");
 		skip(state->fine, src);
+CHECKSRC;
 		while (*src->str && *src->str != '}') {
+CHECKSRC;
 			parse_command(state, src);
+CHECKSRC;
 			skip(state->fine, src);
 		}
+CHECKSRC;
 		if (*src->str == '}')
 			set_style(state->fine, src, 1, "command");
+CHECKSRC;
 	} else {
 		/* Do a single command */
 		parse_command(state, src);
+CHECKSRC;
 	}
 slog("parse_block(...) found <<%.*s>>\n", src->str - start.str, start.str);
 }
@@ -654,6 +701,7 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 	varconst_t *vc;
 
 	/* Try to get a command name.  If no name, assume it's an expression */
+CHECKSRC;
 	start = *src;
 	name = edj_cmd_parse_key(src, 0);
 	if (!name) {
@@ -664,12 +712,14 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 			parse_expression(state, src);
 		if (*src->str == ';')
 			set_style(fine, src, 1, "normal");
+CHECKSRC;
 		return;
 	}
 
 	/* Is it really a command name? */
 	cmd = edj_cmd_by_name(name);
 
+CHECKSRC;
 	/* Is it a function name not followed by "("? */
 	if (!cmd && *src->str != '(' && edj_calc_function_by_name(name)) {
 		/* Treat it like the "print" command */
@@ -677,6 +727,7 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 	}
 	free(name);
 
+CHECKSRC;
 	/* When all else fails, assume it's an expression */
 	if (!cmd) {
 		*src = start;
@@ -684,12 +735,14 @@ static void parse_command(syntaxstate_t *state, edjsrc_t *src)
 			parse_expression(state, src);
 		if (*src->str == ';')
 			set_style(fine, src, 1, "normal");
+CHECKSRC;
 		return;
 	}
 
 	/* Style the command name as a command name */
 	set_style(fine, &start, src->str - start.str, "command");
 
+CHECKSRC;
 	/* Parse the arguments, depending on the command */
 slog("Doing command \"%s\"\n", cmd->name);
 	if (!strcmp(cmd->name, "break")
@@ -900,7 +953,7 @@ slog("Doing command \"%s\"\n", cmd->name);
 			if (*src->str == ',')
 				set_style(fine, src, 1, "command");
 			else {
-				for (len = 1; !end_cmd(src->str[len]); len++) {
+				for (len = 0; !end_cmd(src->str[len]); len++) {
 				}
 				set_style(fine, src, len, "error");
 				break;
@@ -952,17 +1005,21 @@ slog("Doing command \"%s\"\n", cmd->name);
 			parse_block(state, src);
 		}
 	} else {
+CHECKSRC;
 		/* Just whatever */
 Recover:
 		for (len = 0; !end_cmd(src->str[len]); len++) {
 		}
 		set_style(fine, src, len, "normal");
+CHECKSRC;
 	}
 
+CHECKSRC;
 	/* Skip the terminal ";" if any */
 	skip(fine, src);
 	if (*src->str == ';')
 		src->str++;
+CHECKSRC;
 	return;
 
 }
