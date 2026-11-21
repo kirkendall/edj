@@ -23,7 +23,7 @@ static edj_t *common(edj_t *args, char *name)
 
 	/* Must be a single number */
 	if (arg->type != EDJ_NUMBER || arg->next)
-		return edj_error_null(0, "The %s() function expects single number as its argument", name);
+		return edj_error_null(NULL, "The %s() function expects single number as its argument", name);
 
 	/* Convert to binary */
 	d = edj_double(arg);
@@ -105,9 +105,9 @@ static edj_t *common(edj_t *args, char *name)
 	/* If an error occurred, say to */
 	switch (errno) {
 	case 0:		break; /* no error */
-	case EDOM:	return edj_error_null(0, "Domain error in %s() function", name);
-	case ERANGE:	return edj_error_null(0, "Range error in %s() function", name);
-	default:	return edj_error_null(0, "Error in %s() function", name);
+	case EDOM:	return edj_error_null(NULL, "Domain error in %s() function", name);
+	case ERANGE:	return edj_error_null(NULL, "Range error in %s() function", name);
+	default:	return edj_error_null(NULL, "Error in %s() function", name);
 	}
 
 	/* Return the result */
@@ -237,7 +237,7 @@ static edj_t *jfn_atan2(edj_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != EDJ_NUMBER || !arg->next || arg->next->type != EDJ_NUMBER || arg->next->next)
-		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", "atan2");
+		return edj_error_null(NULL, "The %s() function expects two numbers number as its arguments", "atan2");
 
 	/* Convert to binary */
 	y = edj_double(arg);
@@ -251,7 +251,7 @@ static edj_t *jfn_atan2(edj_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return edj_error_null(0, "Error in %s() function", "atan2");
+		return edj_error_null(NULL, "Error in %s() function", "atan2");
 
 	/* Return the result */
 	return edj_from_double(x);
@@ -286,13 +286,13 @@ static edj_t *jfn_hypot(edj_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return edj_error_null(0, "Error in %s() function", "hypot");
+		return edj_error_null(NULL, "Error in %s() function", "hypot");
 
 	/* Return the result */
 	return edj_from_double(d);
 
 BadArgs:
-	return edj_error_null(0, "The %s() function expects at least two numbers number as its arguments", "hypot");
+	return edj_error_null(NULL, "The %s() function expects at least two numbers number as its arguments", "hypot");
 }
 
 static edj_t *jfn_pow(edj_t *args, void *agdata)
@@ -307,7 +307,7 @@ static edj_t *jfn_pow(edj_t *args, void *agdata)
 
 	/* Must be two numbers */
 	if (arg->type != EDJ_NUMBER || !arg->next || arg->next->type != EDJ_NUMBER || arg->next->next)
-		return edj_error_null(0, "The %s() function expects two numbers number as its arguments", "pow");
+		return edj_error_null(NULL, "The %s() function expects two numbers number as its arguments", "pow");
 
 	/* Convert to binary */
 	base = edj_double(arg);
@@ -321,7 +321,7 @@ static edj_t *jfn_pow(edj_t *args, void *agdata)
 
 	/* If error, say so */
 	if (errno)
-		return edj_error_null(0, "Error in %s() function", "pow");
+		return edj_error_null(NULL, "Error in %s() function", "pow");
 
 	/* Return the result */
 	return edj_from_double(base);

@@ -731,7 +731,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 			free(name);
 			if (refend)
 				*refend = settings;
-			return edj_error_null(0, "Malformed option \"%s\"", settings);
+			return edj_error_null(NULL, "Malformed option \"%s\"", settings);
 		}
 
 		/* Make a copy of the name */
@@ -763,7 +763,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 		if (settings[namelen] == '=' || settings[namelen] == '.') {
 			/* If the member doesn't exist, that's an error */
 			if (!found) {
-				found = edj_error_null(0, "Unknown option \"%s\"", name);
+				found = edj_error_null(NULL, "Unknown option \"%s\"", name);
 				free(name);
 				if (refend)
 					*refend = settings;
@@ -803,7 +803,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 					free(name);
 					if (refend)
 						*refend = settings;
-					return edj_error_null(0, "Invalid boolean option value \"%s\"", value);
+					return edj_error_null(NULL, "Invalid boolean option value \"%s\"", value);
 				}
 				continue;
 
@@ -820,7 +820,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 						free(name);
 						if (refend)
 							*refend = settings;
-						return edj_error_null(0, "Invalid number value \"%s\"", value);
+						return edj_error_null(NULL, "Invalid number value \"%s\"", value);
 					}
 					if (lend < dend) {
 						/* It's floating-point */
@@ -863,7 +863,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 				continue;
 
 			default:
-				found = edj_error_null(0, "Bad type for option \"%s\"", name);
+				found = edj_error_null(NULL, "Bad type for option \"%s\"", name);
 				free(name);
 				if (refend)
 					*refend = settings;
@@ -876,7 +876,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 				settings += namelen;
 				continue;
 			} else if (found) {
-				found = edj_error_null(0, "Option \"%s\" is not boolean", name);
+				found = edj_error_null(NULL, "Option \"%s\" is not boolean", name);
 				free(name);
 				if (refend)
 					*refend = settings;
@@ -932,7 +932,7 @@ edj_t *edj_config_parse(edj_t *config, const char *settings, const char **refend
 			}
 
 			/* Dang.  What is this? */
-			found = edj_error_null(0, "Unknown option \"%s\"", name);
+			found = edj_error_null(NULL, "Unknown option \"%s\"", name);
 			free(name);
 			if (refend)
 				*refend = settings;

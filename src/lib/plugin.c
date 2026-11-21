@@ -165,7 +165,7 @@ edj_t *edj_plugin_load(const char *name)
 
 	/* If neither was found, fail */
 	if (!binfile && !scriptfile)
-		return edj_error_null(0, "The \"%s\" plugin could not be located", name);
+		return edj_error_null(NULL, "The \"%s\" plugin could not be located", name);
 
 	/* If there's a binary plugin, load it and run its "init" function */
 	if (binfile) {
@@ -184,7 +184,7 @@ edj_t *edj_plugin_load(const char *name)
 				if (!*err)
 					err = dlerror();
 			}
-			return edj_error_null(0, "The \"%s\" plugin could not be loaded: %s", name, err);
+			return edj_error_null(NULL, "The \"%s\" plugin could not be loaded: %s", name, err);
 		}
 
 		/* Find the init function */
@@ -193,7 +193,7 @@ edj_t *edj_plugin_load(const char *name)
 		*(void **)(&initfn) = dlsym(dlhandle, initname);
 		if (!initfn) {
 			char *error = dlerror();
-			info = edj_error_null(0, "The \"%s\" plugin has no %s() function (%s)", name, initname, error);
+			info = edj_error_null(NULL, "The \"%s\" plugin has no %s() function (%s)", name, initname, error);
 			dlclose(dlhandle);
 			return info;
 		}
@@ -202,7 +202,7 @@ edj_t *edj_plugin_load(const char *name)
 		err = initfn();
 		if (err) {
 			dlclose(dlhandle);
-			return edj_error_null(0, "The \"%s\" plugin failed to initialize: %s", name, err);
+			return edj_error_null(NULL, "The \"%s\" plugin failed to initialize: %s", name, err);
 		}
 	}
 

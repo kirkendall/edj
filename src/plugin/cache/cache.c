@@ -127,12 +127,12 @@ static edj_t *cleanCache(char *cache, edj_t *newSettings)
 			if (!tmp) {
 				edj_free(settings);
 				free(filename);
-				return edj_error_null(0, "Invalid setting name \"%s\" for %s()", scan->text, "cache");
+				return edj_error_null(NULL, "Invalid setting name \"%s\" for %s()", scan->text, "cache");
 			}
 			if (tmp->type != scan->first->type) {
 				edj_free(settings);
 				free(filename);
-				return edj_error_null(0, "Setting \"%s\" has wrong data type for %s()", scan->text, "cache");
+				return edj_error_null(NULL, "Setting \"%s\" has wrong data type for %s()", scan->text, "cache");
 			}
 
 			/* Merge the value into settings */
@@ -212,11 +212,11 @@ static edj_t *jfn_cache(edj_t *args, void *agdata)
 
 	/* Get the cache name */
 	if (args->first->type != EDJ_STRING)
-		return edj_error_null(0, "%s() wants a cache name as first argument", "cache");
+		return edj_error_null(NULL, "%s() wants a cache name as first argument", "cache");
 	cache = args->first->text;
 	err = safeName(cache);
 	if (err)
-		return edj_error_null(0, err, "cache", "cacheName");
+		return edj_error_null(NULL, err, "cache", "cacheName");
 
 	/* If nothing else, then fetch settings and return them */
 	if (!args->first->next)
@@ -228,11 +228,11 @@ static edj_t *jfn_cache(edj_t *args, void *agdata)
 
 	/* Otherwise the second argument must be an index */
 	if (args->first->next->type != EDJ_STRING)
-		return edj_error_null(0, "%s() wants an index string or settings object as the second argument", "cache");
+		return edj_error_null(NULL, "%s() wants an index string or settings object as the second argument", "cache");
 	index = args->first->next->text;
 	err = safeName(index);
 	if (err)
-		return edj_error_null(0, err, "cache", "index");
+		return edj_error_null(NULL, err, "cache", "index");
 
 	/* The third argument is data and can be absent or anything.  There
 	 * must not be a third item.
@@ -240,7 +240,7 @@ static edj_t *jfn_cache(edj_t *args, void *agdata)
 	if (!args->first->next->next)
 		data = NULL;
 	else if (args->first->next->next->next)
-		return edj_error_null(0, "The %() function takes at most 3 arguments", "cache");
+		return edj_error_null(NULL, "The %() function takes at most 3 arguments", "cache");
 	else
 		data = args->first->next->next;
 

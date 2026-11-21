@@ -467,14 +467,14 @@ static edj_t *csvrow(const char *buf, size_t len, const char **refcursor, edj_t 
 		if (!cell) {
 			edj_free(row);
 			if (col)
-				return edj_error_null(0, "Malformed %s data for \"%s\" column", "csv", col->text);
-			return edj_error_null(0, "Malformed %s data in header", "csv");
+				return edj_error_null(NULL, "Malformed %s data for \"%s\" column", "csv", col->text);
+			return edj_error_null(NULL, "Malformed %s data in header", "csv");
 		}
 
 		/* If more data cells than column headings, return an error */
 		if (columns && !col) {
 			edj_free(row);
-			return edj_error_null(0, "Too many %s data columns", "csv");
+			return edj_error_null(NULL, "Too many %s data columns", "csv");
 		}
 
 		/* Append it to the row */
@@ -611,7 +611,7 @@ static edj_t *csvparse(const char *buf, size_t len, const char **refend, const c
 
 		/* Otherwise, generate an error and return it */
 		edj_free(columns);
-		return edj_error_null(0, "Unable to parse \"%s\" data", "csv");
+		return edj_error_null(NULL, "Unable to parse \"%s\" data", "csv");
 	}
 
 	/* Parse each data row, and collect as an array of objects */

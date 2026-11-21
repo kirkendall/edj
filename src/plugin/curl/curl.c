@@ -548,7 +548,11 @@ static edj_t *curlHelper(char *fn, char *request, edj_t *argsfirst)
 		curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&hdr);
 	}
 	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+#ifdef CURLOPT_XFERINFOFUNCTION
+	curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, curlProgress);
+#else
 	curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, curlProgress);
+#endif
 
 	/* Do it */
 	result = curl_easy_perform(curl);

@@ -348,9 +348,9 @@ static edj_t *find_any(edj_t *haystack, edj_t *needle, int ignorecase, regex_t *
 
 	/* Check parameters */
 	if (haystack->type != EDJ_ARRAY && haystack->type != EDJ_OBJECT)
-		return edj_error_null(0, "Can only find within an object or array");
+		return edj_error_null(NULL, "Can only find within an object or array");
 	if (!regex && needle && (needle->type != EDJ_STRING && needle->type != EDJ_NUMBER))
-		return edj_error_null(0, "Can only find string, number, or regex");
+		return edj_error_null(NULL, "Can only find string, number, or regex");
 
 	/* Fill in the find argument block */
 	memset(&find, 0, sizeof find);

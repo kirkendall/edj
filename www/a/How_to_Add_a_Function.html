@@ -56,7 +56,7 @@
 		<b>if</b> (<var>args-&gt;first-&gt;type</var> != EDJ_NUMBER
 		 || (<var>length</var> = edj_int(<var>args-&gt;first</var>)) < 0
 		 || <var>args-&gt;first-&gt;next</var> != NULL)
-			<b>return</b> edj_error_null(0, "The \"%s\" function takes non-negative number", "hrule");
+			<b>return</b> edj_error_null(NULL, "The \"%s\" function takes non-negative number", "hrule");
 
 		/* Allocate an edj_t string as the result */
 		<var>result</var> = edj_string("", <var>length</var>);

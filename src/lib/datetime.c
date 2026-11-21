@@ -1082,7 +1082,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 
 	/* Defend against bad calls */
 	if (!args || args->type != EDJ_ARRAY || !args->first)
-		return edj_error_null(0, "Bad args to edj_datetime()");
+		return edj_error_null(NULL, "Bad args to edj_datetime()");
 
 	/* First arg is a string to parse, or an object to dissect, or a number
 	 * to use as a time_t value or start of the first num/unit pair.
@@ -1094,11 +1094,11 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 	case EDJ_STRING:
 		if (!asdate && !astime) {
 			if (parseperiod(args->first->text, &jdt))
-				return edj_error_null(0, "Invalid period");
+				return edj_error_null(NULL, "Invalid period");
 		} else {
 			if (parsetime(args->first->text, &jdt)
 			 && parsedatetime(args->first->text, &jdt))
-				return edj_error_null(0, "Invalid date/time");
+				return edj_error_null(NULL, "Invalid date/time");
 		}
 		break;
 	case EDJ_OBJECT:
@@ -1133,7 +1133,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 		}
 		break;
 	default:
-		return edj_error_null(0, "%s must be a string or object or \"time_t\" number", typename);
+		return edj_error_null(NULL, "%s must be a string or object or \"time_t\" number", typename);
 	}
 
 	/* For non-periods, if year is 0 then use local date. */
@@ -1200,7 +1200,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 		if (havenum && unit) {
 			unitptr = dtunit(&jdt, unit, didhour, asdate);
 			if (!unitptr)
-				return edj_error_null(0, "Unrecognized time unit \"%s\"", unit);
+				return edj_error_null(NULL, "Unrecognized time unit \"%s\"", unit);
 			*unitptr = num;
 			if (unitptr == &jdt.hour)
 				didhour = 1;
@@ -1216,7 +1216,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 	 */
 	if (havenum) {
 		if (asdate || astime)
-			return edj_error_null(0, "Extra number to %s()", typename);
+			return edj_error_null(NULL, "Extra number to %s()", typename);
 		jdt.second = num;
 	}
 
@@ -1233,7 +1233,7 @@ edj_t *edj_datetime_fn(edj_t *args, char *typename)
 		/* Find the field */
 		unitptr = dtunit(&jdt, unit, 0, asdate);
 		if (!unitptr)
-			return edj_error_null(0, "Unrecognized time unit \"%s\"", unit);
+			return edj_error_null(NULL, "Unrecognized time unit \"%s\"", unit);
 		if (!asdate && !astime) {
 			/* For period, fold any larger units into the requested
 			 * one.  This requires approximations for lengths of

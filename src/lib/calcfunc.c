@@ -2442,7 +2442,7 @@ static edj_t *find_or_grep(edj_t *args, void *agdata, int grep, char **refDefaul
 		else if (other->type == EDJ_STRING && !needkey)
 			needkey = other->text;
 		else {
-			return edj_error_null(0, "findArg:%s() was passed an unexpected extra parameter", grep ? "grep" : "find");
+			return edj_error_null(NULL, "findArg:%s() was passed an unexpected extra parameter", grep ? "grep" : "find");
 		}
 	}
 

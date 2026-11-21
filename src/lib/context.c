@@ -631,11 +631,11 @@ edj_t *edj_context_file(edjcontext_t *context, const char *filename, int writabl
 		char *currentname = edj_text_by_key(edj_by_index(files, *refcurrent), "filename"); /* undeferred */
 		edj_t *data;
 		if (!currentname)
-			data = edj_error_null(0, "There is no current file");
+			data = edj_error_null(NULL, "There is no current file");
 		else {
 			data = edj_parse_file(currentname);
 			if (!data)
-				data = edj_error_null(0, "File \"%s\" is unreadable", currentname);
+				data = edj_error_null(NULL, "File \"%s\" is unreadable", currentname);
 		}
 
 		/* Store it as the variable "data".  This also has the
@@ -1028,11 +1028,11 @@ edj_t *edj_context_assign(edjcalc_t *lvalue, edj_t *rvalue, edjcontext_t *contex
 	 * value may be NULL even if edjlvalue() returns 1.
 	 */
 	if ((err = edjlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL && *err)
-		return edj_error_null(0, err, key);
+		return edj_error_null(NULL, err, key);
 
 	/* If it's const then fail */
 	if (layer->flags & EDJ_CONTEXT_CONST) {
-		value = edj_error_null(0, "Const:Attempt to change const \"%s\"", key);
+		value = edj_error_null(NULL, "Const:Attempt to change const \"%s\"", key);
 		if (err) /* "" */
 			free(key);
 		return value;
@@ -1045,7 +1045,7 @@ edj_t *edj_context_assign(edjcalc_t *lvalue, edj_t *rvalue, edjcontext_t *contex
 			free(key);
 	} else if (container->type == EDJ_ARRAY) {
 		if (!value)
-			return edj_error_null(0, "UnknownSub:No element found with the requested subscript", key);
+			return edj_error_null(NULL, "UnknownSub:No element found with the requested subscript", key);
 
 		/* If it's a deferred array, convert to undeferred */
 		edj_undefer(container);
@@ -1102,17 +1102,17 @@ edj_t *edj_context_append(edjcalc_t *lvalue, edj_t *rvalue, edjcontext_t *contex
 
 	/* Get the details on what to change */
 	if ((err = edjlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
-		return edj_error_null(0, err, key);
+		return edj_error_null(NULL, err, key);
 	if (value == NULL)
-		return edj_error_null(0, "unknownVar:Unknown variable \"%s\"", key);
+		return edj_error_null(NULL, "unknownVar:Unknown variable \"%s\"", key);
 
 	/* If it's const then fail */
 	if (layer->flags & EDJ_CONTEXT_CONST)
-		return edj_error_null(0, "const:Attempt to change const \"%s\"", key);
+		return edj_error_null(NULL, "const:Attempt to change const \"%s\"", key);
 
 	/* We can only append to arrays */
 	if (value->type != EDJ_ARRAY)
-		return edj_error_null(0, "append:Can't append to %s \"%s\"", edj_typeof(value, 0), key);
+		return edj_error_null(NULL, "append:Can't append to %s \"%s\"", edj_typeof(value, 0), key);
 
 	/* If its a deferred array, convert to undeferred */
 	edj_undefer(value);
@@ -1144,13 +1144,13 @@ edj_t *edj_context_delete(edjcalc_t *lvalue, edjcontext_t *context)
 
 	/* Get the details on what to delete */
 	if ((err = edjlvalue(lvalue, context, &layer, &container, &value, &key)) != NULL)
-		return edj_error_null(0, err, key);
+		return edj_error_null(NULL, err, key);
 	if (value == NULL) {
-		//return edj_error_null(0, "UnknownVar:Unknown variable \"%s\"", key);
+		//return edj_error_null(NULL, "UnknownVar:Unknown variable \"%s\"", key);
 		return NULL; // JavaScript silently ignores this type of error
 	}
 	if ((layer->flags & EDJ_CONTEXT_CONST) != 0)
-		return edj_error_null(0, "const:Attempt to change const \"%s\"", key);
+		return edj_error_null(NULL, "const:Attempt to change const \"%s\"", key);
 
 	/* Different technique for deleting from an object vs an array */
 	if (container->type == EDJ_OBJECT) {
