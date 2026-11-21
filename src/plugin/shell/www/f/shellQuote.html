@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>shellQuote</title>
+    <link rel="stylesheet" type="text/css" href="../../edj.css">
+    <meta name="description" content="edj shellQuote - Add quoting to make a string safe to pass as a shell command argument">
+    <meta name="keywords" content="string, number, array, object, boolean, datetime, aggregate, edj, function reference, shellQuote">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <h1>shellQuote - Add quoting to make a string safe to pass as a shell command argument</h1>
+    <dl>
+      <dt>shellQuote(<var>data</var>:any):string
+      <dd>
+      This is part of the <a target="_PARENT" href="../../index.html?p=shell">shell</a> plugin.
+      You must load the plugin via either -lshell on the shell command line,
+      or a <tt>plugin shell;</tt> line in a script.
+      <p>
+      This function adds quoting, if necessary, to make data safe to pass
+      as part of a shell command line, e.g. for use with the
+      <a target="_PARENT" href="../../index.html?f=shell/readShell">readShell()</a>
+      function.
+      It is mostly intended for strings, but it will also convert other data
+      types to string in the manner of the 
+      <a target="_PARENT" href="../../index.html?f=toString">toString()</a>
+      function.
+      <p>
+      Values that consist entirely of ASCII letters, digits, ".", "/", and "-"
+      are left unchanged.
+      They don't require quoting.
+      <p>
+      Other values will be wrapped in apostrophe quotes, and any instances
+      of apostrophes or backslashes in the value will be escaped with a
+      backslash.
+      Non-ASCII characters don't receive any special treatment.
+
+    </dl>
+    <details open>
+      <summary>Examples</summary>
+
+      <div class="example">
+	<kbd>shellQuote("sample.json")</kbd>
+	<samp>"sample.json"</samp>
+        This string didn't need quoting.
+      </div>
+
+      <div class="example">
+	<kbd>shellQuote("Don't press that button!")</kbd>
+	<samp>"'Don\\'t press that button!'"</samp>
+	<kbd>print shellQuote("Don't press that button!")</kbd>
+	<samp>'Don\'t press that button!'</samp>
+        This time the value is quoted by enclosing it in apostrophes.
+        Since it also contains a literal apostrophe, that apostrophe is
+        escaped by a backslash.
+        Displaying this as a JSON string can obfuscate what's happening here,
+        so we also use the
+        <a target="_PARENT" href="../../index.html?cmd=print">print</a>
+        command to output it as plain text.
+      </div>
+
+      <div class="example">
+	<kbd>shellQuote(42)</kbd>
+	<samp>"42"</samp>
+	<kbd>shellQuote({foo:true})</kbd>
+	<samp>"'{\"foo\":true}'"</samp>
+	<kbd>print shellQuote({foo:true})</kbd>
+	<samp>'{"foo":true}'</samp>
+	Some quick examples to show that non-string values can be handled too.
+	In particular, numbers  don't need quoting when converted to strings.
+	Complex values are output as JSON.
+
+    </details>
+
+    <details>
+      <summary>Notes</summary>
+      <ul>
+
+        <li>Values that start with a "-" (including negative numbers) could
+            be mistaken for an option by some programs, in some contexts.
+            I'm sorry for sounding so vague about this, but the vagueness is
+            the point: No simple quoting function can protect against this.
+            You need to adjust your command line to reflect what you're trying
+            to do.
+            For example, if you want to remove a file named "-f", the way to
+            do it is "rm ./-f".
+            In bash's "[" tester command, if you want to compare a string to
+            a value that starts with "-", the usual way to do this is to
+            prefix both strings with "X", as in "[ "X$1" = "X-s" ]".
+
+      </ul>
+    </details>
+
+    <details>
+      <summary>See Also</summary>
+      <table>
+        <tr><td><a target="_PARENT" href="../../index.html?p=shell">plugin shell</a></td><td>Overview of the shell plugin</td><tr>
+        <tr><td><a target="_PARENT" href="../../index.html?f=shell/readShell">readShell()</a></td><td>Run a shell command and return its output</td></tr>
+        <tr><td><a target="_PARENT" href="../../index.html?cmd=print">print</a></td><td>Output text without JSON quotes</td></tr>
+      </table>
+    </details>
+
+  </body>
+</html>
