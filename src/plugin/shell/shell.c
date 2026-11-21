@@ -64,6 +64,83 @@ static edj_t *jfn_getcwd(edj_t *args, void *agdata)
 	return edj_string(buf, -1);
 }
 
+/* Return the length that a quoted string will be, not including the terminating
+ * '\0'.  If passed a non-NULL buf, then also do the actual conversion.
+ */
+static size_t quotehelper(char *str, char *buf)
+{
+	size_t len = 0;
+
+	/* Opening quote */
+	if (buf)
+		buf[len] = '\'';
+	len++;
+
+	/* In between, all characters remain the same except for ' and \\.
+	 * Multibyte characters are all safe.
+	 */
+	for (; *str; str++) {
+		if (*str == '\'' || *str == '\\') {
+			if (buf)
+				buf[len] = '\\';
+			len++;
+		}
+		if (buf)
+			buf[len] = *str;
+		len++;
+	}
+
+	/* Closing quote */
+	if (buf)
+		buf[len] = '\'';
+	len++;
+
+	/* Return the length */
+	return len;
+}
+
+static edj_t *jfn_shellQuote(edj_t *args, void *agdata)
+{
+	char	*in, *mustfree = NULL, *scan;
+	edj_t	*result;
+	size_t	len;
+
+	/* Expect a single string as a parameter.  If not a string, convert it */
+	if (args->first->next)
+		return edj_error_null(NULL, "Extra parameter passed to %s()", "shellQuote");
+	if (args->first->type == EDJ_STRING)
+		in = args->first->text;
+	else
+		in = mustfree = edj_serialize(args->first, NULL);
+
+	/* If all ASCII letters/digits/dots/slashes/hyphens, then return it unchanged */
+	for (scan = in; *scan; scan++) {
+		if (!((*scan >= 'A' && *scan <= 'Z')
+		   || (*scan >= 'a' && *scan <= 'z')
+		   || (*scan >= '0' && *scan <= '9')
+		   || *scan == ','
+		   || *scan == '/'
+		   || *scan == '-'))
+			break;
+	}
+	if (!*scan) {
+		result = edj_string(in, -1);
+		if (mustfree)
+			free(mustfree);
+		return result;
+	}
+
+	/* Count the length of the converted string */
+	len = quotehelper(in, NULL);
+
+	/* Allocate a result buffer */
+	result = edj_string("", len);
+
+	/* Do the conversion */
+	quotehelper(in, result->text);
+	return result;
+}
+
 /*----------------------------------------------------------------------------*/
 
 /* This is a simple "shell" command, for running an external program */
@@ -194,8 +271,9 @@ char *pluginshell()
 	edj_t	*section, *settings;
 
 	/* Register the functions */
-	edj_calc_function_hook("readShell",  "cmdline:string", "string", jfn_readShell);
-	edj_calc_function_hook("getcwd",  "", "string", jfn_getcwd);
+	edj_calc_function_hook("readShell", "cmdline:string", "string", jfn_readShell);
+	edj_calc_function_hook("getcwd", "", "string", jfn_getcwd);
+	edj_calc_function_hook("shellQuote", "text:string|any", "string", jfn_shellQuote);
 
 	/* Register the commands.  The first arg is the plugin name. */
 	jcn_shell = edj_cmd_hook("shell", "shell", shell_parse, shell_run);
