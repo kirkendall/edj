@@ -134,7 +134,6 @@ div.example samp td:not(:first-of-type), div.example samp th:not(:first-of-type)
 }
 div.example kbd, div.example samp, tt, a[target=_PARENT] {
 	font-family: "Courier New", monospace;
-	font-size: 105%;
 }
 tt {
 	white-space: nowrap;
