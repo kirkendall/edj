@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Readline Plugin</title>
+    <link rel="stylesheet" type="text/css" href="../edj.css">
+    <meta name="description" content="edj screen plugin summary">
+    <meta name="keywords" content="edj, screen plugin">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+  </head>
+  <body>
+    <h1>Readline Plugin</h1>
+    This uses the GNU ReadLine library for interactively reading command from
+    the user.
+    This is an alternative to the "line" plugin.
+    <p>
+    <a href="#options" class="button">Options</a> &nbsp;
+    <a href="#functions" class="button">Functions</a> &nbsp;
+    <a href="#commands" class="button">Commands</a> &nbsp;
+    <a href="#other" class="button">Other Features</a>
+
+
+    <h2 id="options">Options</h2>
+    The <tt>readline</tt> plugin doesn't add any new options.
+
+    <h2 id="functions">Functions</h2>
+    The <tt>readline</tt> plugin doesn't add any new functions.
+
+    <h2 id="commands">Commands</h2>
+    The <tt>readline</tt> plugin doesn't add any new commands.
+
+    <h2 id="other">Other Features</h2>
+    The <tt>readline</tt> plugin offers editing, history, and name completion.
+    Name completion is attempted when you hit the &lt;Tab&gt; key after a
+    partial name.
+    <p>
+    GNU ReadLine was used in edj before the fineline library was written,
+    and remains available via this plugin for any user who prefers it.
+    <p>
+    The fineline library adds a number of useful new features, but the killer
+    reason that fineline was necessary is that ReadLine doesn't work inside an
+    ncursesw program.
+    I couldn't find any line input library that could do that, but the
+    <a target="_PARENT" href="../index.html?p=screen">screen</a> plugin
+    requires it.
+  </body>
+</html>

@@ -115,6 +115,7 @@ void edj_plugin_repl_hook(const char *name, int priority, void (*repl)(edjcontex
 		edjrepl = repl;
 	}
 }
+
 /* If a custom REPL handler is installed by a plugin, then call it and return 1
  * otherwise return 0.  Returning 0 means the application should call its
  * default REPL code.

@@ -14,7 +14,7 @@ void batch(edjcontext_t **refcontext, edjcmd_t *initcmds)
 
 	/* If no files then just run any -c commands once and exit */
 	if (edj_length(files) == 0) {
-		run(initcmds, refcontext);
+		edjprog_run(initcmds, refcontext);
 		return;
 	}
 
@@ -25,6 +25,6 @@ void batch(edjcontext_t **refcontext, edjcmd_t *initcmds)
 		edj_context_file(*refcontext, NULL, 0, &i);
 
 		/* Run the initcmds on it */
-		run(initcmds, refcontext);
+		edjprog_run(initcmds, refcontext);
 	}
 }

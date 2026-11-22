@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <readline/readline.h>
 #include <edj.h>
-#include "edjprog.h"
+#include "rlplugin.h"
 
 /*****************************************************************************/
 /* The following code supports name completion in the readline() function.   */
@@ -40,7 +40,7 @@ static char *global_name_generator(const char *text, int state)
 	/* First time? */
 	if (state == 0) {
 		/* Start with the newest context */
-		con = context;
+		con = readline_context;
 		scan = NULL;
 		len = edj_mbs_len(text);
 	}
@@ -330,7 +330,7 @@ char **edj_completion(const char *text, int start, int end)
 	next = strpbrk(&buf[scan], ".[");
 	c = *next;
 	*next = '\0';
-	completion_container = edj_context_by_key(context, &buf[scan], NULL);
+	completion_container = edj_context_by_key(readline_context, &buf[scan], NULL);
 	*next = c;
 	if (!completion_container)
 		return NULL;

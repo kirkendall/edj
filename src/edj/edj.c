@@ -197,7 +197,7 @@ char *jcreadscript(const char *filename)
 	return buf;
 }
 
-void run(edjcmd_t *jc, edjcontext_t **refcontext)
+void edjprog_run(edjcmd_t *jc, edjcontext_t **refcontext)
 {
 	edjcmdout_t *result;
 
@@ -883,7 +883,7 @@ int main(int argc, char **argv)
 	 * we'll run them later, separately for each data file.)
 	 */
 	if (interactive) {
-		run(autocmd, &context);
+		edjprog_run(autocmd, &context);
 	}
 	edj_cmd_free(autocmd);
 

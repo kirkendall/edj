@@ -93,7 +93,7 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 		if (jc != EDJ_CMD_ERROR) {
 			/* Execute */
 			edj_interrupt = 0;
-			run(jc, contextref);
+			edjprog_run(jc, contextref);
 
 			/* Clean up */
 			edj_cmd_free(jc);
