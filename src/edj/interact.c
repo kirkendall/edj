@@ -20,88 +20,30 @@ static void catchinterrupt(int signo)
 	}
 }
 
-/* This is called by readline() when it receives a ^C */
-static void catchRLinterrupt()
-{
-	/* Wipe out the partially-entered line */
-	rl_free_line_state();
-	rl_cleanup_after_signal();
-	rl_replace_line("", 0);
 
-	/* Start a new line */
-	puts("");
-	rl_on_new_line();
-	rl_redisplay();
-}
-
-
-/* Return the full pathname of the history file */
-static char *historyfile(void)
-{
-	static char	*buf = NULL;
-
-	/* First time, generate it */
-	if (!buf) {
-		/* Get the config directory */
-		char *dir = edj_file_path(NULL, NULL, NULL);
-		if (!dir)
-			return ".edj.history";
-
-		/* Append "/history" to it */
-		buf = (char *)malloc(strlen(dir) + 9);
-		strcpy(buf, dir);
-		free(dir);
-		strcat(buf, "/history");
-	}
-
-	return buf;
-}
-
-
-
-/* Interactively read a line from stdin.  */
 static char *edjreadline(const char *prompt)
 {
-	char	*expr;
-	size_t	i;
+	char	*buf;
+	size_t	bufsize, buflen;
+	int	ch;
 
-	/* Read a line into a dynamic buffer; */
-	expr = readline(prompt);
-	if (!expr)
-		return NULL;
-	i = strlen(expr);
+	/* Output the prompt */
+	edj_user_write(NULL, "prompt", prompt, strlen(prompt));
 
-	/* Trim trailing whitespace, possibly including a newline */
-	for (; i > 0 && isspace(expr[i - 1]); i--) {
+	/* Read characters up to the next newline.  The tty is in "cooked"
+	 * mode, so the operating system itself will allow basic editing.
+	 */
+	bufsize = buflen = 0;
+	buf = NULL;
+	while ((ch = getchar()) != EOF && ch != '\n') {
+		if (buflen + 1 >= bufsize) {
+			bufsize += 100;
+			buf = realloc(buf, bufsize);
+		}
+		buf[buflen++] = (char)ch;
 	}
-	expr[i] = '\0';
 
-	/* Add to history */
-	add_history(expr);
-	write_history(historyfile());
-
-	/* Return it */
-	return expr;
-}
-
-/* Built a colorized prompt string.  This is basically the given prompt with
- * a couple of escape sequences added to start and stop the prompt colors,
- * and also a couple of special characters that ReadLine uses to indicate
- * certain parts of the prompt (namely those escape sequences) are zero-width.
- */
-static char *edjprompt(const char *prompt)
-{
-	static char	buf[50];
-
-	sprintf(buf, "%c%s%c%s%c%s%c ",
-		RL_PROMPT_START_IGNORE,
-		"\033[32;1m",
-		RL_PROMPT_END_IGNORE,
-		prompt,
-		RL_PROMPT_START_IGNORE,
-		"\033[m",
-		RL_PROMPT_END_IGNORE);
-
+	/* Return the line */
 	return buf;
 }
 
@@ -126,29 +68,21 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 	if (edj_plugin_repl(context))
 		return;
 
-	/* Enable the use of history and name completion while
-	 * inputting expressions.
-	 */
-	using_history();
-	read_history(historyfile());
-	rl_attempted_completion_function = edj_completion;
-	rl_basic_word_break_characters = " \t\n\"\\'$><=;|&{}()[]#%^*+-:,/?~@";
-
 	/* Catch SIGINT (usually <Ctrl-C>) and use it to stop computation.
 	 * If <Ctrl-C> occurs while entering a line, it'll discard the line
 	 * and give you a new prompt.
 	 */
 	signal(SIGINT, catchinterrupt);
-	rl_catch_signals = 1;
-	rl_signal_event_hook = (rl_hook_func_t *)catchRLinterrupt;
 
 	/* Read an expression */
 	for (running = 0;
-	     (expr = edjreadline(edjprompt("edj:"))) != NULL;
+	     (expr = edjreadline("edj:")) != NULL;
 	     running = 0) {
 		/* Ignore empty lines */
-		if (!expr[0])
+		if (!expr[0]) {
+			free(expr);
 			continue;
+		}
 
 		/* Treat all processing of the line as "running */
 		running = 1;
@@ -165,7 +99,7 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 			edj_cmd_free(jc);
 
 			/* If the last line was incomplete, then output a
-			 * newline.  The readline() library depends on this.
+			 * newline.
 			 */
 			if (edj_print_incomplete_line) {
 				putchar('\n');
@@ -176,7 +110,4 @@ void interact(edjcontext_t **contextref, edjcmd_t *initcmds)
 
 	/* Leave the cursor on the line after the last, unused prompt */
 	putchar('\n');
-
-	/* Clean up the history file */
-	history_truncate_file(historyfile(), 100);
 }
