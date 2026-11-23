@@ -13,3 +13,7 @@ void color_usage(void);
 void debug_usage(void);
 void edjprog_run(edjcmd_t *jc, edjcontext_t **refcontext);
 void edjprog_repl_hook(const char *pluginname, int priority, void (*repl)(edjcontext_t *));
+
+/* in getopt.c */
+int edjprog_getopt(int argc, char **argv, int first, edjcontext_t *context);
+void edjprog_getopt_def(char *argstr);

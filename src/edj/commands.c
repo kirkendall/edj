@@ -85,7 +85,31 @@ static edjcmdname_t *getopt_jcn;
 /* Parse a flag and hints, and add them to a list */
 static edjcmd_t    *getopt_parse(edjsrc_t *src, edjcmdout_t **referr)
 {
-	*referr = edj_cmd_error(src->str, "Not implemented yet");
+	size_t	len;
+	char	*tmp;
+
+	/* Skip whitespace */
+	edj_cmd_parse_whitespace(src);
+
+	/* Find the end of the command */
+	for (len = 0; len < src->size && !strchr("\n;}", src->str[len]); len++){
+	}
+
+	/* Make a temporary copy of it, so we can stick "\0" on the end */
+	tmp = malloc(len + 1);
+	strncpy(tmp, src->str, len);
+	tmp[len] = '\0';
+
+	/* Process it */
+	edjprog_getopt_def(tmp);
+
+	/* Clean up */
+	free(tmp);
+	src->str += len;
+	if (len < src->size)
+		src->str++;
+
+	/* No run-time processing is needed */
 	return NULL;
 }
 
